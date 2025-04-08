@@ -17,6 +17,40 @@ from app.models.disponibilidad import Disponibilidad
 DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 HORAS = list(range(1, 8))  # 1-7
 
+# Mapeo de números a texto para horas
+HORAS_TEXTO = {
+    1: "1",
+    2: "2",
+    3: "3",
+    4: "4",
+    5: "5",
+    6: "6",
+    7: "7"
+}
+
+# Estructura global para rastrear asignaciones de profesores
+# Formato: {(profesor_id, dia, hora): clase_id}
+asignaciones_globales = {}
+
+def reset_asignaciones_globales():
+    """Reinicia el registro global de asignaciones de profesores"""
+    global asignaciones_globales
+    asignaciones_globales = {}
+    
+    # Cargar las asignaciones existentes en la base de datos
+    horarios_existentes = Horario.query.all()
+    for h in horarios_existentes:
+        hora_numerica = int(h.hora) if h.hora.isdigit() else 0
+        asignaciones_globales[(h.profesor_id, h.dia, hora_numerica)] = h.clase_id
+
+def profesor_disponible_globalmente(profesor_id, dia, hora):
+    """Verifica si un profesor ya está asignado en otra clase a la misma hora y día"""
+    return (profesor_id, dia, hora) not in asignaciones_globales
+
+def registrar_asignacion_global(profesor_id, dia, hora, clase_id):
+    """Registra la asignación de un profesor en el horario global"""
+    asignaciones_globales[(profesor_id, dia, hora)] = clase_id
+
 def generate_schedule(clase_id):
     """
     Genera un horario automático para una clase específica
@@ -135,7 +169,16 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
                 
                 # Verificar la disponibilidad del profesor para todo el bloque
                 for i in range(tamano_bloque):
-                    if not Disponibilidad.es_disponible(profesor.id, dia, hora_inicio + i):
+                    hora_actual = hora_inicio + i
+                    hora_texto = HORAS_TEXTO[hora_actual]
+                    
+                    # Verificar disponibilidad personal del profesor
+                    if not Disponibilidad.es_disponible(profesor.id, dia, hora_texto):
+                        profesor_disponible = False
+                        break
+                    
+                    # Verificar que el profesor no esté asignado a otra clase en este horario
+                    if not profesor_disponible_globalmente(profesor.id, dia, hora_actual):
                         profesor_disponible = False
                         break
                 
@@ -150,10 +193,13 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
                 if profesor_disponible:
                     # Asignar el bloque
                     for i in range(tamano_bloque):
-                        horario_matriz[dia][hora_inicio + i - 1] = {
+                        hora_actual = hora_inicio + i
+                        horario_matriz[dia][hora_actual - 1] = {
                             'asignatura_id': asignatura.id,
                             'profesor_id': profesor.id
                         }
+                        # Registrar la asignación global del profesor
+                        registrar_asignacion_global(profesor.id, dia, hora_actual, clase_id)
                     
                     # Actualizar contador de horas asignadas
                     asignaciones[asignatura.id] += tamano_bloque
@@ -174,7 +220,12 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
             # Encontrar un profesor disponible
             for profesor in profesores:
                 # Verificar la disponibilidad del profesor
-                if not Disponibilidad.es_disponible(profesor.id, dia, hora):
+                hora_texto = HORAS_TEXTO[hora]
+                if not Disponibilidad.es_disponible(profesor.id, dia, hora_texto):
+                    continue
+                
+                # Verificar que el profesor no esté asignado a otra clase en este horario
+                if not profesor_disponible_globalmente(profesor.id, dia, hora):
                     continue
                 
                 # Verificar que el profesor no exceda su máximo de horas diarias
@@ -190,6 +241,9 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
                     'asignatura_id': asignatura.id,
                     'profesor_id': profesor.id
                 }
+                
+                # Registrar la asignación global del profesor
+                registrar_asignacion_global(profesor.id, dia, hora, clase_id)
                 
                 # Actualizar contador de horas asignadas
                 asignaciones[asignatura.id] += 1
@@ -212,7 +266,7 @@ def save_schedule_to_db(clase_id, horario_matriz):
                 horario = Horario(
                     clase_id=clase_id,
                     dia=dia,
-                    hora=hora,
+                    hora=HORAS_TEXTO[hora],
                     asignatura_id=celda['asignatura_id'],
                     profesor_id=celda['profesor_id']
                 )

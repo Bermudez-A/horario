@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Nuevo Horario{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Crear Nuevo Horario</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Para crear un nuevo horario, selecciona la clase para la que deseas configurar el horario.
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('schedules.create') }}">
+                        <div class="mb-3">
+                            <label for="clase_id" class="form-label">Clase</label>
+                            <select class="form-select" id="clase_id" name="clase_id" required>
+                                <option value="">Seleccionar una clase</option>
+                                {% for clase in clases %}
+                                <option value="{{ clase.id }}">{{ clase.nombre }} ({{ clase.nivel }} - {{ clase.curso }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('schedules.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-arrow-right me-2"></i>Continuar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4 shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Opciones de Creación de Horarios</h5>
+                </div>
+                <div class="card-body">
+                    <p>Tienes varias opciones para crear horarios en el sistema:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-edit me-2"></i>Crear Manualmente</h5>
+                                    <p class="card-text">Configura manualmente las asignaturas y profesores para cada hora y día de la semana.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-magic me-2"></i>Generar Automáticamente</h5>
+                                    <p class="card-text">Usa nuestro algoritmo para generar un horario óptimo considerando restricciones.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p>Para mejores resultados en la generación automática, asegúrate de:</p>
+                    <ul>
+                        <li>Configurar correctamente las asignaturas y sus horas semanales</li>
+                        <li>Asignar profesores a las asignaturas</li>
+                        <li>Registrar la disponibilidad de los profesores</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

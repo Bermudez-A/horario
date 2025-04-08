@@ -67,6 +67,9 @@
                             </div>
                         </div>
                     </div>
+                    {% else %}
+                    <!-- En modo edición, configuramos un campo oculto para el tipo de usuario -->
+                    <input type="hidden" name="usuario_tipo" value="edicion">
                     {% endif %}
                     
                     <div id="seccion_nuevo_usuario" {% if not profesor and form.usuario_tipo.data == 'existente' %}style="display: none;"{% endif %}>

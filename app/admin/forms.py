@@ -39,7 +39,8 @@ class UserForm(FlaskForm):
 class ProfesorForm(FlaskForm):
     usuario_tipo = RadioField('Tipo de Usuario', choices=[
         ('nuevo', 'Crear nuevo usuario'),
-        ('existente', 'Usar usuario existente')
+        ('existente', 'Usar usuario existente'),
+        ('edicion', 'Edición de profesor existente')
     ], default='nuevo', validators=[DataRequired()])
     
     usuario_id = SelectField('Usuario Existente', coerce=int, validators=[Optional()])
@@ -55,6 +56,9 @@ class ProfesorForm(FlaskForm):
     def validate(self, **kwargs):
         if not super(ProfesorForm, self).validate(**kwargs):
             return False
+            
+        if self.usuario_tipo.data == 'edicion':
+            return True
             
         if self.usuario_tipo.data == 'nuevo':
             if not self.nombre.data or not self.apellido.data:

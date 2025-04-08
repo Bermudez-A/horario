@@ -248,11 +248,31 @@ def add_profesor():
 @admin_required
 def edit_profesor(id):
     profesor = Profesor.query.get_or_404(id)
+    
+    # Crear formulario para edición (sin campos de selección de usuario)
     form = ProfesorForm()
     
     # Obtener asignaturas disponibles para el select
     asignaturas_disponibles = Asignatura.query.filter_by(activa=True).all()
     form.asignatura_id.choices = [(a.id, f"{a.nombre} ({a.codigo})") for a in asignaturas_disponibles]
+    
+    # En modo de edición, establecer un valor para usuario_tipo para evitar validaciones innecesarias
+    form.usuario_tipo.data = 'edicion'
+    
+    # También establecer un valor para usuario_id para evitar errores de validación
+    # No es necesario cargar opciones para usuario_id ya que no se mostrará en modo de edición
+    form.usuario_id.choices = [(0, 'No aplicable')]
+    
+    if request.method == 'GET':
+        form.nombre.data = profesor.usuario.nombre
+        form.apellido.data = profesor.usuario.apellido
+        form.bio.data = profesor.bio
+        form.max_horas_diarias.data = profesor.max_horas_diarias
+        
+        # Seleccionar la asignatura actual (si existe)
+        asignatura_actual = AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).first()
+        if asignatura_actual:
+            form.asignatura_id.data = asignatura_actual.asignatura_id
     
     if form.validate_on_submit():
         # Actualizar datos del usuario vinculado
@@ -283,17 +303,6 @@ def edit_profesor(id):
         db.session.commit()
         flash('Perfil de profesor actualizado con éxito', 'success')
         return redirect(url_for('admin.profesores'))
-    
-    if request.method == 'GET':
-        form.nombre.data = profesor.usuario.nombre
-        form.apellido.data = profesor.usuario.apellido
-        form.bio.data = profesor.bio
-        form.max_horas_diarias.data = profesor.max_horas_diarias
-        
-        # Seleccionar la asignatura actual (si existe)
-        asignatura_actual = AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).first()
-        if asignatura_actual:
-            form.asignatura_id.data = asignatura_actual.asignatura_id
     
     return render_template('admin/profesor_form.html', 
                            title='Editar Profesor', 

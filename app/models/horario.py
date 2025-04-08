@@ -11,6 +11,7 @@ class Horario(db.Model):
     hora = db.Column(db.String(20), nullable=False)  # formato: "8:00 - 8:55"
     asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
     profesor_id = db.Column(db.Integer, db.ForeignKey('profesores.id'), nullable=False)
+    es_fijo = db.Column(db.Boolean, default=False)  # Indica si es una asignación manual fija
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
