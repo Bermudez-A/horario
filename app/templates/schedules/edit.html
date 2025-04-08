@@ -341,18 +341,18 @@
                                 {% endif %}
                             </td>
                                             {% endif %}
-                                {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
                     </div>
                 </div>
             </div>
+            </div>
         </div>
     </div>
-</div>
-
+    
 <!-- Modal para asignar clase -->
 <div class="modal fade" id="asignarModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -363,24 +363,24 @@
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
-                    <div class="col-md-6">
+        <div class="col-md-6">
                         <div class="alert alert-secondary py-2">
                             <strong>Día:</strong> <span id="modal-dia"></span><br>
                             <strong>Hora:</strong> <span id="modal-hora"></span>
-                        </div>
-                    </div>
+                </div>
+                                        </div>
                     <div class="col-md-6">
                         <!-- Contenedor para errores/info específicos del modal -->
                         <div id="modal-error-container">
                              <div class="alert alert-light border py-2" id="conflicto-info"> <!-- Contenedor para mensajes de conflicto -->
                                  <span class="text-muted small">Seleccione asignatura y profesor para verificar disponibilidad.</span>
-                             </div>
-                        </div>
                     </div>
                 </div>
-                
+            </div>
+        </div>
+        
                 <div class="row">
-                    <div class="col-md-6">
+        <div class="col-md-6">
                         <h6><i class="fas fa-book me-1"></i> Selecciona Asignatura</h6>
                         <div id="asignaturas-list" class="list-group mb-3" style="max-height: 250px; overflow-y: auto;">
                             {% for asignatura in asignaturas %}
@@ -389,11 +389,11 @@
                                 <div>
                                     <strong>{{ asignatura.nombre }}</strong>
                                     <div class="text-muted small">{{ asignatura.horas_semanales }}h/sem</div>
-                                </div>
+                </div>
                             </a>
-                            {% endfor %}
-                        </div>
+                                {% endfor %}
                     </div>
+                </div>
                     <div class="col-md-6">
                         <h6><i class="fas fa-user-tie me-1"></i> Selecciona Profesor</h6>
                         <div id="profesores-list" class="list-group mb-3" style="max-height: 250px; overflow-y: auto;">
@@ -469,9 +469,9 @@
                  </button>
             </div>
         </div>
-    </div>
-</div>
-
+                    </div>
+                </div>
+                
 <!-- Modal de confirmación para unir clases -->
 <div class="modal fade" id="unirClasesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -479,12 +479,12 @@
             <div class="modal-header bg-warning">
                 <h5 class="modal-title"><i class="fas fa-object-group me-2"></i>Unir Clases</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+                                </div>
             <div class="modal-body">
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
                     <span id="unir-clases-mensaje">El profesor ya está asignado a otra clase en este horario.</span>
-                </div>
+                            </div>
                 
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -502,9 +502,9 @@
                             <div class="card-body p-2 small">
                                 <div><strong>Clase:</strong> <span id="unir-clases-existente"></span></div>
                                 <div><strong>Asignatura:</strong> <span id="unir-clases-asignatura-existente"></span></div>
-                            </div>
                         </div>
                     </div>
+                </div>
                 </div>
                 
                 <p>¿Deseas unir estas clases para que el profesor imparta la misma asignatura a ambos grupos simultáneamente?</p>
@@ -708,8 +708,8 @@
                 if (!dataTransfer) {
                      console.error("D&D: No se obtuvieron datos en el drop.");
                      dragSourceElement = null;
-                     return;
-                 }
+                return;
+            }
                 console.log('D&D: Datos transferidos:', dataTransfer);
                 const data = JSON.parse(dataTransfer);
                 
@@ -893,13 +893,54 @@
             checkConflictsAPI(profesorId, destino_dia, destino_hora, currentClaseId)
                 .then(conflictoData => {
                     if (conflictoData.conflict) {
-                         mostrarAlerta(`Conflicto al mover: ${conflictoData.message}`, 'danger');
-                         throw new Error("Conflicto detectado"); // Detener
+                        // Comprobar si el mensaje de error contiene alguna indicación de que el profesor está asignado en otra clase
+                        const mensajeError = conflictoData.message || '';
+                        const esConflictoProfesor = 
+                            mensajeError.includes('ya tiene clase') || 
+                            mensajeError.includes('ya está asignado') ||
+                            mensajeError.includes('ya asignado');
+                            
+                        // Si es conflicto de profesor en otra clase o si tenemos datos de la clase conflictiva
+                        if (esConflictoProfesor || (conflictoData.conflict_type === 'profesor_asignado' && conflictoData.conflicting_class)) {
+                            // Datos para el modal de unir clases
+                            console.log('[Mover] Detectado conflicto de profesor ya asignado. Mostrando modal unir clases.');
+                            
+                            // Obtener info de la clase conflictiva (si está disponible)
+                            const claseConflicto = conflictoData.conflicting_class || {};
+                            
+                            window.unionClasesData = {
+                                dia: destino_dia,
+                                hora: destino_hora,
+                                asignatura_actual_id: asignaturaId,
+                                asignatura_actual_nombre: asignaturasData[asignaturaId]?.nombre || 'No disponible',
+                                clase_actual_id: currentClaseId,
+                                clase_actual_nombre: '{{ clase.nombre }}',
+                                profesor_id: profesorId,
+                                profesor_nombre: profesoresData[profesorId]?.nombre || 'No disponible',
+                                clase_existente_id: claseConflicto.clase_id || 0,
+                                clase_existente_nombre: claseConflicto.clase_nombre || 'Otra clase',
+                                asignatura_existente_id: claseConflicto.asignatura_id || asignaturaId,
+                                asignatura_existente_nombre: claseConflicto.asignatura_nombre || 'Misma asignatura'
+                            };
+                            
+                            // Guardar datos de origen para cuando se confirme la unión
+                            window.origenMovimiento = {
+                                dia: origen_dia,
+                                hora: origen_hora
+                            };
+                            
+                            // Mostrar modal de unir clases
+                            mostrarModalUnirClases();
+                        } else {
+                            // Otro tipo de conflicto, mostrar mensaje de error normal
+                            mostrarAlerta(`Conflicto al mover: ${conflictoData.message}`, 'danger');
+                        }
+                        throw new Error("Conflicto detectado"); // Detener
                     }
                     // Si no hay conflicto, proceder a llamar a la API de mover
                     console.log("[Mover] No hay conflicto en destino, llamando a API /schedules/move_class...");
                     return fetch('/schedules/move_class', {
-                        method: 'POST',
+                method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                         body: JSON.stringify({ 
                             clase_id: currentClaseId, 
@@ -912,16 +953,16 @@
                      if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
                      return response.json();
                  })
-                .then(data => {
+            .then(data => {
                     console.log("[Mover] Respuesta de API /schedules/move_class:", data);
-                    if (data.success) {
+                if (data.success) {
                         actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora);
                         mostrarAlerta('Clase movida con éxito', 'success');
-                    } else {
+                } else {
                         mostrarAlerta(`Error al mover: ${data.message || 'Error desconocido'}`, 'danger');
-                    }
-                })
-                .catch(error => {
+                }
+            })
+            .catch(error => {
                     if (error.message !== "Conflicto detectado") { // Evitar doble alerta
                          console.error('[Mover] Error:', error);
                          mostrarAlerta(`Error al mover la clase: ${error.message}`, 'danger');
@@ -976,7 +1017,7 @@
             .then(data => {
                         console.log("[Eliminar] Respuesta del servidor:", data);
                 if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
+                bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
                             actualizarCelda(currentDia, currentHora, null, null); // Llamar a actualizar para limpiar la celda
                             mostrarAlerta('Asignación eliminada con éxito', 'success');
                 } else {
@@ -1003,54 +1044,14 @@
             spinner.classList.remove('d-none');
             document.getElementById('modal-error-container').innerHTML = ''; // Limpiar errores previos del modal
 
-            // *** Doble verificación de conflictos ANTES de enviar ***
-            checkConflictsAPI(selectedProfesorId, currentDia, currentHora, currentClaseId)
-                .then(conflictoData => {
-                    if (conflictoData.conflict) {
-                        // Verificar si el conflicto es porque el profesor ya tiene clase en otro grupo
-                        if (conflictoData.conflict_type === 'profesor_asignado' && conflictoData.conflicting_class) {
-                            // Mostrar modal de unir clases
-                            window.unionClasesData = {
-                                dia: currentDia,
-                                hora: currentHora,
-                                asignatura_actual_id: selectedAsignaturaId,
-                                asignatura_actual_nombre: asignaturasData[selectedAsignaturaId]?.nombre || 'No disponible',
-                                clase_actual_id: currentClaseId,
-                                clase_actual_nombre: '{{ clase.nombre }}',
-                                profesor_id: selectedProfesorId,
-                                profesor_nombre: profesoresData[selectedProfesorId]?.nombre || 'No disponible',
-                                clase_existente_id: conflictoData.conflicting_class.clase_id,
-                                clase_existente_nombre: conflictoData.conflicting_class.clase_nombre || 'Clase desconocida',
-                                asignatura_existente_id: conflictoData.conflicting_class.asignatura_id,
-                                asignatura_existente_nombre: conflictoData.conflicting_class.asignatura_nombre || 'No disponible'
-                            };
-                            
-                            // Cerrar modal actual y mostrar modal de unir clases
-                            bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
-                            mostrarModalUnirClases();
-                            
-                            // Deshabilitar spinner
-                            spinner.classList.add('d-none');
-                            btnGuardar.disabled = false;
-                            
-                            // No continuar con la asignación
-                            return Promise.reject(new Error("Conflicto de profesor en otra clase"));
-                        } else {
-                            // Otro tipo de conflicto, mostrar error
-                            mostrarAlertaEnModal(`Conflicto: ${conflictoData.message}`, 'danger');
-                            throw new Error("Conflicto detectado"); // Detener el proceso
-                        }
-                    }
-                    
-                    // Si no hay conflicto, proceder a guardar
-                    console.log("[Guardar] No hay conflicto, llamando a API /schedules/update...");
-                    const ajustar = document.getElementById('ajustar-otras-clases')?.checked || false;
-                    return actualizarClaseEnServidor(selectedAsignaturaId, selectedProfesorId, currentDia, currentHora, ajustar);
-                })
-                .then(data => {
+            // Proceder directamente con el guardado (la verificación ya se hizo antes)
+            const ajustar = document.getElementById('ajustar-otras-clases')?.checked || false;
+            
+            actualizarClaseEnServidor(selectedAsignaturaId, selectedProfesorId, currentDia, currentHora, ajustar)
+            .then(data => {
                     console.log("[Guardar] Respuesta de API /schedules/update:", data);
-                    if (data.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
                         actualizarCelda(currentDia, currentHora, selectedAsignaturaId, selectedProfesorId);
                         
                         if (data.adjusted_cells && data.adjusted_cells.length > 0) {
@@ -1060,22 +1061,18 @@
                             mostrarAlerta('Se han ajustado otras celdas con la misma asignatura', 'info');
                         }
                         mostrarAlerta('Asignación guardada con éxito', 'success');
-                    } else {
+                } else {
                         mostrarAlertaEnModal(`Error al guardar: ${data.message || 'Error desconocido'}`, 'danger');
-                    }
-                })
-                .catch(error => {
-                    if (error.message !== "Conflicto detectado" && error.message !== "Conflicto de profesor en otra clase") {
-                        console.error('[Guardar] Error:', error);
-                        mostrarAlertaEnModal(`Error al guardar la asignación: ${error.message}`, 'danger');
-                    }
+                        btnGuardar.disabled = false;
+                }
+            })
+            .catch(error => {
+                    console.error('[Guardar] Error:', error);
+                    mostrarAlertaEnModal(`Error al guardar la asignación: ${error.message}`, 'danger');
+                    btnGuardar.disabled = false;
                 })
                 .finally(() => {
-                    if (document.getElementById('spinnerGuardar').classList.contains('d-none') === false) {
-                        // Solo restaurar botón si no se mostró otro modal (unir clases)
-                        btnGuardar.disabled = false;
-                        spinner.classList.add('d-none');
-                    }
+                    spinner.classList.add('d-none');
                 });
         }
         
@@ -1198,24 +1195,26 @@
         }
         
         // Llama a la API /schedules/update
-        function actualizarClaseEnServidor(asignaturaId, profesorId, dia, hora, ajustar = false) {
-             console.log(`[API Update] Guardando: Asig=${asignaturaId}, Prof=${profesorId}, Dia=${dia}, Hora=${hora}, Ajustar=${ajustar}`);
+        function actualizarClaseEnServidor(asignaturaId, profesorId, dia, hora, ajustarOtrasCeldas) {
+             console.log(`[API Update] Guardando: Asig=${asignaturaId}, Prof=${profesorId}, Dia=${dia}, Hora=${hora}, Ajustar=${ajustarOtrasCeldas}`);
             return fetch('/schedules/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify({
                     clase_id: currentClaseId,
-                    dia: dia,
-                    hora: hora,
                     asignatura_id: asignaturaId,
                     profesor_id: profesorId,
-                    ajustar_clases: ajustar
+                    dia: dia,
+                    hora: hora,
+                    ajustar_otras_celdas: ajustarOtrasCeldas
                 })
-            }).then(response => {
+            })
+            .then(response => {
                  if (!response.ok) { 
-                      return response.json().then(errData => { 
-                           throw new Error(errData.message || `Error del servidor: ${response.status}`); 
-                      });
+                      throw new Error(`Error del servidor: ${response.status}`); 
                  }
                  return response.json();
              });
@@ -1369,12 +1368,11 @@
                  });
          }
         
-        // Actualiza el div de conflictos y el botón guardar en el modal
+        // Función para verificar conflictos (independiente, no bloquea la edición)
         function verificarConflictos() {
             const conflictoDiv = document.getElementById('conflicto-info');
             const btnGuardar = document.getElementById('btn-guardar');
             conflictoDiv.innerHTML = '<span class="text-muted small"><i class="fas fa-spinner fa-spin me-1"></i>Verificando...</span>'; // Mensaje con spinner
-            btnGuardar.disabled = true; // Deshabilitar mientras se verifica
             
             if (!selectedProfesorId || !selectedAsignaturaId) {
                  console.log("[Check Conflicts UI] Faltan asignatura o profesor.");
@@ -1395,9 +1393,20 @@
                 .then(data => {
                     console.log("[Check Conflicts UI] Respuesta de API:", data);
                     if (data.conflict) {
-                        // Verificar si el conflicto es porque el profesor ya tiene clase en otro grupo
-                        if (data.conflict_type === 'profesor_asignado' && data.conflicting_class) {
-                            // En lugar de mostrar error, guardar datos para el modal de unir clases
+                        // Comprobar si el mensaje de error contiene alguna indicación de que el profesor está asignado en otra clase
+                        const mensajeError = data.message || '';
+                        const esConflictoProfesor = 
+                            mensajeError.includes('ya tiene clase') || 
+                            mensajeError.includes('ya está asignado') ||
+                            mensajeError.includes('ya asignado');
+                            
+                        // Si es conflicto de profesor en otra clase o si tenemos datos de la clase conflictiva
+                        if (esConflictoProfesor || (data.conflict_type === 'profesor_asignado' && data.conflicting_class)) {
+                            console.log('[Check Conflicts UI] Detectado conflicto de profesor ya asignado.');
+                            // Obtener info de la clase conflictiva (si está disponible)
+                            const claseConflicto = data.conflicting_class || {};
+                            
+                            // Preparar datos para el botón de unir clases
                             window.unionClasesData = {
                                 dia: currentDia,
                                 hora: currentHora,
@@ -1413,26 +1422,28 @@
                                 asignatura_existente_nombre: data.conflicting_class.asignatura_nombre || 'No disponible'
                             };
                             
-                            // Mostrar modal de unir clases
-                            mostrarModalUnirClases();
+                            // Agregar botón para unir clases en el modal actual
+                            const actionBtn = `<button type="button" class="btn btn-sm btn-warning mt-2" onclick="mostrarModalUnirClases()">
+                                <i class="fas fa-object-group me-1"></i> Unir Clases
+                            </button>`;
                             
-                            // Ocultar modal actual
-                            bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
+                            conflictoDiv.innerHTML += actionBtn;
                         } else {
                             // Otro tipo de conflicto, mostrar mensaje de error normal
                             mostrarAlertaEnModal(`Conflicto: ${data.message}`, 'danger');
-                            btnGuardar.disabled = true;
+                            // Permitir guardar de todos modos, es responsabilidad del usuario
+                            btnGuardar.disabled = false;
                         }
                     } else {
                         mostrarAlertaEnModal('Profesor disponible y sin conflictos detectados.', 'success');
-                        btnGuardar.disabled = false; // Habilitar solo si no hay conflicto
+                        btnGuardar.disabled = false; // Habilitar siempre
                     }
                 })
                 .catch(error => {
-                     // El error ya debería haber sido manejado en checkConflictsAPI y devuelto como {conflict: true}
-                     console.error("[Check Conflicts UI] Error inesperado en la verificación (esto no debería ocurrir si checkConflictsAPI maneja errores):");
+                     console.error("[Check Conflicts UI] Error inesperado en la verificación:", error);
                      mostrarAlertaEnModal(`Error al verificar disponibilidad: ${error.message}`, 'warning');
-                     btnGuardar.disabled = true;
+                     // Permitir guardar de todos modos
+                     btnGuardar.disabled = false;
                  });
         }
 
@@ -1508,8 +1519,21 @@
                     // Cerrar modal
                     bootstrap.Modal.getInstance(document.getElementById('unirClasesModal')).hide();
                     
-                    // Actualizar UI si es necesario
-                    actualizarCelda(data.dia, data.hora, data.asignatura_actual_id, data.profesor_id);
+                    // Verificar si esta unión viene de un movimiento de clase
+                    if (window.origenMovimiento) {
+                        // Si viene de un movimiento, actualizar la interfaz para reflejar el movimiento
+                        actualizarUIAlMover(
+                            window.origenMovimiento.dia, 
+                            window.origenMovimiento.hora, 
+                            data.dia, 
+                            data.hora
+                        );
+                        // Limpiar datos de origen
+                        window.origenMovimiento = null;
+                    } else {
+                        // Si no viene de un movimiento, solo actualizar la celda destino
+                        actualizarCelda(data.dia, data.hora, data.asignatura_actual_id, data.profesor_id);
+                    }
                     
                     // Mostrar mensaje de éxito
                     mostrarAlerta('Clases unidas correctamente', 'success');

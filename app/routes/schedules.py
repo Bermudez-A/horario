@@ -97,8 +97,10 @@ def unir_clases():
         # Verificar si la asignatura existente es diferente (podría ser)
         if asignatura_existente_id and asignatura_existente_id != asignatura_actual_id:
             # Este caso podría manejarse de manera diferente dependiendo de la lógica de negocio
-            # Por ahora, usaremos la asignatura existente como la principal
-            pass
+            # Por ahora, usaremos la asignatura de la clase existente como la principal
+            asignatura_id_a_usar = asignatura_existente_id
+        else:
+            asignatura_id_a_usar = asignatura_actual_id
         
         # Buscar el horario existente en la clase existente
         horario_existente = Horario.query.filter_by(
@@ -120,7 +122,7 @@ def unir_clases():
         # Crear o actualizar el horario en la clase actual
         if horario_actual:
             # Actualizar horario existente
-            horario_actual.asignatura_id = asignatura_actual_id
+            horario_actual.asignatura_id = asignatura_id_a_usar
             horario_actual.profesor_id = profesor_id
             horario_actual.unido_con_clase_id = clase_existente_id  # Marcar como unido
         else:
@@ -129,7 +131,7 @@ def unir_clases():
                 clase_id=clase_actual_id,
                 dia=dia,
                 hora=hora,
-                asignatura_id=asignatura_actual_id,
+                asignatura_id=asignatura_id_a_usar,
                 profesor_id=profesor_id,
                 unido_con_clase_id=clase_existente_id  # Marcar como unido
             )
@@ -148,5 +150,87 @@ def unir_clases():
     
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error al unir clases: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error al unir las clases: {str(e)}'}) 
+        print(f"Error al unir clases: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error al unir las clases: {str(e)}'})
+
+@schedules_bp.route('/update', methods=['POST'])
+@login_required
+def update():
+    """Actualiza una celda de horario"""
+    data = request.get_json()
+    
+    # Validar datos
+    if not all(key in data for key in ['asignatura_id', 'profesor_id', 'dia', 'hora']):
+        return jsonify({'success': False, 'message': 'Faltan datos requeridos'})
+    
+    asignatura_id = data.get('asignatura_id')
+    profesor_id = data.get('profesor_id')
+    dia = data.get('dia')
+    hora = data.get('hora')
+    ajustar_otras_celdas = data.get('ajustar_otras_celdas', False)
+    
+    # Obtener el ID de la clase del cuerpo de la solicitud o del usuario actual
+    clase_id = data.get('clase_id')
+    if not clase_id and hasattr(current_user, 'clase_id'):
+        clase_id = current_user.clase_id
+    
+    if not clase_id:
+        return jsonify({'success': False, 'message': 'No se pudo determinar la clase'})
+    
+    try:
+        # No validar conflictos aquí - ahora el frontend los muestra como advertencia
+        # y es decisión del usuario si quiere guardar o no
+        
+        # Obtener o crear el horario para esta celda
+        horario = Horario.get_by_clase_dia_hora(clase_id, dia, hora)
+        
+        if horario:
+            # Actualizar existente
+            horario.asignatura_id = asignatura_id
+            horario.profesor_id = profesor_id
+        else:
+            # Crear nuevo
+            horario = Horario(
+                clase_id=clase_id,
+                dia=dia,
+                hora=hora,
+                asignatura_id=asignatura_id,
+                profesor_id=profesor_id
+            )
+            db.session.add(horario)
+        
+        cells_adjusted = []
+        
+        # Si se solicitó ajustar otras celdas con la misma asignatura
+        if ajustar_otras_celdas:
+            # Buscar otras celdas con la misma asignatura
+            otros_horarios = Horario.query.filter_by(
+                clase_id=clase_id,
+                asignatura_id=asignatura_id
+            ).filter(
+                Horario.dia != dia, 
+                Horario.hora != hora
+            ).all()
+            
+            # Actualizar profesor
+            for h in otros_horarios:
+                h.profesor_id = profesor_id
+                cells_adjusted.append({
+                    'dia': h.dia, 
+                    'hora': h.hora, 
+                    'asignatura_id': h.asignatura_id, 
+                    'profesor_id': h.profesor_id
+                })
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Horario actualizado',
+            'adjusted_cells': cells_adjusted
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al actualizar horario: {str(e)}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}) 

@@ -23,7 +23,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <p>En este panel puede marcar las horas (de 8:00 a 17:00) en las que el profesor <strong>NO</strong> estará disponible para impartir clases.</p>
+                    <p>En este panel puede marcar las horas en las que el profesor <strong>NO</strong> estará disponible para impartir clases.</p>
                     <p>Haga clic en una celda del horario para cambiar su disponibilidad. Las celdas <span class="badge bg-danger">rojas</span> indican no disponibilidad.</p>
                     <div class="d-flex mt-3 justify-content-center">
                         <div class="me-4 d-flex align-items-center">
@@ -42,7 +42,7 @@
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <div>
                 <i class="fas fa-table me-1 text-primary"></i>
-                Horario de Disponibilidad (8:00 - 17:00)
+                Horario de Disponibilidad
             </div>
             <button id="btnRefrescarDisponibilidad" class="btn btn-outline-primary btn-sm" title="Recargar datos">
                 <i class="fas fa-sync-alt me-1"></i>Actualizar
@@ -215,6 +215,32 @@
         'viernes': 'Viernes'
     };
     
+    // Mapeo de horas del sistema a horas de clase
+    const horasClaseMap = {
+        '8:00 - 9:00': '1ª hora',
+        '9:00 - 10:00': '2ª hora',
+        '10:00 - 11:00': '3ª hora',
+        '11:00 - 12:00': '4ª hora',
+        '12:00 - 13:00': '5ª hora',
+        '13:00 - 14:00': '6ª hora',
+        '14:00 - 15:00': '7ª hora',
+        '15:00 - 16:00': '8ª hora',
+        '16:00 - 17:00': '9ª hora'
+    };
+    
+    // Mapeo inverso para convertir hora de clase a hora del sistema
+    const horasSistemaMap = {
+        '1': '8:00 - 9:00',
+        '2': '9:00 - 10:00',
+        '3': '10:00 - 11:00',
+        '4': '11:00 - 12:00',
+        '5': '12:00 - 13:00',
+        '6': '13:00 - 14:00',
+        '7': '14:00 - 15:00',
+        '8': '15:00 - 16:00',
+        '9': '16:00 - 17:00'
+    };
+    
     // Función para obtener parámetros de la URL
     function obtenerParametroURL(nombre) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -272,7 +298,7 @@
             return;
         }
         
-        console.log("[Renderizar] Generando HTML para la tabla (8:00 - 17:00)...");
+        console.log("[Renderizar] Generando HTML para la tabla...");
         // Generar HTML para la tabla
         let html = `
             <h4 class="mb-3">Disponibilidad de ${nombreProfesorActual}</h4>
@@ -291,23 +317,21 @@
                     <tbody>
         `;
         
-        // *** CAMBIO: Generar las horas de 8:00 a 17:00 ***
-        const horasParaMostrar = [];
-        for (let i = 8; i < 17; i++) { // Cambiado el rango: 8 hasta 16 (incluye 16:00-17:00)
-            horasParaMostrar.push(`${i}:00 - ${i+1}:00`);
-        }
-        
-        // Para cada hora
-        for (const horaDisplay of horasParaMostrar) {
+        // Generar las horas usando número de clase (1ª hora hasta 9ª hora)
+        for (let i = 1; i <= 9; i++) {
+            const horaNumero = `${i}ª hora`;
+            const horaSistema = horasSistemaMap[i.toString()]; // Convertir a string para buscar en el mapa
+            
             html += `<tr>`;
-            html += `<td>${horaDisplay}</td>`;
+            html += `<td>${horaNumero}</td>`;
             
             // Para cada día (lunes a viernes)
             const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
             
             for (const dia of dias) {
                 // Buscar en los datos si existe esta hora y día
-                const disponibilidad = disponibilidadesCargadas.find(d => d.dia === dia && d.hora === horaDisplay);
+                // Nota: Usamos horaSistema para comparar con los datos cargados que usan formato 8:00 - 9:00
+                const disponibilidad = disponibilidadesCargadas.find(d => d.dia === dia && d.hora === horaSistema);
                 
                 const disponible = disponibilidad ? disponibilidad.disponible : true;
                 const motivo = disponibilidad && disponibilidad.motivo ? disponibilidad.motivo : '';
@@ -315,7 +339,7 @@
                 html += `
                     <td class="celda-disponibilidad ${disponible ? 'disponible' : 'no-disponible'}" 
                         data-dia="${dia}" 
-                        data-hora="${horaDisplay}" 
+                        data-hora="${horaSistema}" 
                         data-disponible="${disponible}" 
                         data-motivo="${motivo}" 
                         title="${!disponible ? `No disponible: ${motivo}` : 'Disponible'}"
@@ -456,12 +480,15 @@
             diaActual = dia;
             horaActual = hora;
             
+            // Convertir hora del sistema a número de clase para mostrar en el modal
+            const horaClase = horasClaseMap[hora] || hora;
+            
             // Llenar campos del modal
             document.getElementById('modalDia').value = dia;
             document.getElementById('modalHora').value = hora;
             document.getElementById('modalProfesorId').value = profesorIdActual;
             document.getElementById('modalDiaTexto').textContent = diasSemana[dia]; // Usar mapeo para mostrar nombre completo
-            document.getElementById('modalHoraTexto').textContent = hora;
+            document.getElementById('modalHoraTexto').textContent = horaClase; // Mostrar como "1ª hora" en lugar de "8:00 - 9:00"
             document.getElementById('modalProfesorNombre').textContent = nombreProfesorActual;
             
             // Limpiar validación previa del motivo
@@ -495,7 +522,7 @@
     function guardarDisponibilidad() {
         console.log("[Guardar] Iniciando proceso de guardado...");
         const dia = document.getElementById('modalDia').value; // 'lunes', 'martes', etc.
-        const hora = document.getElementById('modalHora').value; // '7:00 - 8:00', etc.
+        const hora = document.getElementById('modalHora').value; // '8:00 - 9:00', etc.
         const profesorId = document.getElementById('modalProfesorId').value;
         const disponible = document.querySelector('input[name="disponible"]:checked').value === 'true';
         const motivoInput = document.getElementById('motivo');

@@ -14,7 +14,8 @@ class Clase(db.Model):
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relaciones
-    horarios = db.relationship('Horario', back_populates='clase', cascade='all, delete-orphan')
+    horarios = db.relationship('Horario', back_populates='clase', foreign_keys='[Horario.clase_id]', cascade='all, delete-orphan')
+    clases_unidas = db.relationship('Horario', back_populates='clase_unida', foreign_keys='[Horario.unido_con_clase_id]')
     asignaciones_profesor = db.relationship('AsignaturaProfesorClase', back_populates='clase', cascade='all, delete-orphan')
     
     def __repr__(self):
