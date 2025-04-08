@@ -1,0 +1,197 @@
+/* 
+ * Estilos personalizados para el Generador de Horarios
+ * Autor: Equipo de Desarrollo
+ * Versión: 1.0
+ */
+
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --dark-color: #2c3e50;
+    --light-color: #ecf0f1;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --success-color: #2ecc71;
+}
+
+/* Estilos generales */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* Navbar personalizado */
+.navbar-brand {
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+/* Footer */
+footer a:hover {
+    text-decoration: underline;
+}
+
+/* Tarjetas y elementos UI */
+.card {
+    border-radius: 0.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.btn {
+    border-radius: 0.35rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+/* Estilos para la tabla de horarios */
+.table-horario {
+    border-collapse: separate;
+    border-spacing: 2px;
+}
+
+.table-horario th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table-horario td {
+    height: 80px;
+    vertical-align: middle;
+    text-align: center;
+    position: relative;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.table-horario .cell-content {
+    padding: 10px;
+}
+
+.table-horario .asignatura {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.table-horario .profesor {
+    font-size: 0.8em;
+    color: #666;
+}
+
+/* Estilos para el cuadro de disponibilidad */
+.disponibilidad-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.disponibilidad-cell {
+    padding: 10px;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.disponibilidad-cell.disponible {
+    background-color: rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(46, 204, 113, 0.5);
+}
+
+.disponibilidad-cell.no-disponible {
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid rgba(231, 76, 60, 0.5);
+    text-decoration: line-through;
+}
+
+.disponibilidad-cell:hover {
+    filter: brightness(90%);
+}
+
+/* Estilos para las páginas de estadísticas */
+.stats-card {
+    height: 100%;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.stats-card .card-header {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Estilos para formularios */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+.required-field::after {
+    content: "*";
+    color: var(--danger-color);
+    margin-left: 4px;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .table-horario td {
+        height: 60px;
+        font-size: 0.9rem;
+    }
+    
+    .table-horario .profesor {
+        display: none;
+    }
+}
+
+/* Estilos personalizados para las alertas */
+.alert-message {
+    border-left: 4px solid;
+    border-radius: 0.25rem;
+}
+
+.alert-message.info {
+    border-left-color: var(--info-color);
+}
+
+.alert-message.success {
+    border-left-color: var(--success-color);
+}
+
+.alert-message.warning {
+    border-left-color: var(--warning-color);
+}
+
+.alert-message.danger {
+    border-left-color: var(--danger-color);
+} 

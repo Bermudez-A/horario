@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="row align-items-center py-4">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold text-primary mb-3">Generador de Horarios</h1>
+        <p class="lead mb-4">Simplifica la planificación de horarios escolares con nuestra aplicación intuitiva y eficiente.</p>
+        
+        <div class="mb-4">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Características principales:</h5>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><i class="fas fa-calendar-check text-primary me-2"></i>Generación automática de horarios</li>
+                <li class="list-group-item"><i class="fas fa-user-clock text-primary me-2"></i>Gestión de disponibilidad de profesores</li>
+                <li class="list-group-item"><i class="fas fa-chart-pie text-primary me-2"></i>Estadísticas detalladas de carga lectiva</li>
+                <li class="list-group-item"><i class="fas fa-users-cog text-primary me-2"></i>Administración de usuarios, profesores y asignaturas</li>
+                <li class="list-group-item"><i class="fas fa-edit text-primary me-2"></i>Edición manual de horarios con interfaz visual</li>
+            </ul>
+        </div>
+        
+        {% if not current_user.is_authenticated %}
+        <div class="d-grid gap-2 d-md-flex">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-6 mt-5 mt-lg-0">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-week me-2"></i>Ejemplo de Horario</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Hora</th>
+                                <th scope="col">Lunes</th>
+                                <th scope="col">Martes</th>
+                                <th scope="col">Miércoles</th>
+                                <th scope="col">Jueves</th>
+                                <th scope="col">Viernes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">08:00-09:00</th>
+                                <td class="bg-info bg-opacity-25">Matemáticas</td>
+                                <td class="bg-warning bg-opacity-25">Historia</td>
+                                <td class="bg-success bg-opacity-25">Ciencias</td>
+                                <td class="bg-danger bg-opacity-25">Literatura</td>
+                                <td class="bg-primary bg-opacity-25">Inglés</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">09:00-10:00</th>
+                                <td class="bg-primary bg-opacity-25">Inglés</td>
+                                <td class="bg-info bg-opacity-25">Matemáticas</td>
+                                <td class="bg-warning bg-opacity-25">Historia</td>
+                                <td class="bg-success bg-opacity-25">Ciencias</td>
+                                <td class="bg-danger bg-opacity-25">Literatura</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">10:00-11:00</th>
+                                <td class="bg-danger bg-opacity-25">Literatura</td>
+                                <td class="bg-primary bg-opacity-25">Inglés</td>
+                                <td class="bg-info bg-opacity-25">Matemáticas</td>
+                                <td class="bg-warning bg-opacity-25">Historia</td>
+                                <td class="bg-success bg-opacity-25">Ciencias</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<!-- Sección "Cómo funciona" -->
+<div class="row mb-5">
+    <div class="col-12 text-center mb-4">
+        <h2 class="fw-bold">¿Cómo funciona?</h2>
+        <p class="lead">Nuestro generador utiliza algoritmos avanzados para crear horarios optimizados.</p>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-inline-flex mb-3">
+                    <i class="fas fa-clipboard-list text-primary fa-2x"></i>
+                </div>
+                <h5 class="card-title">1. Configuración</h5>
+                <p class="card-text">Ingresa tus asignaturas, profesores y restricciones de disponibilidad.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-inline-flex mb-3">
+                    <i class="fas fa-cogs text-primary fa-2x"></i>
+                </div>
+                <h5 class="card-title">2. Generación</h5>
+                <p class="card-text">El sistema aplica algoritmos voraces para crear horarios optimizados.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-inline-flex mb-3">
+                    <i class="fas fa-calendar-check text-primary fa-2x"></i>
+                </div>
+                <h5 class="card-title">3. Resultados</h5>
+                <p class="card-text">Obtén horarios equilibrados y ajustables según tus necesidades.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección "Beneficios" -->
+<div class="row mb-5">
+    <div class="col-lg-6">
+        <h2 class="fw-bold">Beneficios</h2>
+        <p class="lead">Optimiza la organización escolar y ahorra tiempo valioso.</p>
+        
+        <div class="d-flex align-items-center mb-4">
+            <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                <i class="fas fa-clock text-success"></i>
+            </div>
+            <div class="ms-3">
+                <h5 class="mb-1">Ahorro de tiempo</h5>
+                <p class="mb-0">Reduce el tiempo de planificación de semanas a minutos.</p>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center mb-4">
+            <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                <i class="fas fa-balance-scale text-primary"></i>
+            </div>
+            <div class="ms-3">
+                <h5 class="mb-1">Distribución equilibrada</h5>
+                <p class="mb-0">Asigna carga lectiva de manera equitativa entre profesores.</p>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center">
+            <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
+                <i class="fas fa-chart-line text-warning"></i>
+            </div>
+            <div class="ms-3">
+                <h5 class="mb-1">Análisis detallado</h5>
+                <p class="mb-0">Visualiza estadísticas para tomar mejores decisiones.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mt-4 mt-lg-0">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title mb-3 text-primary">¿Listo para empezar?</h3>
+                <p class="card-text mb-4">
+                    Nuestro sistema está diseñado para centros educativos de todos los tamaños. 
+                    Simplifica la gestión de horarios y mejora la experiencia de alumnos y profesores.
+                </p>
+                
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="card bg-light border-0 h-100">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-user-graduate text-primary me-2"></i>Para Alumnos</h5>
+                                <p class="card-text">Visualización clara de horarios y actualizaciones en tiempo real.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="card bg-light border-0 h-100">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-chalkboard-teacher text-primary me-2"></i>Para Profesores</h5>
+                                <p class="card-text">Gestión de disponibilidad y carga horaria equilibrada.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if current_user.is_authenticated %}
+                <div class="d-grid mt-4">
+                    <a href="{{ url_for('schedules.index') }}" class="btn btn-primary">
+                        <i class="fas fa-calendar-alt me-2"></i>Ver Horarios
+                    </a>
+                </div>
+                {% else %}
+                <div class="d-grid mt-4">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>Acceder ahora
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
