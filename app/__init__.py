@@ -1,20 +1,11 @@
 import os
 import sys
 from flask import Flask, request
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_babel import Babel
 from dotenv import load_dotenv
+from app.extensions import db, migrate, login_manager, babel
 
 # Cargar variables de entorno
 load_dotenv()
-
-# Inicializar extensiones
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
-babel = Babel()
 
 def get_locale():
     return request.accept_languages.best_match(['es', 'en'])

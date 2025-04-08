@@ -10,6 +10,7 @@ from app.models.profesor import Profesor
 from app.models.asignatura import Asignatura, AsignaturaProfesor, AsignaturaProfesorClase
 from app.models.clase import Clase
 from app.admin.utils import admin_required, save_picture
+from app.models.disponibilidad_comun import DisponibilidadComun
 
 # Dashboard
 @admin.route('/')
@@ -475,62 +476,28 @@ def delete_clase(id):
     flash(f'Clase {nombre} eliminada con éxito', 'success')
     return redirect(url_for('admin.clases'))
 
-# Ruta para gestionar la disponibilidad de un profesor
-@admin.route('/profesores/disponibilidad/<int:profesor_id>', methods=['GET', 'POST'])
+# Ruta para MOSTRAR la página de disponibilidad de un profesor específico
+# Esta ruta ahora solo necesita pasar el profesor a la plantilla.
+# La carga/guardado de datos se hace vía API/JavaScript.
+@admin.route('/profesores/disponibilidad/<int:profesor_id>', methods=['GET']) # Solo GET
 @login_required
 @admin_required
 def disponibilidad_profesor(profesor_id):
-    profesor = Profesor.query.get_or_404(profesor_id)
-    
-    # Obtener la disponibilidad actual del profesor
-    disponibilidad = {
-        'lunes': [0] * 24,
-        'martes': [0] * 24,
-        'miercoles': [0] * 24,
-        'jueves': [0] * 24,
-        'viernes': [0] * 24,
-        'sabado': [0] * 24,
-        'domingo': [0] * 24
-    }
-    
-    # Cargar disponibilidad existente en DB
-    for disp in profesor.disponibilidad:
-        disponibilidad[disp.dia][disp.hora] = disp.disponible
-    
-    if request.method == 'POST':
-        # Actualizar disponibilidad desde el formulario
-        from app.models.disponibilidad import Disponibilidad
-        
-        # Eliminar registros existentes
-        for disp in profesor.disponibilidad:
-            db.session.delete(disp)
-        
-        # Crear nuevos registros según el formulario
-        for dia in disponibilidad.keys():
-            for hora in range(24):
-                estado = request.form.get(f'{dia}_{hora}', '0')
-                if estado == '1':  # Solo guardar las horas disponibles
-                    nueva_disp = Disponibilidad(
-                        profesor_id=profesor.id,
-                        dia=dia,
-                        hora=hora,
-                        disponible=1
-                    )
-                    db.session.add(nueva_disp)
-        
-        db.session.commit()
-        flash('Disponibilidad actualizada correctamente', 'success')
-        return redirect(url_for('admin.profesores'))
-    
-    dias_semana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
-    horas = list(range(24))
-    
-    return render_template('admin/disponibilidad_profesor.html', 
-                           title=f'Disponibilidad de {profesor.get_nombre_completo()}',
-                           profesor=profesor,
-                           disponibilidad=disponibilidad,
-                           dias_semana=dias_semana,
-                           horas=horas)
+    try:
+        print(f"[Admin Route] Accediendo a disponibilidad para profesor ID: {profesor_id}")
+        profesor = Profesor.query.get_or_404(profesor_id)
+        print(f"[Admin Route] Profesor encontrado: {profesor.get_nombre_completo()}")
+
+        # Renderizar la plantilla, pasando el objeto profesor con el nombre correcto
+        return render_template(
+            'admin/disponibilidad_profesor.html',
+            title=f"Disponibilidad de {profesor.get_nombre_completo()}",
+            profesor_seleccionado=profesor # <-- Nombre de variable CORREGIDO
+        )
+    except Exception as e:
+        print(f"[Admin Route] ERROR al cargar disponibilidad para profesor {profesor_id}: {e}")
+        flash('Error al cargar la página de disponibilidad del profesor.', 'danger')
+        return redirect(url_for('admin.profesores')) # Redirigir si hay error
 
 # Ruta para cambiar el estado del profesor (activo/inactivo)
 @admin.route('/profesores/toggle_status/<int:id>')
@@ -1148,4 +1115,4 @@ def asignar_profesores_clases():
     # Inicio: formulario para seleccionar clase
     return render_template('admin/seleccionar_clase.html',
                          title='Asignar Profesores a Clases',
-                         form=form) 
+                         form=form)

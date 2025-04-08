@@ -1,4 +1,4 @@
-from app import db
+from app.extensions import db
 from datetime import datetime
 
 class Disponibilidad(db.Model):
@@ -10,6 +10,7 @@ class Disponibilidad(db.Model):
     dia = db.Column(db.String(10), nullable=False)  # lunes, martes, etc.
     hora = db.Column(db.String(20), nullable=False)  # formato: "8:00 - 8:55"
     disponible = db.Column(db.Boolean, default=True)
+    motivo = db.Column(db.String(255))  # Motivo de la indisponibilidad
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

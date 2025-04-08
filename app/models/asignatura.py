@@ -1,4 +1,4 @@
-from app import db
+from app.extensions import db
 from datetime import datetime
 
 # Tabla de asociación entre Asignaturas y Profesores

@@ -24,15 +24,15 @@ def index():
     # Obtener una lista de horarios recientes
     horarios = []
     for clase in clases:
-        total_asignaciones = Horario.query.filter_by(clase_id=clase.id).count()
-        if total_asignaciones > 0:
+        horario_reciente = Horario.query.filter_by(clase_id=clase.id).order_by(Horario.fecha_creacion.desc()).first()
+        if horario_reciente:
             horarios_activos += 1
             # Crear un objeto simplificado para la vista
             horarios.append({
                 'id': clase.id,
                 'nombre': clase.nombre,
                 'periodo': f"{clase.nivel} - {clase.curso}",
-                'fecha_creacion': Horario.query.filter_by(clase_id=clase.id).order_by(Horario.fecha_creacion.desc()).first().fecha_creacion,
+                'fecha_creacion': horario_reciente.fecha_creacion,
                 'activo': clase.activa
             })
     
@@ -101,9 +101,9 @@ def view_schedule(clase_id):
     
     # Recopilar todas las asignaturas usadas en este horario
     for dia in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']:
-        for hora in horario[dia]:
-            if hora and 'asignatura_id' in hora:
-                asignaturas_ids.add(hora['asignatura_id'])
+        for hora_data in horario.get(dia, []):
+            if hora_data and 'asignatura_id' in hora_data:
+                asignaturas_ids.add(hora_data['asignatura_id'])
     
     # Obtener información de cada asignatura
     for asignatura_id in asignaturas_ids:
@@ -116,11 +116,11 @@ def view_schedule(clase_id):
         profesor_nombre = None
         
         for dia in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']:
-            for hora in horario[dia]:
-                if hora and hora.get('asignatura_id') == asignatura_id:
+             for hora_data in horario.get(dia, []):
+                if hora_data and hora_data.get('asignatura_id') == asignatura_id:
                     horas += 1
-                    if not profesor_nombre and hora.get('profesor'):
-                        profesor_nombre = hora.get('profesor')
+                    if not profesor_nombre and hora_data.get('profesor'):
+                        profesor_nombre = hora_data.get('profesor')
         
         resumen_asignaturas.append({
             'nombre': asignatura.nombre,
@@ -149,76 +149,169 @@ def edit_schedule(clase_id):
     profesores = Profesor.query.join(User).filter(User.activo == True).all()
     horario = clase.get_horario_completo()
     
+    # Obtener actividades comunes
+    try:
+        from app.models.disponibilidad_comun import DisponibilidadComun
+        actividades_comunes = DisponibilidadComun.get_all_as_dict()
+    except Exception as e:
+        # Si la tabla no existe o hay algún error, usamos un diccionario vacío
+        actividades_comunes = {}
+        print(f"Error al obtener actividades comunes: {str(e)}")
+    
     return render_template('schedules/edit.html', 
                           title=f'Editar Horario de {clase.nombre}', 
                           clase=clase, 
                           horario=horario,
                           asignaturas=asignaturas,
-                          profesores=profesores)
+                          profesores=profesores,
+                          actividades_comunes=actividades_comunes)
 
 @schedules.route('/update', methods=['POST'])
 @login_required
 def update_schedule():
     # Solo administradores pueden actualizar horarios
     if not current_user.rol == 'admin':
-        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'})
+        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
     
     try:
         data = request.json
         clase_id = data.get('clase_id')
         dia = data.get('dia')
-        hora = data.get('hora')
+        hora = data.get('hora') # Esperamos formato '7:00 - 8:00'
         asignatura_id = data.get('asignatura_id')
         profesor_id = data.get('profesor_id')
+        ajustar_clases = data.get('ajustar_clases', False)
+        
+        print(f"[Update Schedule] Recibido: clase={clase_id}, dia={dia}, hora={hora}, asig={asignatura_id}, prof={profesor_id}")
         
         # Validar que todos los datos necesarios están presentes
         if not all([clase_id, dia, hora, asignatura_id, profesor_id]):
-            return jsonify({'success': False, 'message': 'Faltan datos necesarios'})
+             print("[Update Schedule] Error: Faltan datos")
+             return jsonify({'success': False, 'message': 'Faltan datos necesarios'}), 400
+        
+        # Verificar si hay conflictos antes de actualizar
+        if not Disponibilidad.es_disponible(profesor_id, dia, hora):
+            print(f"[Update Schedule] Conflicto: Profesor {profesor_id} no disponible en {dia} {hora}")
+            return jsonify({'success': False, 'message': 'El profesor no está disponible en este horario'}), 409
+        
+        # Verificar si el profesor ya tiene clase asignada en este horario
+        clases_existentes = Horario.query.filter_by(
+            profesor_id=profesor_id, 
+            dia=dia, 
+            hora=hora
+        ).filter(Horario.clase_id != clase_id).all()
+        
+        if clases_existentes:
+            clases_nombres = [h.clase.nombre for h in clases_existentes]
+            print(f"[Update Schedule] Conflicto: Profesor {profesor_id} ya asignado en {dia} {hora} a {', '.join(clases_nombres)}")
+            return jsonify({
+                'success': False, 
+                'message': 'El profesor ya tiene clase asignada en: ' + ', '.join(clases_nombres)
+            }), 409
+        
+        # Lista para almacenar las celdas ajustadas
+        adjusted_cells = []
         
         # Verificar si ya existe una asignación para esta clase en este horario
         horario_existente = Horario.get_by_clase_dia_hora(clase_id, dia, hora)
         
         if horario_existente:
+            print(f"[Update Schedule] Actualizando horario existente ID: {horario_existente.id}")
             # Actualizar la asignación existente
             horario_existente.asignatura_id = asignatura_id
             horario_existente.profesor_id = profesor_id
-            horario_existente.modificado_por = current_user.id
+            # horario_existente.modificado_por = current_user.id # Eliminado
         else:
+            print(f"[Update Schedule] Creando nuevo horario para {dia} {hora}")
             # Crear una nueva asignación
             horario = Horario(
                 clase_id=clase_id,
                 dia=dia,
-                hora=hora,
+                hora=hora, # Asegurarse que el modelo acepta este formato string
                 asignatura_id=asignatura_id,
-                profesor_id=profesor_id,
-                modificado_por=current_user.id
+                profesor_id=profesor_id
+                # modificado_por=current_user.id # Eliminado
             )
             db.session.add(horario)
         
+        # Si se solicita ajustar otras clases, buscar todas las de la misma asignatura en el mismo horario
+        if ajustar_clases:
+            print(f"[Update Schedule] Ajustando otras clases para Asignatura ID {asignatura_id}")
+            # Buscar todas las clases de la misma asignatura en el horario
+            clases_misma_asignatura = Horario.query.filter_by(
+                clase_id=clase_id,
+                asignatura_id=asignatura_id
+            ).all()
+            
+            # Obtener el profesor preferido para esta asignatura
+            # Esta lógica podría necesitar revisión si se quiere usar el profesor recién asignado
+            profesor_preferido = AsignaturaProfesor.query.filter_by(
+                asignatura_id=asignatura_id
+            ).order_by(AsignaturaProfesor.prioridad).first()
+            
+            if profesor_preferido:
+                profesor_id_preferido = profesor_preferido.profesor_id
+                print(f"[Update Schedule] Profesor preferido para ajuste: {profesor_id_preferido}")
+                
+                # Actualizar todas las demás clases de la misma asignatura con el mismo profesor
+                for h in clases_misma_asignatura:
+                    # No modificar la clase que acabamos de actualizar
+                    if h.dia == dia and h.hora == hora:
+                        continue
+                    
+                    # Verificar si el profesor está disponible en ese horario
+                    if Disponibilidad.es_disponible(profesor_id_preferido, h.dia, h.hora):
+                        # Verificar si el profesor tiene conflicto con otra clase
+                        conflicto = Horario.query.filter_by(
+                            profesor_id=profesor_id_preferido,
+                            dia=h.dia,
+                            hora=h.hora
+                        ).filter(Horario.clase_id != clase_id).first()
+                        
+                        if not conflicto:
+                            print(f"[Update Schedule] Ajustando {h.dia} {h.hora} al profesor {profesor_id_preferido}")
+                            h.profesor_id = profesor_id_preferido
+                            # h.modificado_por = current_user.id # Eliminado
+                            adjusted_cells.append({
+                                'dia': h.dia,
+                                'hora': h.hora,
+                                'asignatura_id': h.asignatura_id,
+                                'profesor_id': h.profesor_id
+                            })
+        
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Horario actualizado con éxito'})
+        print("[Update Schedule] Cambios guardados con éxito.")
+        return jsonify({
+            'success': True, 
+            'message': 'Horario actualizado con éxito',
+            'adjusted_cells': adjusted_cells
+        })
     
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+        db.session.rollback()
+        print(f"[Update Schedule] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc() # Imprime traceback en consola Flask
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
 
 @schedules.route('/delete', methods=['POST'])
 @login_required
 def delete_schedule():
     # Solo administradores pueden eliminar horarios
     if not current_user.rol == 'admin':
-        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'})
+        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
     
     try:
         data = request.json
         horario_id = data.get('horario_id')
         
         if not horario_id:
-            return jsonify({'success': False, 'message': 'ID de horario no proporcionado'})
+            return jsonify({'success': False, 'message': 'ID de horario no proporcionado'}), 400
         
         horario = Horario.query.get(horario_id)
         
         if not horario:
-            return jsonify({'success': False, 'message': 'Horario no encontrado'})
+            return jsonify({'success': False, 'message': 'Horario no encontrado'}), 404
         
         db.session.delete(horario)
         db.session.commit()
@@ -226,7 +319,47 @@ def delete_schedule():
         return jsonify({'success': True, 'message': 'Horario eliminado con éxito'})
     
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
+
+@schedules.route('/delete_by_position', methods=['POST'])
+@login_required
+def delete_by_position():
+    # Solo administradores pueden eliminar horarios
+    if not current_user.rol == 'admin':
+        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
+    
+    try:
+        data = request.json
+        clase_id = data.get('clase_id')
+        dia = data.get('dia')
+        hora = data.get('hora') # Esperamos formato '7:00 - 8:00'
+        
+        print(f"[Delete Position] Solicitud: clase={clase_id}, dia={dia}, hora={hora}")
+        
+        if not all([clase_id, dia, hora]):
+            print("[Delete Position] Error: Faltan datos")
+            return jsonify({'success': False, 'message': 'Faltan datos necesarios'}), 400
+        
+        # Buscar el horario por clase, día y hora
+        horario = Horario.get_by_clase_dia_hora(clase_id, dia, hora)
+        
+        if not horario:
+            print("[Delete Position] Error: Horario no encontrado")
+            return jsonify({'success': False, 'message': 'Horario no encontrado'}), 404
+            
+        print(f"[Delete Position] Eliminando horario ID: {horario.id}")
+        db.session.delete(horario)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Horario eliminado con éxito'})
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"[Delete Position] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
 
 @schedules.route('/generate/<int:clase_id>', methods=['GET', 'POST'])
 @login_required
@@ -240,10 +373,12 @@ def generate(clase_id):
     
     if request.method == 'POST':
         # Eliminar horarios existentes para esta clase
-        Horario.query.filter_by(clase_id=clase_id).delete()
-        db.session.commit()
+        Horario.query.filter_by(clase_id=clase_id).delete() 
+        # NO HACEMOS COMMIT aquí todavía, el generador lo hará al final si tiene éxito
         
         # Llamar al algoritmo para generar el horario
+        from .generator import generate_schedule, reset_asignaciones_globales
+        reset_asignaciones_globales() # Asegurarse de reiniciar el estado global
         result = generate_schedule(clase_id)
         
         if result['success']:
@@ -276,20 +411,29 @@ def generate_all():
         reset_asignaciones_globales()
         
         for clase in clases:
-            # Eliminar horarios existentes para esta clase
+            # Eliminar horarios existentes para esta clase ANTES de generar
             Horario.query.filter_by(clase_id=clase.id).delete()
+            # db.session.commit() # Es mejor hacer commit después del bucle o dentro del generador
             
             # Llamar al algoritmo para generar el horario
-            result = generate_schedule(clase.id)
+            result = generate_schedule(clase.id) 
             
             if result['success']:
                 success_count += 1
             else:
                 error_messages.append(f"Error en {clase.nombre}: {result['message']}")
         
-        db.session.commit()
+        # Commit final después de intentar generar todos
+        try:
+            db.session.commit()
+            print("[Generate All] Commit final exitoso.")
+        except Exception as e:
+             db.session.rollback()
+             print(f"[Generate All] ERROR en commit final: {str(e)}")
+             flash(f'Error crítico al guardar los horarios generados: {str(e)}', 'danger')
+             # Los mensajes de error individuales ya se acumularon
         
-        if success_count == len(clases):
+        if not error_messages:
             flash(f'Horarios generados con éxito para {success_count} clases', 'success')
         else:
             flash(f'Generados {success_count} de {len(clases)} horarios. Errores: {", ".join(error_messages)}', 'warning')
@@ -303,46 +447,255 @@ def generate_all():
 @schedules.route('/availability')
 @login_required
 def availability():
-    # Solo administradores y profesores pueden ver disponibilidad
+    # Esta ruta es para la página general de selección de profesor
     if not current_user.rol in ['admin', 'profesor']:
         flash('No tienes permiso para ver esta página', 'warning')
         return redirect(url_for('schedules.index'))
     
     if current_user.rol == 'profesor':
-        # El profesor solo puede ver su propia disponibilidad
         profesor = Profesor.query.filter_by(usuario_id=current_user.id).first_or_404()
         profesores = [profesor]
+        profesor_seleccionado = profesor # Pasar el profesor actual para la plantilla
     else:
-        # El admin puede ver la disponibilidad de todos los profesores
-        profesores = Profesor.query.all()
+        profesores = Profesor.query.join(User).filter(User.activo == True).all()
+        profesor_seleccionado = None # Admin no tiene uno preseleccionado
     
-    return render_template('schedules/availability.html', 
+    # Renderizar la plantilla antigua que tenía el selector
+    # O adaptar una nueva si 'disponibilidad_profesor.html' ya no lo tiene
+    return render_template('schedules/availability_selector.html', # Asumiendo que renombras o creas una nueva
                           title='Disponibilidad de Profesores', 
-                          profesores=profesores)
+                          profesores=profesores,
+                          profesor_seleccionado=profesor_seleccionado) 
 
 @schedules.route('/availability/update', methods=['POST'])
 @login_required
 def update_availability():
+    print("[Update Availability] Recibida solicitud POST")
     try:
         data = request.json
+        print(f"[Update Availability] Datos recibidos: {data}")
         profesor_id = data.get('profesor_id')
-        dia = data.get('dia')
-        hora = data.get('hora')
+        dia = data.get('dia') # Esperamos 'lunes', etc.
+        hora = data.get('hora') # Esperamos '7:00 - 8:00', etc.
         disponible = data.get('disponible', False)
         motivo = data.get('motivo', '')
+        
+        # Validar datos básicos
+        if not all([profesor_id, dia, hora]):
+             print("[Update Availability] Error: Faltan datos clave (profesor, dia, hora)")
+             return jsonify({'success': False, 'message': 'Faltan datos necesarios'}), 400
+             
+        if dia not in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']:
+             print(f"[Update Availability] Error: Día inválido '{dia}'")
+             return jsonify({'success': False, 'message': f'Día inválido: {dia}'}), 400
+             
+        # Aquí podríamos añadir validación del formato de hora si fuera necesario
         
         # Verificar permisos
         if current_user.rol == 'profesor':
             profesor = Profesor.query.filter_by(usuario_id=current_user.id).first()
+            # Convertir profesor_id a int para comparación segura
             if not profesor or profesor.id != int(profesor_id):
-                return jsonify({'success': False, 'message': 'No tienes permiso para modificar esta disponibilidad'})
+                 print("[Update Availability] Error Permiso: Profesor intentando modificar otro ID")
+                 return jsonify({'success': False, 'message': 'No tienes permiso para modificar esta disponibilidad'}), 403
         elif current_user.rol != 'admin':
-            return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'})
+            print("[Update Availability] Error Permiso: Rol no autorizado")
+            return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
         
         # Actualizar o crear disponibilidad
-        Disponibilidad.set_disponible(profesor_id, dia, hora, disponible, motivo)
+        print(f"[Update Availability] Llamando a Disponibilidad.set_disponible para prof {profesor_id}, {dia}, {hora}, disp={disponible}")
+        disp_obj = Disponibilidad.set_disponible(profesor_id, dia, hora, disponible, motivo)
+        print(f"[Update Availability] Operación set_disponible completada. Objeto: {disp_obj}")
         
         return jsonify({'success': True, 'message': 'Disponibilidad actualizada con éxito'})
     
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}) 
+        print(f"[Update Availability] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
+
+@schedules.route('/check_conflicts')
+@login_required
+def check_conflicts():
+    """Verifica conflictos de horario para un profesor en un día y hora específicos"""
+    profesor_id = request.args.get('profesor_id', type=int)
+    dia = request.args.get('dia')
+    hora = request.args.get('hora') # Asume formato '7:00 - 8:00'
+    clase_id = request.args.get('clase_id', type=int)
+    
+    print(f"[Check Conflicts] Solicitud: prof={profesor_id}, dia={dia}, hora={hora}, clase_actual={clase_id}")
+    
+    if not all([profesor_id, dia, hora]):
+        return jsonify({'success': False, 'message': 'Faltan parámetros requeridos'}), 400
+    
+    # Verificar disponibilidad del profesor
+    if not Disponibilidad.es_disponible(profesor_id, dia, hora):
+        print("[Check Conflicts] Conflicto: Profesor no disponible.")
+        return jsonify({
+            'conflict': True,
+            'message': 'El profesor no está disponible en este horario'
+        })
+    
+    # Verificar si el profesor ya tiene clase asignada en este horario (excluyendo la clase actual si se edita)
+    query = Horario.query.filter_by(
+        profesor_id=profesor_id, 
+        dia=dia, 
+        hora=hora
+    )
+    if clase_id: # Si estamos editando, excluimos la propia clase
+        query = query.filter(Horario.clase_id != clase_id)
+        
+    clases_existentes = query.all()
+    
+    if clases_existentes:
+        clases_nombres = [h.clase.nombre for h in clases_existentes]
+        print(f"[Check Conflicts] Conflicto: Profesor ya asignado a: {', '.join(clases_nombres)}")
+        return jsonify({
+            'conflict': True,
+            'message': 'El profesor ya tiene clase asignada en: ' + ', '.join(clases_nombres)
+        })
+    
+    # Verificar si hay algún bloque de disponibilidad común en este horario
+    try:
+        from app.models.disponibilidad_comun import DisponibilidadComun
+        bloque_comun = DisponibilidadComun.get_by_dia_hora(dia, hora)
+        if bloque_comun:
+            print("[Check Conflicts] Conflicto: Actividad común encontrada.")
+            return jsonify({
+                'conflict': True, 
+                'message': f'Hay una actividad común programada: {bloque_comun.titulo}'
+            })
+    except Exception as e:
+        # Si la tabla no existe o hay algún error, ignoramos esta verificación
+        print(f"[Check Conflicts] WARN al verificar actividades comunes: {str(e)}")
+    
+    print("[Check Conflicts] No se encontraron conflictos.")
+    return jsonify({'conflict': False})
+
+# app/schedules/routes.py (Revisión de la función get_disponibilidad)
+
+@schedules.route('/get_disponibilidad/<int:profesor_id>')
+@login_required
+def get_disponibilidad(profesor_id):
+    print(f"[Get Disponibilidad] Solicitud para profesor ID: {profesor_id}")
+    # Verificar permisos
+    if current_user.rol == 'profesor':
+        profesor = Profesor.query.filter_by(usuario_id=current_user.id).first()
+        if not profesor or profesor.id != profesor_id:
+            print("[Get Disponibilidad] Error Permiso: Profesor intentando ver otro ID")
+            return jsonify({'success': False, 'message': 'No tienes permiso para ver esta disponibilidad'}), 403
+    elif current_user.rol != 'admin':
+        print("[Get Disponibilidad] Error Permiso: Rol no autorizado")
+        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
+    
+    try:
+        import traceback # Para logs de error detallados
+
+        disponibilidades = Disponibilidad.query.filter_by(profesor_id=profesor_id).all()
+        print(f"[Get Disponibilidad] Encontradas {len(disponibilidades)} entradas en BD.")
+
+        disponibilidad_dict = {}
+        for disp in disponibilidades:
+            # Asegurarse que dia y hora son strings no nulos
+            dia_str = str(disp.dia).lower().strip() if disp.dia else None
+            hora_str = str(disp.hora).strip() if disp.hora else None
+
+            if dia_str and hora_str and dia_str in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']:
+                key = f"{dia_str}_{hora_str}" # ej: "lunes_7:00 - 8:00"
+                disponibilidad_dict[key] = {
+                    'id': disp.id,
+                    'disponible': disp.disponible,
+                    'motivo': getattr(disp, 'motivo', '') or '' # Usar getattr por si acaso
+                }
+            else:
+                 print(f"[Get Disponibilidad] WARN: Entrada omitida por dia/hora inválidos o dia no estándar. ID: {disp.id}, Dia: {disp.dia}, Hora: {disp.hora}")
+
+        print(f"[Get Disponibilidad] Diccionario final a enviar (Keys: {len(disponibilidad_dict)}): {disponibilidad_dict}")
+
+        return jsonify({
+            'success': True, 
+            'disponibilidad': disponibilidad_dict
+        })
+
+    except Exception as e:
+        print(f"[Get Disponibilidad] ERROR CRÍTICO para profesor {profesor_id}: {str(e)}")
+        print(traceback.format_exc()) # Imprime el traceback completo en la consola del servidor Flask
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
+
+@schedules.route('/move_class', methods=['POST'])
+@login_required
+def move_class():
+    """Mueve una clase de una posición a otra en el horario"""
+    # Solo administradores pueden mover clases
+    if not current_user.rol == 'admin':
+        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
+    
+    try:
+        data = request.json
+        clase_id = data.get('clase_id')
+        origen_dia = data.get('origen_dia')
+        origen_hora = data.get('origen_hora') # Formato '7:00 - 8:00'
+        destino_dia = data.get('destino_dia')
+        destino_hora = data.get('destino_hora') # Formato '7:00 - 8:00'
+        
+        print(f"[Move Class] Solicitud: clase={clase_id} de {origen_dia} {origen_hora} a {destino_dia} {destino_hora}")
+        
+        if not all([clase_id, origen_dia, origen_hora, destino_dia, destino_hora]):
+             print("[Move Class] Error: Faltan datos")
+             return jsonify({'success': False, 'message': 'Faltan datos necesarios'}), 400
+        
+        # Buscar la asignación de horario original
+        horario_origen = Horario.get_by_clase_dia_hora(clase_id, origen_dia, origen_hora)
+        
+        if not horario_origen:
+            print("[Move Class] Error: Horario origen no encontrado")
+            return jsonify({'success': False, 'message': 'Horario origen no encontrado'}), 404
+        
+        print(f"[Move Class] Horario origen encontrado ID: {horario_origen.id}")
+        
+        # Verificar si el destino ya está ocupado por OTRA asignatura en la MISMA clase
+        horario_destino = Horario.get_by_clase_dia_hora(clase_id, destino_dia, destino_hora)
+        if horario_destino:
+            print("[Move Class] Error: Posición destino ya ocupada en esta clase")
+            return jsonify({'success': False, 'message': 'La posición destino ya está ocupada'}), 409
+        
+        # Verificar disponibilidad del profesor en el nuevo horario
+        if not Disponibilidad.es_disponible(horario_origen.profesor_id, destino_dia, destino_hora):
+            print("[Move Class] Conflicto: Profesor no disponible en destino.")
+            return jsonify({'success': False, 'message': 'El profesor no está disponible en el nuevo horario'}), 409
+        
+        # Verificar si el profesor ya tiene clase en ese horario en otra clase diferente
+        clases_existentes_destino = Horario.query.filter_by(
+            profesor_id=horario_origen.profesor_id,
+            dia=destino_dia,
+            hora=destino_hora
+        ).filter(Horario.clase_id != clase_id).all()
+        
+        if clases_existentes_destino:
+            clases_nombres = [h.clase.nombre for h in clases_existentes_destino]
+            print(f"[Move Class] Conflicto: Profesor ya asignado a otras clases en destino: {', '.join(clases_nombres)}")
+            return jsonify({
+                'success': False,
+                'message': 'El profesor ya tiene clase asignada en: ' + ', '.join(clases_nombres)
+            }), 409
+        
+        # Crear nuevo registro de horario para el destino
+        # NO creamos uno nuevo, simplemente actualizamos el existente
+        print(f"[Move Class] Actualizando horario ID {horario_origen.id} a {destino_dia} {destino_hora}")
+        horario_origen.dia = destino_dia
+        horario_origen.hora = destino_hora
+        # horario_origen.modificado_por = current_user.id # Eliminado
+        
+        # Guardar el cambio
+        db.session.commit()
+        print("[Move Class] Horario movido con éxito.")
+        
+        return jsonify({'success': True, 'message': 'Horario movido con éxito'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[Move Class] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 

@@ -12,10 +12,13 @@ from app.models.horario import Horario
 from app.models.profesor import Profesor
 from app.models.asignatura import Asignatura, AsignaturaProfesor, AsignaturaProfesorClase
 from app.models.disponibilidad import Disponibilidad
+from app.models.disponibilidad_comun import DisponibilidadComun
+import random
 
 # Constantes
 DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
 HORAS = list(range(1, 8))  # 1-7
+MAX_HORAS_DIARIAS_POR_ASIGNATURA = 2  # Máximo de horas para una asignatura por día en una clase
 
 # Mapeo de números a texto para horas
 HORAS_TEXTO = {
@@ -179,6 +182,28 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
             if not bloque_disponible:
                 continue
             
+            # Verificar que no hay bloques comunes en este horario
+            hay_bloque_comun = False
+            for i in range(tamano_bloque):
+                hora_actual = hora_inicio + i
+                hora_texto = HORAS_TEXTO[hora_actual]
+                if DisponibilidadComun.get_by_dia_hora(dia, hora_texto) is not None:
+                    hay_bloque_comun = True
+                    break
+            
+            if hay_bloque_comun:
+                continue
+            
+            # Verificar que no se exceda el máximo de horas diarias por asignatura
+            horas_asignatura_dia = sum(
+                1 for h in range(len(HORAS)) 
+                if horario_matriz[dia][h] is not None and horario_matriz[dia][h]['asignatura_id'] == asignatura.id
+            )
+            
+            if horas_asignatura_dia + tamano_bloque > MAX_HORAS_DIARIAS_POR_ASIGNATURA:
+                # Ya se alcanzó el máximo para esta asignatura en este día
+                continue
+            
             # Encontrar un profesor disponible para todo el bloque
             for profesor in profesores:
                 profesor_disponible = True
@@ -233,10 +258,24 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
             if horario_matriz[dia][hora - 1] is not None:
                 continue
             
+            # Verificar que no hay bloques comunes en este horario
+            hora_texto = HORAS_TEXTO[hora]
+            if DisponibilidadComun.get_by_dia_hora(dia, hora_texto) is not None:
+                continue
+            
+            # Verificar que no se exceda el máximo de horas diarias por asignatura
+            horas_asignatura_dia = sum(
+                1 for h in range(len(HORAS)) 
+                if horario_matriz[dia][h] is not None and horario_matriz[dia][h]['asignatura_id'] == asignatura.id
+            )
+            
+            if horas_asignatura_dia >= MAX_HORAS_DIARIAS_POR_ASIGNATURA:
+                # Ya se alcanzó el máximo para esta asignatura en este día
+                continue
+            
             # Encontrar un profesor disponible
             for profesor in profesores:
                 # Verificar la disponibilidad del profesor
-                hora_texto = HORAS_TEXTO[hora]
                 if not Disponibilidad.es_disponible(profesor.id, dia, hora_texto):
                     continue
                 
