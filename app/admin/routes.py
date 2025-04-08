@@ -4,10 +4,10 @@ import os
 from werkzeug.utils import secure_filename
 from app import db
 from app.admin import admin
-from app.admin.forms import UserForm, ProfesorForm, AsignaturaForm, ClaseForm
+from app.admin.forms import UserForm, ProfesorForm, AsignaturaForm, ClaseForm, AsignarProfesorClaseForm
 from app.models.user import User
 from app.models.profesor import Profesor
-from app.models.asignatura import Asignatura, AsignaturaProfesor
+from app.models.asignatura import Asignatura, AsignaturaProfesor, AsignaturaProfesorClase
 from app.models.clase import Clase
 from app.admin.utils import admin_required, save_picture
 
@@ -1051,4 +1051,101 @@ def generar_horarios():
     # TODO: Implementar algoritmo más avanzado para generar horarios completos
     
     flash('Generación automática de horarios iniciada. Revise cada clase para completar manualmente si es necesario.', 'info')
-    return redirect(url_for('admin.horarios')) 
+    return redirect(url_for('admin.horarios'))
+
+@admin.route('/asignaturas/asignar-profesores', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def asignar_profesores_clases():
+    form = AsignarProfesorClaseForm()
+    
+    # Cargar las clases activas
+    clases = Clase.query.filter_by(activa=True).all()
+    form.clase_id.choices = [(c.id, c.nombre) for c in clases]
+    
+    # Si ya se seleccionó una clase, cargar las asignaturas y profesores
+    clase_id = request.args.get('clase_id', type=int) or form.clase_id.data
+    asignatura_id = request.args.get('asignatura_id', type=int)
+    
+    if clase_id:
+        clase = Clase.query.get_or_404(clase_id)
+        asignaturas = Asignatura.query.filter_by(activa=True).all()
+        
+        # Si se está editando una asignatura específica
+        if asignatura_id:
+            asignatura = Asignatura.query.get_or_404(asignatura_id)
+            # Obtener todos los profesores que pueden enseñar esta asignatura
+            asignaciones_profesor = AsignaturaProfesor.query.filter_by(asignatura_id=asignatura_id).all()
+            profesores = [ap.profesor for ap in asignaciones_profesor if ap.profesor.usuario.activo]
+            
+            # Obtener el profesor actualmente asignado a esta clase para esta asignatura
+            asignacion_actual = AsignaturaProfesorClase.query.join(AsignaturaProfesor).filter(
+                AsignaturaProfesor.asignatura_id == asignatura_id,
+                AsignaturaProfesorClase.clase_id == clase_id
+            ).first()
+            
+            # Si el formulario ha sido enviado
+            if request.method == 'POST':
+                profesor_id = request.form.get('profesor_id', type=int)
+                
+                # Si se seleccionó un profesor
+                if profesor_id:
+                    # Verificar si ya existe una asignación para esta clase y asignatura
+                    if asignacion_actual:
+                        # Actualizar la asignación existente
+                        asignacion_profesor = AsignaturaProfesor.query.filter_by(
+                            asignatura_id=asignatura_id,
+                            profesor_id=profesor_id
+                        ).first()
+                        
+                        if asignacion_profesor:
+                            asignacion_actual.asignatura_profesor_id = asignacion_profesor.id
+                            db.session.commit()
+                            flash(f'Profesor actualizado para la asignatura {asignatura.nombre} en la clase {clase.nombre}', 'success')
+                        else:
+                            flash('Combinación de profesor y asignatura no válida', 'danger')
+                    else:
+                        # Crear una nueva asignación
+                        asignacion_profesor = AsignaturaProfesor.query.filter_by(
+                            asignatura_id=asignatura_id,
+                            profesor_id=profesor_id
+                        ).first()
+                        
+                        if asignacion_profesor:
+                            nueva_asignacion = AsignaturaProfesorClase(
+                                asignatura_profesor_id=asignacion_profesor.id,
+                                clase_id=clase_id
+                            )
+                            db.session.add(nueva_asignacion)
+                            db.session.commit()
+                            flash(f'Profesor asignado para la asignatura {asignatura.nombre} en la clase {clase.nombre}', 'success')
+                        else:
+                            flash('Combinación de profesor y asignatura no válida', 'danger')
+                
+                # Si se envió pero no se seleccionó ningún profesor, eliminar la asignación existente
+                elif asignacion_actual and 'eliminar' in request.form:
+                    db.session.delete(asignacion_actual)
+                    db.session.commit()
+                    flash(f'Asignación de profesor eliminada para la asignatura {asignatura.nombre}', 'success')
+                
+                return redirect(url_for('admin.asignar_profesores_clases', clase_id=clase_id))
+            
+            # Para el GET, preparar datos para la plantilla
+            return render_template('admin/asignar_profesor_asignatura.html',
+                                 title=f'Asignar Profesor para {asignatura.nombre} - {clase.nombre}',
+                                 clase=clase,
+                                 asignatura=asignatura,
+                                 profesores=profesores,
+                                 asignacion_actual=asignacion_actual)
+        
+        # Si solo se seleccionó la clase, mostrar la lista de asignaturas
+        return render_template('admin/asignar_profesores.html',
+                             title=f'Asignar Profesores para {clase.nombre}',
+                             clase=clase,
+                             asignaturas=asignaturas,
+                             form=form)
+    
+    # Inicio: formulario para seleccionar clase
+    return render_template('admin/seleccionar_clase.html',
+                         title='Asignar Profesores a Clases',
+                         form=form) 

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4"><i class="fas fa-chalkboard-teacher me-2"></i>{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Panel de Administración</a></li>
+        <li class="breadcrumb-item active">Asignar Profesores a Clases</li>
+    </ol>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-lg mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-users-cog me-2"></i>Seleccione una Clase</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Información:</strong> Seleccione una clase para asignar profesores específicos a cada asignatura.
+                        Esto permitirá que un profesor enseñe una asignatura particular solo a clases específicas.
+                    </div>
+                    
+                    <form method="GET" action="{{ url_for('admin.asignar_profesores_clases') }}">
+                        <div class="mb-3">
+                            <label for="clase_id" class="form-label">Clase</label>
+                            <select class="form-select" id="clase_id" name="clase_id" required>
+                                <option value="">-- Seleccione una clase --</option>
+                                {% for value, label in form.clase_id.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-arrow-right me-2"></i>Continuar
+                            </button>
+                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

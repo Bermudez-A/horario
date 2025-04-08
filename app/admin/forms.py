@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, TextAreaField, IntegerField, SelectField, BooleanField, SubmitField, RadioField
+from wtforms import StringField, TextAreaField, IntegerField, SelectField, BooleanField, SubmitField, RadioField, SelectMultipleField, widgets
 from wtforms.validators import DataRequired, Email, Length, Optional, NumberRange, ValidationError
 from app.models.user import User
 from app.models.asignatura import Asignatura
@@ -128,4 +128,15 @@ class ClaseForm(FlaskForm):
         if self.original_nombre is None or self.original_nombre != nombre.data:
             clase = Clase.query.filter_by(nombre=nombre.data).first()
             if clase is not None:
-                raise ValidationError('Ya existe una clase con este nombre.') 
+                raise ValidationError('Ya existe una clase con este nombre.')
+
+class MultiCheckboxField(SelectMultipleField):
+    """Campo personalizado para checkboxes múltiples"""
+    widget = widgets.ListWidget(prefix_label=False)
+    option_widget = widgets.CheckboxInput()
+
+class AsignarProfesorClaseForm(FlaskForm):
+    """Formulario para asignar profesores específicos a asignaturas por clase"""
+    clase_id = SelectField('Clase', coerce=int, validators=[DataRequired()])
+    asignaciones = SelectMultipleField('Asignaciones', coerce=int, validators=[Optional()])
+    submit = SubmitField('Guardar Asignaciones') 

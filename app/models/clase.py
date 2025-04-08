@@ -15,6 +15,7 @@ class Clase(db.Model):
     
     # Relaciones
     horarios = db.relationship('Horario', back_populates='clase', cascade='all, delete-orphan')
+    asignaciones_profesor = db.relationship('AsignaturaProfesorClase', back_populates='clase', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Clase {self.nombre}>'
@@ -46,4 +47,17 @@ class Clase(db.Model):
                 # Manejar errores de conversión o índices fuera de rango
                 print(f"Error al procesar hora '{h.hora}' para día '{h.dia}': {str(e)}")
         
-        return horario 
+        return horario
+    
+    def get_profesor_asignado(self, asignatura_id):
+        """Obtiene el profesor asignado a una asignatura específica para esta clase"""
+        from app.models.asignatura import AsignaturaProfesorClase, AsignaturaProfesor
+        
+        asignacion = AsignaturaProfesorClase.query.join(AsignaturaProfesor).filter(
+            AsignaturaProfesor.asignatura_id == asignatura_id,
+            AsignaturaProfesorClase.clase_id == self.id
+        ).first()
+        
+        if asignacion:
+            return asignacion.asignatura_profesor.profesor
+        return None 

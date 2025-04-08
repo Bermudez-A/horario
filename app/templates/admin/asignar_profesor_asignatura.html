@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4"><i class="fas fa-user-tie me-2"></i>{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Panel de Administración</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.asignar_profesores_clases') }}">Asignar Profesores a Clases</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.asignar_profesores_clases', clase_id=clase.id) }}">{{ clase.nombre }}</a></li>
+        <li class="breadcrumb-item active">{{ asignatura.nombre }}</li>
+    </ol>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-lg mt-3 mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>Asignar Profesor</h3>
+                    <a href="{{ url_for('admin.asignar_profesores_clases', clase_id=clase.id) }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Volver a Asignaturas
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Asignatura:</strong> {{ asignatura.nombre }} ({{ asignatura.codigo }})
+                        <br>
+                        <strong>Clase:</strong> {{ clase.nombre }}
+                        <br>
+                        <strong>Horas semanales:</strong> {{ asignatura.horas_semanales }}
+                    </div>
+                    
+                    {% if profesores %}
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label class="form-label">Seleccione un profesor para esta asignatura</label>
+                            
+                            {% for profesor in profesores %}
+                            <div class="form-check card mb-2 p-2">
+                                <input class="form-check-input ms-1" type="radio" name="profesor_id" 
+                                       id="profesor_{{ profesor.id }}" value="{{ profesor.id }}"
+                                       {% if asignacion_actual and asignacion_actual.asignatura_profesor.profesor_id == profesor.id %}checked{% endif %}>
+                                <label class="form-check-label ms-2" for="profesor_{{ profesor.id }}">
+                                    <div class="d-flex align-items-center">
+                                        {% if profesor.foto %}
+                                        <img src="{{ url_for('static', filename='uploads/profesores/' + profesor.foto) }}" 
+                                             class="rounded-circle me-2" width="40" height="40" alt="{{ profesor.usuario.nombre }}">
+                                        {% else %}
+                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ profesor.usuario.nombre }} {{ profesor.usuario.apellido }}</strong>
+                                            <small class="d-block text-muted">{{ profesor.especialidad }}</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Guardar Asignación
+                            </button>
+                            
+                            {% if asignacion_actual %}
+                            <button type="submit" name="eliminar" value="1" class="btn btn-danger">
+                                <i class="fas fa-trash-alt me-2"></i>Eliminar Asignación
+                            </button>
+                            {% endif %}
+                            
+                            <a href="{{ url_for('admin.asignar_profesores_clases', clase_id=clase.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No hay profesores disponibles para esta asignatura. Por favor, asigne profesores a esta asignatura primero.
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.asignar_profesores_clases', clase_id=clase.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver
+                        </a>
+                        <a href="{{ url_for('admin.profesores') }}" class="btn btn-primary">
+                            <i class="fas fa-users me-2"></i>Gestionar Profesores
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

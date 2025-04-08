@@ -10,7 +10,7 @@ from app import db
 from app.models.clase import Clase
 from app.models.horario import Horario
 from app.models.profesor import Profesor
-from app.models.asignatura import Asignatura, AsignaturaProfesor
+from app.models.asignatura import Asignatura, AsignaturaProfesor, AsignaturaProfesorClase
 from app.models.disponibilidad import Disponibilidad
 
 # Constantes
@@ -50,6 +50,27 @@ def profesor_disponible_globalmente(profesor_id, dia, hora):
 def registrar_asignacion_global(profesor_id, dia, hora, clase_id):
     """Registra la asignación de un profesor en el horario global"""
     asignaciones_globales[(profesor_id, dia, hora)] = clase_id
+
+def get_profesores_by_asignatura(asignatura_id, clase_id=None):
+    """
+    Obtiene la lista de profesores asignados a una asignatura.
+    Si se proporciona clase_id, primero busca si hay un profesor específicamente asignado
+    a esa clase para la asignatura.
+    """
+    # Si hay una clase específica, intentar obtener el profesor asignado a esa clase
+    if clase_id is not None:
+        try:
+            profesor_asignado = AsignaturaProfesorClase.obtener_profesor_para_asignatura_clase(asignatura_id, clase_id)
+            if profesor_asignado and profesor_asignado.usuario.activo:
+                return [profesor_asignado]
+        except Exception as e:
+            # Si hay un error (por ejemplo, la tabla no existe), loguear y continuar
+            print(f"Error al buscar profesor específico: {str(e)}")
+    
+    # Si no hay profesor específico o no se proporcionó clase_id, devolver todos los profesores
+    asignaciones = AsignaturaProfesor.query.filter_by(asignatura_id=asignatura_id).all()
+    profesores = [asig.profesor for asig in asignaciones if asig.profesor.usuario.activo]
+    return profesores
 
 def generate_schedule(clase_id):
     """
@@ -93,8 +114,9 @@ def generate_schedule(clase_id):
             if horas_restantes <= 0:
                 continue
             
-            # Obtener profesores para esta asignatura
-            profesores_disponibles = get_profesores_by_asignatura(asignatura.id)
+            # Obtener profesores para esta asignatura, priorizando los asignados específicamente a esta clase
+            profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
+            
             if not profesores_disponibles:
                 return {
                     'success': False, 
@@ -142,12 +164,6 @@ def generate_schedule(clase_id):
     except Exception as e:
         db.session.rollback()
         return {'success': False, 'message': f'Error al generar el horario: {str(e)}'}
-
-def get_profesores_by_asignatura(asignatura_id):
-    """Obtiene la lista de profesores asignados a una asignatura"""
-    asignaciones = AsignaturaProfesor.query.filter_by(asignatura_id=asignatura_id).all()
-    profesores = [asig.profesor for asig in asignaciones if asig.profesor.usuario.activo]
-    return profesores
 
 def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignaciones, tamano_bloque=2):
     """Intenta asignar un bloque continuo de horas para una asignatura"""

@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4"><i class="fas fa-chalkboard-teacher me-2"></i>{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Panel de Administración</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.asignar_profesores_clases') }}">Asignar Profesores a Clases</a></li>
+        <li class="breadcrumb-item active">{{ clase.nombre }}</li>
+    </ol>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-lg border-0 rounded-lg mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="fas fa-book me-2"></i>Asignaturas para {{ clase.nombre }}</h3>
+                    <a href="{{ url_for('admin.asignar_profesores_clases') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Cambiar Clase
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Instrucciones:</strong> Seleccione una asignatura para asignarle un profesor específico para esta clase.
+                    </div>
+                    
+                    {% if asignaturas %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Asignatura</th>
+                                    <th>Código</th>
+                                    <th>Horas Semanales</th>
+                                    <th>Profesores Disponibles</th>
+                                    <th>Profesor Asignado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for asignatura in asignaturas %}
+                                {% set profesor_asignado = asignatura.get_profesor_para_clase(clase.id) %}
+                                <tr>
+                                    <td>
+                                        <span class="d-flex align-items-center">
+                                            <span class="color-dot me-2" style="background-color: {{ asignatura.color }};"></span>
+                                            {{ asignatura.nombre }}
+                                        </span>
+                                    </td>
+                                    <td>{{ asignatura.codigo }}</td>
+                                    <td>{{ asignatura.horas_semanales }}</td>
+                                    <td>
+                                        {% if asignatura.profesores %}
+                                            {{ asignatura.profesores|length }}
+                                        {% else %}
+                                            <span class="badge bg-warning">Ninguno</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if profesor_asignado %}
+                                            <span class="badge bg-success">{{ profesor_asignado.usuario.nombre }} {{ profesor_asignado.usuario.apellido }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('admin.asignar_profesores_clases', clase_id=clase.id, asignatura_id=asignatura.id) }}" class="btn btn-primary btn-sm">
+                                            {% if profesor_asignado %}
+                                            <i class="fas fa-edit me-1"></i>Cambiar
+                                            {% else %}
+                                            <i class="fas fa-user-plus me-1"></i>Asignar
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No hay asignaturas disponibles. Por favor, agregue asignaturas primero.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Panel
+                </a>
+                <a href="{{ url_for('admin.asignaturas') }}" class="btn btn-primary">
+                    <i class="fas fa-book me-2"></i>Gestionar Asignaturas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .color-dot {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+    }
+</style>
+{% endblock %} 
