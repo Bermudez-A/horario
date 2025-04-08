@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas {% if user %}fa-user-edit{% else %}fa-user-plus{% endif %} me-2"></i>{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }} <!-- Token CSRF -->
+
+                        <div class="mb-3">
+                            {{ form.username.label(class="form-label fw-bold") }}
+                            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), placeholder="Nombre de usuario único") }}
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.username.errors %}
+                                        <span>{{ error }}</span><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label fw-bold") }}
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="ejemplo@correo.com") }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        <span>{{ error }}</span><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.nombre.label(class="form-label fw-bold") }}
+                                {{ form.nombre(class="form-control" + (" is-invalid" if form.nombre.errors else ""), placeholder="Nombre de pila") }}
+                                {% if form.nombre.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.nombre.errors %}
+                                            <span>{{ error }}</span><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.apellido.label(class="form-label fw-bold") }}
+                                {{ form.apellido(class="form-control" + (" is-invalid" if form.apellido.errors else ""), placeholder="Apellidos") }}
+                                {% if form.apellido.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.apellido.errors %}
+                                            <span>{{ error }}</span><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.rol.label(class="form-label fw-bold") }}
+                            {{ form.rol(class="form-select" + (" is-invalid" if form.rol.errors else "")) }}
+                            {% if form.rol.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.rol.errors %}
+                                        <span>{{ error }}</span><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-check form-switch mb-4">
+                            {{ form.activo(class="form-check-input" + (" is-invalid" if form.activo.errors else ""), role="switch") }}
+                            {{ form.activo.label(class="form-check-label") }}
+                             {% if form.activo.errors %}
+                                <div class="invalid-feedback d-block"> <!-- d-block para mostrar error en switch -->
+                                    {% for error in form.activo.errors %}
+                                        <span>{{ error }}</span><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if not user %} <!-- Solo mostrar en creación -->
+                        <div class="alert alert-info small">
+                            <i class="fas fa-info-circle me-1"></i> Se asignará una contraseña temporal: <code>temporal123</code>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

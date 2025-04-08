@@ -32,17 +32,19 @@
         background-color: #fff9c4;
         cursor: not-allowed;
         position: relative;
+        opacity: 0.8; /* Hacerlas un poco menos prominentes */
     }
     
     .asignatura-bloque {
         height: 100%;
         width: 100%;
-        padding: 10px;
+        padding: 8px;
         color: white;
         border-radius: 4px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        font-size: 0.85rem; /* Ligeramente más pequeño */
     }
     
     .actividad-comun-bloque {
@@ -52,29 +54,31 @@
         border-radius: 4px;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: center; /* Centrar contenido */
+        align-items: center;
         text-align: center;
     }
     
     .actividad-comun-nombre {
         font-weight: bold;
         font-size: 0.9rem;
+        color: #6c757d; /* Color más apagado */
     }
     
     .asignatura-nombre {
         font-weight: bold;
-        font-size: 0.9rem;
     }
     
     .profesor-nombre {
         font-size: 0.8rem;
+        margin-top: 4px;
     }
     
     /* Estilos para el modal */
-    .subject-option {
+    .subject-option, .profesor-option {
         display: flex;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         padding: 8px;
         border: 1px solid #dee2e6;
         border-radius: 4px;
@@ -82,13 +86,21 @@
         transition: all 0.2s;
     }
     
-    .subject-option:hover {
-        background-color: #f8f9fa;
+    .subject-option:hover, .profesor-option:hover {
+        background-color: #f1f3f5;
     }
     
     .subject-option.selected {
         border-color: #0d6efd;
-        background-color: #e9f2ff;
+        background-color: #e7f1ff;
+        font-weight: bold;
+    }
+    
+    .profesor-option.selected {
+         border-color: #0d6efd;
+         background-color: #0d6efd;
+         color: white;
+         font-weight: bold;
     }
     
     .subject-color {
@@ -97,16 +109,19 @@
         border-radius: 50%;
         margin-right: 10px;
         display: inline-block;
+        flex-shrink: 0; /* Evitar que se encoja */
     }
     
     /* Estilos para drag and drop */
     .dragging {
         opacity: 0.5;
+        border: 2px dashed #0d6efd;
     }
     
     .drag-over {
         background-color: rgba(0, 123, 255, 0.1);
         border: 2px dashed #007bff;
+        transform: scale(1.01); /* Ligeramente más grande */
     }
     
     .asignatura-item, .actividad-comun-item {
@@ -167,6 +182,12 @@
         margin-right: 8px;
         display: inline-block;
     }
+
+    /* Div para errores específicos del modal */
+    #modal-error-container {
+        min-height: 50px; /* Espacio reservado para errores */
+    }
+
 </style>
 {% endblock %}
 
@@ -186,13 +207,13 @@
 
     <div class="row">
         <div class="col-md-3">
-            <div class="card shadow mb-4">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="fas fa-book me-2"></i>Asignaturas Disponibles</h5>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
+                    <div class="alert alert-light border-info small mb-3">
+                        <i class="fas fa-info-circle me-1 text-info"></i>
                         Arrastra una asignatura al horario para añadirla.
                     </div>
                     
@@ -213,16 +234,16 @@
                 </div>
             </div>
             
-            <div class="card shadow mb-4">
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Profesores</h5>
                 </div>
                 <div class="card-body">
-                    <div class="list-group">
+                    <div class="list-group list-group-flush">
                         {% for profesor in profesores %}
-                        <div class="list-group-item">
-                            <div class="fw-bold">{{ profesor.get_nombre_completo() }}</div>
-                            <div class="small">{{ profesor.get_asignaturas_nombres()|join(', ') or 'Ninguna' }}</div>
+                        <div class="list-group-item px-2 py-1">
+                            <div class="fw-bold small">{{ profesor.get_nombre_completo() }}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">{{ profesor.get_asignaturas_nombres()|join(', ') or 'Ninguna' }}</div>
                         </div>
                         {% endfor %}
                     </div>
@@ -231,28 +252,28 @@
         </div>
         
         <div class="col-md-9">
-    <div class="card shadow mb-4">
+            <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Horario Semanal</h5>
                 <div>
-                    <button class="btn btn-sm btn-light" id="btn-clear-all">
+                            <button class="btn btn-sm btn-light" id="btn-clear-all" title="Eliminar todas las asignaciones">
                         <i class="fas fa-trash me-1"></i> Limpiar Todo
                     </button>
-                    <button class="btn btn-sm btn-light ms-1" id="btn-generate">
+                            <button class="btn btn-sm btn-light ms-1" id="btn-generate" title="Intentar completar horario automáticamente">
                         <i class="fas fa-magic me-1"></i> Generar Automáticamente
                     </button>
                 </div>
             </div>
         </div>
         <div class="card-body">
-                    <div class="alert alert-warning mb-3">
+                    <div class="alert alert-warning small mb-3">
                         <i class="fas fa-info-circle me-2"></i>
-                        Las actividades comunes (en amarillo) son actividades fijas que no pueden ser modificadas aquí. Si necesitas cambiarlas, dirígete a la pantalla de "Gestión de Disponibilidad" en la sección de "Actividades Comunes".
+                        Las actividades comunes (celdas amarillas) son fijas y no se pueden modificar aquí.
                     </div>
-                    <div class="alert alert-info mb-3">
+                    <div class="alert alert-info small mb-3">
                         <i class="fas fa-hand-point-up me-2"></i>
-                        Puedes arrastrar y soltar las clases para reorganizar el horario fácilmente. Haz clic en una celda para asignar o editar una clase.
+                        Arrastra asignaturas de la izquierda o clases existentes para reorganizar. Haz clic en una celda para asignar/editar.
                     </div>
             <div class="table-responsive">
                 <table class="table table-bordered horario-tabla">
@@ -267,49 +288,54 @@
                         </tr>
                     </thead>
                             <tbody id="horario-tbody">
-                        {% for hora in range(1, 8) %}
+                                {% for hora in range(1, 8) %} <!-- Asume 7 horas -->
                         <tr>
-                            <th class="text-center align-middle">{{ hora }}° Hora</th>
+                                    <th class="text-center align-middle small">{{ hora }}° Hora</th>
                             
                             {% for dia in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'] %}
-                                    {% set key = dia + '_' + (hora|string) %}
-                                    {% if actividades_comunes and key in actividades_comunes %}
-                                        <td class="celda-actividad-comun" data-dia="{{ dia }}" data-hora="{{ hora }}">
-                                            <div class="actividad-comun-bloque" 
-                                                 data-color="{{ actividades_comunes[key].color }}"
-                                                 style="background-color: {{ actividades_comunes[key].color }}">
-                                                <div class="actividad-comun-nombre">
-                                                    <i class="fas {{ actividades_comunes[key].icono }} me-1"></i>
-                                                    {{ actividades_comunes[key].titulo }}
-                                                </div>
-                                            </div>
-                                        </td>
-                                    {% else %}
-                            <td class="celda-horario {{ 'celda-con-clase' if horario[dia][hora-1] else 'celda-vacia' }}" 
+                                            {% set key = dia + '_' + (hora|string) %}
+                                            {% set hora_data = horario[dia][hora-1] if horario and dia in horario and hora-1 < horario[dia]|length else None %}
+                                            {% set actividad_comun = actividades_comunes.get(key) %}
+
+                                            {% if actividad_comun %}
+                                                <td class="celda-actividad-comun" data-dia="{{ dia }}" data-hora="{{ hora }}">
+                                                    <div class="actividad-comun-bloque" 
+                                                         data-color="{{ actividad_comun.color }}"
+                                                         style="background-color: {{ actividad_comun.color }}; color: black;" 
+                                                         title="{{ actividad_comun.titulo }}">
+                                                        <div class="actividad-comun-nombre">
+                                                            <i class="fas {{ actividad_comun.icono }} me-1"></i>
+                                                            {{ actividad_comun.titulo }}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            {% else %}
+                                                <td class="celda-horario {{ 'celda-con-clase' if hora_data else 'celda-vacia' }}" 
                                 data-dia="{{ dia }}" 
                                 data-hora="{{ hora }}"
-                                data-asignatura-id="{{ horario[dia][hora-1].asignatura_id if horario[dia][hora-1] else '' }}"
-                                data-profesor-id="{{ horario[dia][hora-1].profesor_id if horario[dia][hora-1] else '' }}"
-                                            data-clase-id="{{ clase.id }}"
-                                            ondrop="drop(event)"
-                                            ondragover="allowDrop(event)"
-                                            ondragleave="leaveDrop(event)">
-                                {% if horario[dia][hora-1] %}
-                                            <div class="asignatura-bloque" 
-                                                 data-color="{{ horario[dia][hora-1].color }}"
-                                                 style="background-color: {{ horario[dia][hora-1].color }}"
-                                                 draggable="true"
-                                                 ondragstart="drag(event)"
-                                                 data-asignatura-id="{{ horario[dia][hora-1].asignatura_id }}"
-                                                 data-profesor-id="{{ horario[dia][hora-1].profesor_id }}">
+                                                    data-asignatura-id="{{ hora_data.asignatura_id if hora_data else '' }}"
+                                                    data-profesor-id="{{ hora_data.profesor_id if hora_data else '' }}"
+                                                    data-clase-id="{{ clase.id }}"
+                                                    ondrop="drop(event)"
+                                                    ondragover="allowDrop(event)"
+                                                    ondragleave="leaveDrop(event)">
+                                                    {% if hora_data %}
+                                                        <div class="asignatura-bloque" 
+                                                             data-color="{{ hora_data.color }}"
+                                                             style="background-color: {{ hora_data.color }}"
+                                                             draggable="true"
+                                                             ondragstart="drag(event)"
+                                                             data-asignatura-id="{{ hora_data.asignatura_id }}"
+                                                             data-profesor-id="{{ hora_data.profesor_id }}"
+                                                             title="{{ hora_data.asignatura }} - {{ hora_data.profesor }}">
                                     <div class="asignatura-nombre">
-                                        {% if horario[dia][hora-1].icono %}
-                                        <i class="fas {{ horario[dia][hora-1].icono }} me-1"></i>
+                                                                {% if hora_data.icono %}
+                                                                <i class="fas {{ hora_data.icono }} me-1"></i>
                                         {% endif %}
-                                        {{ horario[dia][hora-1].asignatura }}
+                                                                {{ hora_data.asignatura }}
                                     </div>
                                     <div class="profesor-nombre">
-                                        {{ horario[dia][hora-1].profesor if horario[dia][hora-1].profesor else 'Sin asignar' }}
+                                                                {{ hora_data.profesor if hora_data.profesor else 'Sin asignar' }}
                                     </div>
                                 </div>
                                 {% endif %}
@@ -332,56 +358,67 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Asignar Clase</h5>
+                <h5 class="modal-title"><i class="fas fa-pencil-alt me-2"></i>Asignar/Editar Clase</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="alert alert-info">
+                        <div class="alert alert-secondary py-2">
                             <strong>Día:</strong> <span id="modal-dia"></span><br>
                             <strong>Hora:</strong> <span id="modal-hora"></span>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="alert alert-warning" id="alert-conflicto" style="display: none;"></div>
+                        <!-- Contenedor para errores/info específicos del modal -->
+                        <div id="modal-error-container">
+                             <div class="alert alert-light border py-2" id="conflicto-info"> <!-- Contenedor para mensajes de conflicto -->
+                                 <span class="text-muted small">Seleccione asignatura y profesor para verificar disponibilidad.</span>
+                             </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6">
-                        <h5>Selecciona una asignatura</h5>
-                        <div id="asignaturas-list" class="mb-3">
+                        <h6><i class="fas fa-book me-1"></i> Selecciona Asignatura</h6>
+                        <div id="asignaturas-list" class="list-group mb-3" style="max-height: 250px; overflow-y: auto;">
                             {% for asignatura in asignaturas %}
-                            <div class="subject-option" data-id="{{ asignatura.id }}" data-color="{{ asignatura.color }}" data-icono="{{ asignatura.icono }}">
-                                <div class="subject-color" style="background-color: {{ asignatura.color }}"></div>
+                            <a href="#" class="list-group-item list-group-item-action subject-option" data-id="{{ asignatura.id }}" data-color="{{ asignatura.color }}" data-icono="{{ asignatura.icono }}">
+                                <div class="subject-color me-2" style="background-color: {{ asignatura.color }}"></div>
                                 <div>
                                     <strong>{{ asignatura.nombre }}</strong>
-                                    <div><small>{{ asignatura.horas_semanales }} horas semanales</small></div>
+                                    <div class="text-muted small">{{ asignatura.horas_semanales }}h/sem</div>
                                 </div>
-                            </div>
+                            </a>
                             {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <h5>Selecciona un profesor</h5>
-                        <div id="profesores-list" class="mb-3">
-                            <!-- Será llenado dinámicamente basado en la asignatura seleccionada -->
+                        <h6><i class="fas fa-user-tie me-1"></i> Selecciona Profesor</h6>
+                        <div id="profesores-list" class="list-group mb-3" style="max-height: 250px; overflow-y: auto;">
+                            <!-- Será llenado dinámicamente -->
+                            <div class="alert alert-light border small">Seleccione una asignatura para ver profesores.</div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="form-check">
+                <div class="form-check mt-2">
                     <input class="form-check-input" type="checkbox" id="ajustar-otras-clases" checked>
-                    <label class="form-check-label" for="ajustar-otras-clases">
-                        Ajustar automáticamente otras clases de esta asignatura
+                    <label class="form-check-label small" for="ajustar-otras-clases">
+                        Ajustar automáticamente otras clases de esta asignatura con el mismo profesor (si es posible).
                     </label>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" id="btn-eliminar">Eliminar Clase</button>
-                <button type="button" class="btn btn-primary" id="btn-guardar">Guardar</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-danger me-auto" id="btn-eliminar" title="Eliminar esta asignación">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-guardar" disabled> <!-- Deshabilitado inicialmente -->
+                     <span class="spinner-border spinner-border-sm d-none me-1" id="spinnerGuardar" role="status" aria-hidden="true"></span>
+                    <i class="fas fa-save me-1"></i> Guardar
+                </button>
             </div>
         </div>
     </div>
@@ -392,7 +429,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-warning">
-                <h5 class="modal-title">Intercambiar Clases</h5>
+                <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Intercambiar Clases</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -400,31 +437,84 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="card">
-                            <div class="card-header bg-info text-white">Origen</div>
-                            <div class="card-body">
-                                <p><strong>Día:</strong> <span id="swap-origen-dia"></span></p>
-                                <p><strong>Hora:</strong> <span id="swap-origen-hora"></span></p>
-                                <p><strong>Asignatura:</strong> <span id="swap-origen-asignatura"></span></p>
-                                <p><strong>Profesor:</strong> <span id="swap-origen-profesor"></span></p>
+                            <div class="card-header bg-info text-white small py-1">Origen</div>
+                            <div class="card-body p-2 small">
+                                <div><strong>Día:</strong> <span id="swap-origen-dia"></span></div>
+                                <div><strong>Hora:</strong> <span id="swap-origen-hora"></span></div>
+                                <div><strong>Asignatura:</strong> <span id="swap-origen-asignatura"></span></div>
+                                <div><strong>Profesor:</strong> <span id="swap-origen-profesor"></span></div>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="card">
-                            <div class="card-header bg-success text-white">Destino</div>
-                            <div class="card-body">
-                                <p><strong>Día:</strong> <span id="swap-destino-dia"></span></p>
-                                <p><strong>Hora:</strong> <span id="swap-destino-hora"></span></p>
-                                <p><strong>Asignatura:</strong> <span id="swap-destino-asignatura"></span></p>
-                                <p><strong>Profesor:</strong> <span id="swap-destino-profesor"></span></p>
+                            <div class="card-header bg-success text-white small py-1">Destino</div>
+                            <div class="card-body p-2 small">
+                                <div><strong>Día:</strong> <span id="swap-destino-dia"></span></div>
+                                <div><strong>Hora:</strong> <span id="swap-destino-hora"></span></div>
+                                <div><strong>Asignatura:</strong> <span id="swap-destino-asignatura"></span></div>
+                                <div><strong>Profesor:</strong> <span id="swap-destino-profesor"></span></div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <!-- Contenedor para errores de intercambio -->
+                <div id="swap-error-container" class="mt-3"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btn-confirmar-swap">Confirmar Intercambio</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirmar-swap">
+                     <span class="spinner-border spinner-border-sm d-none me-1" id="spinnerSwap" role="status" aria-hidden="true"></span>
+                    <i class="fas fa-check me-1"></i> Confirmar Intercambio
+                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación para unir clases -->
+<div class="modal fade" id="unirClasesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-object-group me-2"></i>Unir Clases</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span id="unir-clases-mensaje">El profesor ya está asignado a otra clase en este horario.</span>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white small py-1">Clase Actual</div>
+                            <div class="card-body p-2 small">
+                                <div><strong>Clase:</strong> <span id="unir-clases-actual"></span></div>
+                                <div><strong>Asignatura:</strong> <span id="unir-clases-asignatura-actual"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white small py-1">Clase Existente</div>
+                            <div class="card-body p-2 small">
+                                <div><strong>Clase:</strong> <span id="unir-clases-existente"></span></div>
+                                <div><strong>Asignatura:</strong> <span id="unir-clases-asignatura-existente"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <p>¿Deseas unir estas clases para que el profesor imparta la misma asignatura a ambos grupos simultáneamente?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirmar-unir">
+                    <span class="spinner-border spinner-border-sm d-none me-1" id="spinnerUnir" role="status" aria-hidden="true"></span>
+                    <i class="fas fa-check me-1"></i> Unir Clases
+                </button>
             </div>
         </div>
     </div>
@@ -434,7 +524,7 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Inicializando editor de horarios');
+        console.log('Inicializando editor de horarios v2');
         
         let currentDia = null;
         let currentHora = null;
@@ -447,10 +537,11 @@
         let dragSourceDia = null;
         let dragSourceHora = null;
         
-        // Inicializar datos de asignaturas
+        // Inicializar datos de asignaturas y profesores (simplificado para ejemplo)
+        try {
         {% for asignatura in asignaturas %}
         asignaturasData[{{ asignatura.id }}] = {
-            nombre: "{{ asignatura.nombre }}",
+                nombre: {{ asignatura.nombre | tojson }},
             color: "{{ asignatura.color }}",
             icono: "{{ asignatura.icono or '' }}",
             profesores: [
@@ -461,10 +552,9 @@
         };
         {% endfor %}
         
-        // Datos de profesores
         {% for profesor in profesores %}
         profesoresData[{{ profesor.id }}] = {
-            nombre: "{{ profesor.get_nombre_completo() }}",
+                nombre: {{ profesor.get_nombre_completo() | tojson }},
             asignaturas: [
                 {% for asignatura_id in profesor.get_asignaturas_ids() %}
                 {{ asignatura_id }},
@@ -472,73 +562,64 @@
             ]
         };
         {% endfor %}
+            console.log("Datos inicializados:", { asignaturasData, profesoresData });
+        } catch(e) {
+            console.error("Error inicializando datos JS desde Jinja:", e);
+            mostrarAlerta("Error interno al cargar datos iniciales. La funcionalidad puede verse afectada.", "danger");
+        }
+
         
-        // Event listeners - solo para celdas que no son actividades comunes
-        document.querySelectorAll('.celda-horario').forEach(celda => {
-            if (!celda.classList.contains('celda-actividad-comun')) {
+        // --- Event Listeners --- 
+        
+        // Celdas del horario (solo las que no son actividad común)
+        document.querySelectorAll('.celda-horario:not(.celda-actividad-comun)').forEach(celda => {
             celda.addEventListener('click', openModal);
-            }
+            celda.addEventListener('dragover', allowDrop);
+            celda.addEventListener('dragleave', leaveDrop);
+            celda.addEventListener('drop', drop);
         });
         
-        document.querySelectorAll('.subject-option').forEach(option => {
-            option.addEventListener('click', selectAsignatura);
-        });
-        
-        // Asegurarse de que los elementos sean realmente arrastables
-        document.querySelectorAll('.asignatura-card, .asignatura-bloque').forEach(item => {
-            item.setAttribute('draggable', 'true');
-        });
-        
-        // Eventos para drag and drop en celdas
-        document.querySelectorAll('.celda-horario').forEach(celda => {
-            if (!celda.classList.contains('celda-actividad-comun')) {
-                celda.addEventListener('dragover', allowDrop);
-                celda.addEventListener('dragleave', leaveDrop);
-                celda.addEventListener('drop', drop);
-            }
-        });
-        
-        // Eventos para drag and drop en asignaturas
-        document.querySelectorAll('.asignatura-card').forEach(card => {
+        // Asignaturas en la lista lateral
+        document.querySelectorAll('#asignaturas-container .asignatura-card').forEach(card => {
             card.addEventListener('dragstart', dragAsignatura);
         });
         
-        document.querySelectorAll('.asignatura-bloque').forEach(bloque => {
+        // Bloques de asignatura ya colocados en el horario
+        document.querySelectorAll('#horario-tbody .asignatura-bloque').forEach(bloque => {
             bloque.addEventListener('dragstart', drag);
         });
         
-        // Eventos para los botones
+        // Opciones de asignatura en el modal
+        document.querySelectorAll('.subject-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevenir comportamiento de enlace
+                selectAsignatura(e);
+            });
+        });
+        
+        // Botones principales
         const btnGuardar = document.getElementById('btn-guardar');
-        if (btnGuardar) {
-            btnGuardar.addEventListener('click', guardarAsignacion);
-        }
+        if (btnGuardar) btnGuardar.addEventListener('click', guardarAsignacion);
         
         const btnEliminar = document.getElementById('btn-eliminar');
-        if (btnEliminar) {
-            btnEliminar.addEventListener('click', eliminarAsignacion);
-        }
+        if (btnEliminar) btnEliminar.addEventListener('click', eliminarAsignacion);
         
         const btnClearAll = document.getElementById('btn-clear-all');
-        if (btnClearAll) {
-            btnClearAll.addEventListener('click', confirmarLimpiarTodo);
-            console.log('Botón limpiar todo configurado');
-        }
+        if (btnClearAll) btnClearAll.addEventListener('click', confirmarLimpiarTodo);
         
         const btnGenerate = document.getElementById('btn-generate');
-        if (btnGenerate) {
-            btnGenerate.addEventListener('click', confirmarGenerarAutomatico);
-            console.log('Botón generar configurado');
-        }
+        if (btnGenerate) btnGenerate.addEventListener('click', confirmarGenerarAutomatico);
         
         const btnConfirmarSwap = document.getElementById('btn-confirmar-swap');
-        if (btnConfirmarSwap) {
-            btnConfirmarSwap.addEventListener('click', confirmarIntercambio);
-        }
+        if (btnConfirmarSwap) btnConfirmarSwap.addEventListener('click', confirmarIntercambio);
         
-        // Funciones para drag and drop
+        // --- Funciones Drag and Drop --- 
+        
         function allowDrop(ev) {
             ev.preventDefault();
-            ev.currentTarget.classList.add('drag-over');
+            if (ev.currentTarget.classList.contains('celda-horario') && !ev.currentTarget.classList.contains('celda-actividad-comun')) {
+                ev.currentTarget.classList.add('drag-over');
+            }
         }
         
         function leaveDrop(ev) {
@@ -546,9 +627,13 @@
         }
         
         function drag(ev) {
-            console.log('Dragging started');
+            console.log('D&D: Iniciando arrastre de bloque existente');
             const asignaturaBloque = ev.target.closest('.asignatura-bloque');
-            if (!asignaturaBloque) return;
+            if (!asignaturaBloque) {
+                 console.warn("D&D: No se encontró .asignatura-bloque");
+                 ev.preventDefault(); // Prevenir arrastre si no se encuentra
+                 return;
+            }
             
             dragSourceElement = asignaturaBloque;
             const celda = asignaturaBloque.closest('.celda-horario');
@@ -556,438 +641,538 @@
             dragSourceHora = celda.dataset.hora;
             
             try {
-                ev.dataTransfer.setData('text/plain', JSON.stringify({
+                const data = JSON.stringify({
+                    type: 'existing_block',
                     asignaturaId: asignaturaBloque.dataset.asignaturaId,
                     profesorId: asignaturaBloque.dataset.profesorId,
                     origen: { dia: dragSourceDia, hora: dragSourceHora }
-                }));
-                
-                asignaturaBloque.classList.add('dragging');
+                });
+                ev.dataTransfer.setData('text/plain', data);
+                ev.dataTransfer.effectAllowed = "move";
+                console.log("D&D: Datos establecidos para bloque existente:", data);
+                // Aplicar estilo de arrastre un poco después para que se vea
+                 setTimeout(() => asignaturaBloque.classList.add('dragging'), 0);
             } catch (error) {
-                console.error('Error during drag start:', error);
+                console.error('D&D: Error en drag start:', error);
             }
         }
         
         function dragAsignatura(ev) {
-            console.log('Dragging asignatura');
+            console.log('D&D: Iniciando arrastre de nueva asignatura');
             const card = ev.target.closest('.asignatura-card');
-            if (!card) return;
+            if (!card) {
+                 console.warn("D&D: No se encontró .asignatura-card");
+                 ev.preventDefault();
+                 return;
+             }
+            dragSourceElement = card; // Para posible feedback visual
             
             try {
-                ev.dataTransfer.setData('text/plain', JSON.stringify({
-                    asignaturaId: card.dataset.id,
-                    nuevaAsignatura: true
-                }));
+                 const data = JSON.stringify({
+                    type: 'new_subject',
+                    asignaturaId: card.dataset.id
+                });
+                ev.dataTransfer.setData('text/plain', data);
+                ev.dataTransfer.effectAllowed = "copy";
+                 console.log("D&D: Datos establecidos para nueva asignatura:", data);
+                // Aplicar estilo de arrastre
+                 setTimeout(() => card.classList.add('dragging'), 0);
             } catch (error) {
-                console.error('Error durante dragAsignatura:', error);
+                console.error('D&D: Error en dragAsignatura start:', error);
             }
         }
         
         function drop(ev) {
+            console.log('D&D: Drop detectado');
             ev.preventDefault();
-            console.log('Drop event triggered');
-            
             const targetCelda = ev.currentTarget;
             targetCelda.classList.remove('drag-over');
+            
+            // Limpiar estilo de arrastre del origen si existe
+             if (dragSourceElement) {
+                 dragSourceElement.classList.remove('dragging');
+             }
             
             const targetDia = targetCelda.dataset.dia;
             const targetHora = targetCelda.dataset.hora;
             
-            // Si es una celda con actividad común, no permitir el drop
+            // No permitir drop en celdas con actividad común
             if (targetCelda.classList.contains('celda-actividad-comun')) {
-                console.log('Dropping en actividad común - No permitido');
+                console.warn('D&D: Intento de drop en actividad común. No permitido.');
+                dragSourceElement = null;
                 return;
             }
             
             try {
                 const dataTransfer = ev.dataTransfer.getData('text/plain');
-                console.log('Datos transferidos:', dataTransfer);
-                
+                if (!dataTransfer) {
+                     console.error("D&D: No se obtuvieron datos en el drop.");
+                     dragSourceElement = null;
+                     return;
+                 }
+                console.log('D&D: Datos transferidos:', dataTransfer);
                 const data = JSON.parse(dataTransfer);
                 
-                // Caso 1: Intercambio entre dos celdas con clases
-                if (targetCelda.classList.contains('celda-con-clase') && !data.nuevaAsignatura) {
-                    console.log('Intercambio de clases');
-                    // Mostrar modal de confirmación para el intercambio
-                    mostrarModalIntercambio(data, targetCelda);
-                return;
-            }
-            
-                // Caso 2: Moviendo de una celda a una vacía
-                if (data.origen && !targetCelda.classList.contains('celda-con-clase')) {
-                    console.log('Moviendo clase');
-                    // Si estamos moviendo una clase existente
-                    moverClase(data.origen.dia, data.origen.hora, targetDia, targetHora);
-                    return;
-                }
+                const celdaOcupada = targetCelda.classList.contains('celda-con-clase');
+                const bloqueExistente = data.type === 'existing_block';
+                const nuevaAsignatura = data.type === 'new_subject';
                 
-                // Caso 3: Arrastrar una asignatura desde la lista
-                if (data.nuevaAsignatura) {
-                    console.log('Nueva asignatura arrastrada');
-                    // Abrimos el modal para seleccionar profesor
-                    openModalForNewAsignatura(data.asignaturaId, targetDia, targetHora);
-                    return;
+                console.log(`D&D: Tipo=${data.type}, Celda Ocupada=${celdaOcupada}`);
+
+                // --- Lógica de Drop --- 
+
+                // 1. Arrastrando bloque existente a celda vacía (MOVER)
+                if (bloqueExistente && !celdaOcupada) {
+                    console.log("D&D: Acción = MOVER");
+                    moverClase(data.origen.dia, data.origen.hora, targetDia, targetHora);
                 }
+                // 2. Arrastrando bloque existente a celda ocupada (INTERCAMBIAR)
+                else if (bloqueExistente && celdaOcupada) {
+                     // Evitar intercambiar consigo mismo
+                     if (data.origen.dia === targetDia && data.origen.hora === targetHora) {
+                         console.log("D&D: Arrastrado sobre sí mismo, no hacer nada.");
+                     } else {
+                         console.log("D&D: Acción = INTERCAMBIAR");
+                         mostrarModalIntercambio(data, targetCelda);
+                     }
+                }
+                // 3. Arrastrando nueva asignatura a celda vacía (ASIGNAR NUEVO)
+                else if (nuevaAsignatura && !celdaOcupada) {
+                    console.log("D&D: Acción = ASIGNAR NUEVO");
+                    openModalForNewAsignatura(data.asignaturaId, targetDia, targetHora);
+                }
+                // 4. Arrastrando nueva asignatura a celda ocupada (REEMPLAZAR - abrir modal preseleccionado)
+                else if (nuevaAsignatura && celdaOcupada) {
+                    console.log("D&D: Acción = REEMPLAZAR (abrir modal)");
+                    openModalForNewAsignatura(data.asignaturaId, targetDia, targetHora);
+                }
+                 else {
+                     console.warn("D&D: Condición de drop no manejada.");
+                 }
                 
             } catch (error) {
-                console.error('Error procesando datos durante drop:', error);
+                console.error('D&D: Error procesando datos durante drop:', error);
+                 mostrarAlerta("Error al procesar la acción de arrastrar.", "danger");
             }
-            
-            if (dragSourceElement) {
-                dragSourceElement.classList.remove('dragging');
-                dragSourceElement = null;
-            }
+            finally {
+                 // Resetear origen del drag independientemente del resultado
+                 dragSourceElement = null;
+                 dragSourceDia = null;
+                 dragSourceHora = null;
+             }
         }
         
-        // Función para mostrar el modal de intercambio
+        // --- Funciones Modales y API --- 
+
         function mostrarModalIntercambio(data, targetCelda) {
+            console.log("[Swap Modal] Abriendo modal de intercambio...");
             const origenDia = data.origen.dia;
             const origenHora = data.origen.hora;
             const origenCelda = document.querySelector(`.celda-horario[data-dia="${origenDia}"][data-hora="${origenHora}"]`);
             
+            if (!origenCelda) {
+                console.error("[Swap Modal] No se encontró la celda origen para el intercambio.");
+                return;
+            }
+            
             const destinoDia = targetCelda.dataset.dia;
             const destinoHora = targetCelda.dataset.hora;
             
-            // Mostrar info en el modal
-            document.getElementById('swap-origen-dia').textContent = capitalize(origenDia);
-            document.getElementById('swap-origen-hora').textContent = origenHora + "° hora";
-            
+            // Preparar datos del Origen
             const origenAsignaturaId = origenCelda.dataset.asignaturaId;
             const origenProfesorId = origenCelda.dataset.profesorId;
-            const origenAsignatura = asignaturasData[origenAsignaturaId]?.nombre || 'Desconocido';
-            const origenProfesor = profesoresData[origenProfesorId]?.nombre || 'Desconocido';
+            const origenAsignatura = asignaturasData[origenAsignaturaId]?.nombre || 'N/A';
+            const origenProfesor = profesoresData[origenProfesorId]?.nombre || 'N/A';
+            
+            document.getElementById('swap-origen-dia').textContent = capitalize(origenDia);
+            document.getElementById('swap-origen-hora').textContent = origenHora + "° hora";
             document.getElementById('swap-origen-asignatura').textContent = origenAsignatura;
             document.getElementById('swap-origen-profesor').textContent = origenProfesor;
             
-            document.getElementById('swap-destino-dia').textContent = capitalize(destinoDia);
-            document.getElementById('swap-destino-hora').textContent = destinoHora + "° hora";
-            
+            // Preparar datos del Destino
             const destinoAsignaturaId = targetCelda.dataset.asignaturaId;
             const destinoProfesorId = targetCelda.dataset.profesorId;
-            const destinoAsignatura = asignaturasData[destinoAsignaturaId]?.nombre || 'Desconocido';
-            const destinoProfesor = profesoresData[destinoProfesorId]?.nombre || 'Desconocido';
+            const destinoAsignatura = asignaturasData[destinoAsignaturaId]?.nombre || 'N/A';
+            const destinoProfesor = profesoresData[destinoProfesorId]?.nombre || 'N/A';
+            
+            document.getElementById('swap-destino-dia').textContent = capitalize(destinoDia);
+            document.getElementById('swap-destino-hora').textContent = destinoHora + "° hora";
             document.getElementById('swap-destino-asignatura').textContent = destinoAsignatura;
             document.getElementById('swap-destino-profesor').textContent = destinoProfesor;
             
-            // Guardar datos para el intercambio
+            // Guardar datos para la acción de confirmar
             window.swapData = {
                 origen: { dia: origenDia, hora: origenHora, asignaturaId: origenAsignaturaId, profesorId: origenProfesorId },
                 destino: { dia: destinoDia, hora: destinoHora, asignaturaId: destinoAsignaturaId, profesorId: destinoProfesorId }
             };
             
-            // Mostrar modal
+            // Limpiar errores previos y mostrar modal
+            document.getElementById('swap-error-container').innerHTML = '';
             const swapModal = new bootstrap.Modal(document.getElementById('swapModal'));
             swapModal.show();
-            
-            // Limpiar elementos de arrastre
-            if (dragSourceElement) {
-                dragSourceElement.classList.remove('dragging');
-                dragSourceElement = null;
-            }
         }
         
-        // Función para confirmar el intercambio de clases
         function confirmarIntercambio() {
             if (!window.swapData) return;
+            console.log("[Swap] Confirmando intercambio:", window.swapData);
             
             const { origen, destino } = window.swapData;
+            const btnConfirmar = document.getElementById('btn-confirmar-swap');
+            const spinner = document.getElementById('spinnerSwap');
+            const errorContainer = document.getElementById('swap-error-container');
+            errorContainer.innerHTML = ''; // Limpiar errores previos
             
-            // Realizar dos actualizaciones en el servidor
-            const promesas = [
-                actualizarClaseEnServidor(destino.asignaturaId, destino.profesorId, origen.dia, origen.hora),
-                actualizarClaseEnServidor(origen.asignaturaId, origen.profesorId, destino.dia, destino.hora)
-            ];
-            
-            Promise.all(promesas)
-                .then(results => {
-                    if (results.every(result => result.success)) {
-                        // Actualizar la UI
-                        actualizarCelda(origen.dia, origen.hora, destino.asignaturaId, destino.profesorId);
-                        actualizarCelda(destino.dia, destino.hora, origen.asignaturaId, origen.profesorId);
-                        
-                        // Cerrar modal
-                        bootstrap.Modal.getInstance(document.getElementById('swapModal')).hide();
-                        
-                        // Mostrar mensaje de éxito
-                        mostrarAlerta('Clases intercambiadas correctamente', 'success');
-                    } else {
-                        const errores = results.filter(r => !r.success).map(r => r.message).join(', ');
-                        mostrarAlerta('Error al intercambiar clases: ' + errores, 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    mostrarAlerta('Error al intercambiar clases', 'danger');
-                });
-        }
-        
-        // Función para mover una clase
-        function moverClase(origen_dia, origen_hora, destino_dia, destino_hora) {
-            console.log(`Moviendo clase de ${origen_dia}-${origen_hora} a ${destino_dia}-${destino_hora}`);
-            
-            // Obtener celda origen y destino
-            const origenCelda = document.querySelector(`.celda-horario[data-dia="${origen_dia}"][data-hora="${origen_hora}"]`);
-            const destinoCelda = document.querySelector(`.celda-horario[data-dia="${destino_dia}"][data-hora="${destino_hora}"]`);
-            
-            if (!origenCelda || !destinoCelda) {
-                console.error('No se encontraron las celdas origen o destino');
-                return false;
-            }
-            
-            const asignaturaId = origenCelda.dataset.asignaturaId;
-            const profesorId = origenCelda.dataset.profesorId;
-            
-            // Verificar si el destino está ocupado
-            if (destinoCelda.classList.contains('celda-con-clase')) {
-                console.log('Destino ocupado, no se puede mover');
-                mostrarAlerta('No se puede mover ahí, ya existe una clase', 'warning');
-                return false;
-            }
-            
-            // Actualizar en el servidor
-            fetch('/schedules/move_class', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    clase_id: currentClaseId,
-                    origen_dia: origen_dia,
-                    origen_hora: origen_hora,
-                    destino_dia: destino_dia,
-                    destino_hora: destino_hora
-                })
+            btnConfirmar.disabled = true;
+            spinner.classList.remove('d-none');
+
+            // Verificar conflictos ANTES de intentar el intercambio
+            Promise.all([
+                checkConflictsAPI(destino.profesorId, origen.dia, origen.hora, currentClaseId),
+                checkConflictsAPI(origen.profesorId, destino.dia, destino.hora, currentClaseId)
+            ]).then(([conflictoDestEnOrigen, conflictoOrigenEnDestino]) => {
+                let mensajesError = [];
+                if (conflictoDestEnOrigen.conflict) {
+                    mensajesError.push(`Origen (${origen.dia} ${origen.hora}): ${conflictoDestEnOrigen.message}`);
+                }
+                if (conflictoOrigenEnDestino.conflict) {
+                    mensajesError.push(`Destino (${destino.dia} ${destino.hora}): ${conflictoOrigenEnDestino.message}`);
+                }
+
+                if (mensajesError.length > 0) {
+                    console.error("[Swap] Conflictos detectados:", mensajesError);
+                    errorContainer.innerHTML = `<div class="alert alert-danger small">${mensajesError.join('<br>')}</div>`;
+                    throw new Error("Conflictos detectados"); // Detener la ejecución
+                }
+
+                // Si no hay conflictos, proceder con las actualizaciones
+                console.log("[Swap] No hay conflictos, procediendo con las actualizaciones...");
+                return Promise.all([
+                    actualizarClaseEnServidor(destino.asignaturaId, destino.profesorId, origen.dia, origen.hora),
+                    actualizarClaseEnServidor(origen.asignaturaId, origen.profesorId, destino.dia, destino.hora)
+                ]);
             })
-                .then(response => response.json())
-                .then(data => {
-                if (data.success) {
-                    // Actualizar la UI manualmente
-                    actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora);
-                    mostrarAlerta('Clase movida con éxito', 'success');
+            .then(results => {
+                console.log("[Swap] Resultados de actualización:", results);
+                if (results.every(result => result.success)) {
+                    console.log("[Swap] Actualización exitosa, actualizando UI...");
+                    actualizarCelda(origen.dia, origen.hora, destino.asignaturaId, destino.profesorId);
+                    actualizarCelda(destino.dia, destino.hora, origen.asignaturaId, origen.profesorId);
+                    bootstrap.Modal.getInstance(document.getElementById('swapModal')).hide();
+                    mostrarAlerta('Clases intercambiadas correctamente', 'success');
                 } else {
-                    mostrarAlerta('Error: ' + (data.message || 'No se pudo mover la clase'), 'danger');
+                    const errores = results.filter(r => !r.success).map(r => r.message).join(', ');
+                    console.error("[Swap] Error en la actualización del servidor:", errores);
+                    errorContainer.innerHTML = `<div class="alert alert-danger small">Error al guardar: ${errores}</div>`;
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                mostrarAlerta('Error al mover la clase', 'danger');
+                console.error('[Swap] Error durante el intercambio:', error);
+                if (error.message !== "Conflictos detectados") { // No mostrar doble alerta
+                     errorContainer.innerHTML = `<div class="alert alert-danger small">Error inesperado: ${error.message}</div>`;
+                }
+            })
+            .finally(() => {
+                btnConfirmar.disabled = false;
+                spinner.classList.add('d-none');
             });
-            
-            return true;
         }
         
-        // Función para actualizar la UI manualmente al mover una clase
-        function actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora) {
+        function moverClase(origen_dia, origen_hora, destino_dia, destino_hora) {
+            console.log(`[Mover] Moviendo clase de ${origen_dia}-${origen_hora} a ${destino_dia}-${destino_hora}`);
             const origenCelda = document.querySelector(`.celda-horario[data-dia="${origen_dia}"][data-hora="${origen_hora}"]`);
             const destinoCelda = document.querySelector(`.celda-horario[data-dia="${destino_dia}"][data-hora="${destino_hora}"]`);
             
-            if (!origenCelda || !destinoCelda) {
-                console.error('No se encontraron las celdas para actualizar UI');
-                return;
-            }
+            if (!origenCelda || !destinoCelda) return mostrarAlerta('Error interno: Celdas no encontradas.', 'danger');
             
-            // Guardar datos de la celda de origen
             const asignaturaId = origenCelda.dataset.asignaturaId;
             const profesorId = origenCelda.dataset.profesorId;
             
-            const asignaturaBloque = origenCelda.querySelector('.asignatura-bloque');
-            if (!asignaturaBloque) {
-                console.error('No se encontró el bloque de asignatura en el origen');
-                return;
-            }
-            
-            const color = asignaturaBloque.dataset.color;
-            const asignaturaNombre = asignaturaBloque.querySelector('.asignatura-nombre').innerHTML;
-            const profesorNombre = asignaturaBloque.querySelector('.profesor-nombre').innerHTML;
-            
+            if (destinoCelda.classList.contains('celda-con-clase')) return mostrarAlerta('No se puede mover, el destino está ocupado.', 'warning');
+
+            // Verificar conflictos en destino ANTES de mover
+            checkConflictsAPI(profesorId, destino_dia, destino_hora, currentClaseId)
+                .then(conflictoData => {
+                    if (conflictoData.conflict) {
+                         mostrarAlerta(`Conflicto al mover: ${conflictoData.message}`, 'danger');
+                         throw new Error("Conflicto detectado"); // Detener
+                    }
+                    // Si no hay conflicto, proceder a llamar a la API de mover
+                    console.log("[Mover] No hay conflicto en destino, llamando a API /schedules/move_class...");
+                    return fetch('/schedules/move_class', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                        body: JSON.stringify({ 
+                            clase_id: currentClaseId, 
+                            origen_dia, origen_hora, 
+                            destino_dia, destino_hora 
+                        })
+                    });
+                })
+                .then(response => {
+                     if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
+                     return response.json();
+                 })
+                .then(data => {
+                    console.log("[Mover] Respuesta de API /schedules/move_class:", data);
+                    if (data.success) {
+                        actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora);
+                        mostrarAlerta('Clase movida con éxito', 'success');
+                    } else {
+                        mostrarAlerta(`Error al mover: ${data.message || 'Error desconocido'}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    if (error.message !== "Conflicto detectado") { // Evitar doble alerta
+                         console.error('[Mover] Error:', error);
+                         mostrarAlerta(`Error al mover la clase: ${error.message}`, 'danger');
+                    }
+                });
+        }
+        
+        function actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora) {
+             console.log("[UI Mover] Actualizando interfaz...");
+            const origenCelda = document.querySelector(`.celda-horario[data-dia="${origen_dia}"][data-hora="${origen_hora}"]`);
+            const destinoCelda = document.querySelector(`.celda-horario[data-dia="${destino_dia}"][data-hora="${destino_hora}"]`);
+            if (!origenCelda || !destinoCelda) return;
+
+            const bloque = origenCelda.querySelector('.asignatura-bloque');
+            if (bloque) {
+                 // Mover el bloque al destino
+                 destinoCelda.innerHTML = ''; // Limpiar destino por si acaso
+                 destinoCelda.appendChild(bloque.cloneNode(true)); // Clonar para mantener listeners?
+                 destinoCelda.classList.remove('celda-vacia');
+                 destinoCelda.classList.add('celda-con-clase');
+                 destinoCelda.dataset.asignaturaId = origenCelda.dataset.asignaturaId;
+                 destinoCelda.dataset.profesorId = origenCelda.dataset.profesorId;
+                 // Re-añadir listener de drag al nuevo bloque clonado
+                 destinoCelda.querySelector('.asignatura-bloque')?.addEventListener('dragstart', drag);
+            } else {
+                 console.warn("[UI Mover] No se encontró bloque en origen para mover.");
+             }
+
             // Limpiar celda origen
             origenCelda.innerHTML = '';
             origenCelda.classList.remove('celda-con-clase');
             origenCelda.classList.add('celda-vacia');
             origenCelda.removeAttribute('data-asignatura-id');
             origenCelda.removeAttribute('data-profesor-id');
-            
-            // Actualizar celda destino
-            destinoCelda.classList.remove('celda-vacia');
-            destinoCelda.classList.add('celda-con-clase');
-            destinoCelda.dataset.asignaturaId = asignaturaId;
-            destinoCelda.dataset.profesorId = profesorId;
-            
-            // Crear bloque de asignatura para el destino
-            destinoCelda.innerHTML = `
-                <div class="asignatura-bloque" 
-                     data-color="${color}"
-                     style="background-color: ${color}"
-                     draggable="true"
-                     ondragstart="drag(event)"
-                     data-asignatura-id="${asignaturaId}"
-                     data-profesor-id="${profesorId}">
-                    <div class="asignatura-nombre">
-                        ${asignaturaNombre}
-                    </div>
-                    <div class="profesor-nombre">
-                        ${profesorNombre}
-                    </div>
-                </div>
-            `;
+             console.log("[UI Mover] Interfaz actualizada.");
         }
         
-        // Función para eliminar una clase en el servidor
         function eliminarClaseEnServidor(dia, hora) {
-            console.log(`Eliminando en servidor: dia=${dia}, hora=${hora}`);
-            
+            console.log(`[API Eliminar] Eliminando: dia=${dia}, hora=${hora}`);
             return fetch('/schedules/delete_by_position', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    clase_id: currentClaseId,
-                    dia: dia,
-                    hora: hora
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ clase_id: currentClaseId, dia, hora })
             }).then(response => response.json());
         }
         
-        // Función para eliminar una asignación
         function eliminarAsignacion() {
-            if (confirm('¿Eliminar esta asignación?')) {
+            if (!currentDia || !currentHora) return;
+            console.log(`[Eliminar] Solicitando eliminar ${currentDia} ${currentHora}° hora`);
+            if (confirm(`¿Estás seguro de eliminar la asignación del ${capitalize(currentDia)} a la ${currentHora}° hora?`)) {
                 eliminarClaseEnServidor(currentDia, currentHora)
             .then(data => {
+                        console.log("[Eliminar] Respuesta del servidor:", data);
                 if (data.success) {
-                    // Cerrar el modal
                     bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
-                            
-                            // Actualizar la UI
-                            const celda = document.querySelector(`.celda-horario[data-dia="${currentDia}"][data-hora="${currentHora}"]`);
-                            celda.innerHTML = '';
-                            celda.classList.remove('celda-con-clase');
-                            celda.classList.add('celda-vacia');
-                            celda.removeAttribute('data-asignatura-id');
-                            celda.removeAttribute('data-profesor-id');
-                    
-                    // Mostrar mensaje de éxito
+                            actualizarCelda(currentDia, currentHora, null, null); // Llamar a actualizar para limpiar la celda
                             mostrarAlerta('Asignación eliminada con éxito', 'success');
                 } else {
-                    mostrarAlerta('Error: ' + data.message, 'danger');
+                            mostrarAlerta(`Error al eliminar: ${data.message || 'Error desconocido'}`, 'danger');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                        mostrarAlerta('Error al eliminar la asignación', 'danger');
+                        console.error('[Eliminar] Error:', error);
+                        mostrarAlerta(`Error al eliminar la asignación: ${error.message}`, 'danger');
                     });
             }
         }
         
-        // Función para guardar una asignación
         function guardarAsignacion() {
+            console.log("[Guardar] Iniciando guardado desde modal...");
             if (!selectedAsignaturaId || !selectedProfesorId) {
                 mostrarAlerta('Debes seleccionar asignatura y profesor', 'warning');
                 return;
             }
             
-            // Actualizar en el servidor
-            actualizarClaseEnServidor(selectedAsignaturaId, selectedProfesorId, currentDia, currentHora)
-            .then(data => {
-                if (data.success) {
-                    // Cerrar el modal
-                    bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
-                        
-                        // Actualizar la UI
+            const btnGuardar = document.getElementById('btn-guardar');
+            const spinner = document.getElementById('spinnerGuardar');
+            btnGuardar.disabled = true;
+            spinner.classList.remove('d-none');
+            document.getElementById('modal-error-container').innerHTML = ''; // Limpiar errores previos del modal
+
+            // *** Doble verificación de conflictos ANTES de enviar ***
+            checkConflictsAPI(selectedProfesorId, currentDia, currentHora, currentClaseId)
+                .then(conflictoData => {
+                    if (conflictoData.conflict) {
+                        // Verificar si el conflicto es porque el profesor ya tiene clase en otro grupo
+                        if (conflictoData.conflict_type === 'profesor_asignado' && conflictoData.conflicting_class) {
+                            // Mostrar modal de unir clases
+                            window.unionClasesData = {
+                                dia: currentDia,
+                                hora: currentHora,
+                                asignatura_actual_id: selectedAsignaturaId,
+                                asignatura_actual_nombre: asignaturasData[selectedAsignaturaId]?.nombre || 'No disponible',
+                                clase_actual_id: currentClaseId,
+                                clase_actual_nombre: '{{ clase.nombre }}',
+                                profesor_id: selectedProfesorId,
+                                profesor_nombre: profesoresData[selectedProfesorId]?.nombre || 'No disponible',
+                                clase_existente_id: conflictoData.conflicting_class.clase_id,
+                                clase_existente_nombre: conflictoData.conflicting_class.clase_nombre || 'Clase desconocida',
+                                asignatura_existente_id: conflictoData.conflicting_class.asignatura_id,
+                                asignatura_existente_nombre: conflictoData.conflicting_class.asignatura_nombre || 'No disponible'
+                            };
+                            
+                            // Cerrar modal actual y mostrar modal de unir clases
+                            bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
+                            mostrarModalUnirClases();
+                            
+                            // Deshabilitar spinner
+                            spinner.classList.add('d-none');
+                            btnGuardar.disabled = false;
+                            
+                            // No continuar con la asignación
+                            return Promise.reject(new Error("Conflicto de profesor en otra clase"));
+                        } else {
+                            // Otro tipo de conflicto, mostrar error
+                            mostrarAlertaEnModal(`Conflicto: ${conflictoData.message}`, 'danger');
+                            throw new Error("Conflicto detectado"); // Detener el proceso
+                        }
+                    }
+                    
+                    // Si no hay conflicto, proceder a guardar
+                    console.log("[Guardar] No hay conflicto, llamando a API /schedules/update...");
+                    const ajustar = document.getElementById('ajustar-otras-clases')?.checked || false;
+                    return actualizarClaseEnServidor(selectedAsignaturaId, selectedProfesorId, currentDia, currentHora, ajustar);
+                })
+                .then(data => {
+                    console.log("[Guardar] Respuesta de API /schedules/update:", data);
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
                         actualizarCelda(currentDia, currentHora, selectedAsignaturaId, selectedProfesorId);
                         
-                        // Si hay celdas ajustadas automáticamente, actualizarlas también
                         if (data.adjusted_cells && data.adjusted_cells.length > 0) {
                             data.adjusted_cells.forEach(cell => {
                                 actualizarCelda(cell.dia, cell.hora, cell.asignatura_id, cell.profesor_id);
                             });
                             mostrarAlerta('Se han ajustado otras celdas con la misma asignatura', 'info');
                         }
-                    
-                    // Mostrar mensaje de éxito
                         mostrarAlerta('Asignación guardada con éxito', 'success');
-                } else {
-                    mostrarAlerta('Error: ' + data.message, 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                    mostrarAlerta('Error al guardar la asignación', 'danger');
-            });
-        }
-        
-        // Función para confirmar y limpiar todo el horario
-        function confirmarLimpiarTodo() {
-            console.log('Iniciando limpieza de horario');
-            if (confirm('¿Estás seguro de limpiar todo el horario? Esta acción no se puede deshacer.')) {
-                // Llamar a la API para limpiar
-                fetch(`/schedules/clear_all/${currentClaseId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Limpiar UI
-                        document.querySelectorAll('.celda-con-clase').forEach(celda => {
-                            celda.innerHTML = '';
-                            celda.classList.remove('celda-con-clase');
-                            celda.classList.add('celda-vacia');
-                            celda.removeAttribute('data-asignatura-id');
-                            celda.removeAttribute('data-profesor-id');
-                        });
-                        
-                        mostrarAlerta('Horario limpiado con éxito', 'success');
                     } else {
-                        mostrarAlerta('Error: ' + data.message, 'danger');
+                        mostrarAlertaEnModal(`Error al guardar: ${data.message || 'Error desconocido'}`, 'danger');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    mostrarAlerta('Error al limpiar el horario', 'danger');
+                    if (error.message !== "Conflicto detectado" && error.message !== "Conflicto de profesor en otra clase") {
+                        console.error('[Guardar] Error:', error);
+                        mostrarAlertaEnModal(`Error al guardar la asignación: ${error.message}`, 'danger');
+                    }
+                })
+                .finally(() => {
+                    if (document.getElementById('spinnerGuardar').classList.contains('d-none') === false) {
+                        // Solo restaurar botón si no se mostró otro modal (unir clases)
+                        btnGuardar.disabled = false;
+                        spinner.classList.add('d-none');
+                    }
+                });
+        }
+        
+        function confirmarLimpiarTodo() {
+            console.log('[Limpiar Todo] Confirmando...');
+            if (confirm('¿Estás seguro de limpiar todo el horario para esta clase? Esta acción no se puede deshacer.')) {
+                console.log('[Limpiar Todo] Confirmado, llamando a API...');
+                fetch(`/schedules/clear_all/${currentClaseId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, // Añadir CSRF si es necesario
+                    body: JSON.stringify({})
+                })
+                .then(response => {
+                     if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
+                     return response.json();
+                 })
+                .then(data => {
+                    console.log("[Limpiar Todo] Respuesta del servidor:", data);
+                    if (data.success) {
+                        // Limpiar UI
+                        document.querySelectorAll('.celda-con-clase').forEach(celda => {
+                            actualizarCelda(celda.dataset.dia, celda.dataset.hora, null, null);
+                        });
+                        mostrarAlerta('Horario limpiado con éxito', 'success');
+                    } else {
+                        mostrarAlerta(`Error al limpiar: ${data.message || 'Error desconocido'}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('[Limpiar Todo] Error:', error);
+                    mostrarAlerta(`Error al limpiar el horario: ${error.message}`, 'danger');
                 });
             }
         }
         
-        // Confirmar y generar horario automáticamente
         function confirmarGenerarAutomatico() {
-            console.log('Iniciando generación automática');
-            if (confirm('¿Generar horario automáticamente? Esto sobrescribirá cualquier asignación existente.')) {
-                window.location.href = `/schedules/generate/${currentClaseId}`;
+            console.log('[Generar Auto] Confirmando...');
+            if (confirm('¿Generar horario automáticamente? Esto intentará completar los huecos y podría sobrescribir asignaciones existentes si hay conflictos irresolubles.')) {
+                // Idealmente, esto llamaría a una API que devuelve el horario generado
+                // Por ahora, redirigimos a la ruta que procesa el POST
+                console.log('[Generar Auto] Redirigiendo para generación POST...');
+                 // Mostrar un spinner o mensaje de carga aquí sería bueno
+                 mostrarAlerta("Iniciando generación automática... por favor espere.", "info");
+                 // Usar un formulario oculto para enviar POST o redirigir si la ruta GET maneja POST
+                 // Si la ruta /generate/<id> maneja POST:
+                 const form = document.createElement('form');
+                 form.method = 'POST';
+                 form.action = `/schedules/generate/${currentClaseId}`;
+                 // Añadir CSRF token si es necesario
+                 const csrfInput = document.createElement('input');
+                 csrfInput.type = 'hidden';
+                 csrfInput.name = 'csrf_token'; // Ajustar si el nombre es diferente
+                 csrfInput.value = getCsrfToken(); 
+                 form.appendChild(csrfInput);
+                 document.body.appendChild(form);
+                 form.submit();
+                 
+                 // Si prefieres redirigir al GET y que ese maneje el POST:
+                 // window.location.href = `/schedules/generate/${currentClaseId}`;
             }
         }
         
-        // Actualizar celda en la UI
         function actualizarCelda(dia, hora, asignaturaId, profesorId) {
+             console.log(`[UI Actualizar Celda] Actualizando ${dia} ${hora}° hora. Asig=${asignaturaId}, Prof=${profesorId}`);
             const celda = document.querySelector(`.celda-horario[data-dia="${dia}"][data-hora="${hora}"]`);
             if (!celda) {
-                console.error(`No se encontró la celda para actualizar: dia=${dia}, hora=${hora}`);
+                console.error(`[UI Actualizar Celda] No se encontró celda para ${dia} ${hora}`);
                 return;
             }
             
-            // Actualizar la celda
-            celda.innerHTML = '';
-            celda.classList.remove('celda-con-clase', 'celda-vacia');
+            // Limpiar contenido anterior
+            celda.innerHTML = ''; 
+
+            if (asignaturaId && profesorId) {
+                // Si hay datos, crear el bloque
+            celda.classList.remove('celda-vacia');
             celda.classList.add('celda-con-clase');
-            celda.dataset.asignaturaId = asignaturaId;
-            celda.dataset.profesorId = profesorId;
-            
-            // Crear bloque de asignatura
-            try {
-                const asignatura = asignaturasData[asignaturaId];
-                const profesor = profesoresData[profesorId];
+                celda.dataset.asignaturaId = asignaturaId;
+                celda.dataset.profesorId = profesorId;
                 
-                if (!asignatura || !profesor) {
-                    console.error(`No se encontraron datos para asignatura=${asignaturaId} o profesor=${profesorId}`);
-                    return;
-                }
-                
-            celda.innerHTML = `
-                    <div class="asignatura-bloque" 
-                         data-color="${asignatura.color}"
-                         style="background-color: ${asignatura.color}"
-                         draggable="true"
-                         ondragstart="drag(event)"
-                         data-asignatura-id="${asignaturaId}"
-                         data-profesor-id="${profesorId}">
+                try {
+                    const asignatura = asignaturasData[asignaturaId];
+                    const profesor = profesoresData[profesorId];
+                    
+                    if (!asignatura || !profesor) throw new Error("Datos de asignatura o profesor no encontrados");
+
+                    const bloqueHTML = `
+                        <div class="asignatura-bloque" 
+                             data-color="${asignatura.color}"
+                             style="background-color: ${asignatura.color}"
+                             draggable="true"
+                             ondragstart="drag(event)"
+                             data-asignatura-id="${asignaturaId}"
+                             data-profesor-id="${profesorId}"
+                             title="${asignatura.nombre} - ${profesor.nombre}">
                     <div class="asignatura-nombre">
+                        ${asignatura.icono ? `<i class="fas ${asignatura.icono} me-1"></i>` : ''}
                         ${asignatura.nombre}
                     </div>
                     <div class="profesor-nombre">
@@ -995,225 +1180,412 @@
                     </div>
                 </div>
             `;
-                
-                // Agregar evento de arrastre al nuevo bloque
-                const nuevoBloque = celda.querySelector('.asignatura-bloque');
-                if (nuevoBloque) {
-                    nuevoBloque.addEventListener('dragstart', drag);
+                    celda.innerHTML = bloqueHTML;
+                    // Re-añadir listener de drag al nuevo bloque
+                    celda.querySelector('.asignatura-bloque')?.addEventListener('dragstart', drag);
+                    
+                } catch (error) {
+                    console.error(`[UI Actualizar Celda] Error creando bloque: ${error.message}`);
+                    celda.innerHTML = '<span class="text-danger small">Error</span>'; // Mostrar error en celda
                 }
-            } catch (error) {
-                console.error(`No se pudo crear el bloque de asignatura: dia=${dia}, hora=${hora}`, error);
+            } else {
+                // Si no hay datos, limpiar la celda
+            celda.classList.remove('celda-con-clase');
+            celda.classList.add('celda-vacia');
+                celda.removeAttribute('data-asignatura-id');
+                celda.removeAttribute('data-profesor-id');
             }
         }
         
-        // Función para actualizar clase en el servidor
-        function actualizarClaseEnServidor(asignaturaId, profesorId, dia, hora) {
+        // Llama a la API /schedules/update
+        function actualizarClaseEnServidor(asignaturaId, profesorId, dia, hora, ajustar = false) {
+             console.log(`[API Update] Guardando: Asig=${asignaturaId}, Prof=${profesorId}, Dia=${dia}, Hora=${hora}, Ajustar=${ajustar}`);
             return fetch('/schedules/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 body: JSON.stringify({
                     clase_id: currentClaseId,
                     dia: dia,
                     hora: hora,
                     asignatura_id: asignaturaId,
-                    profesor_id: profesorId
+                    profesor_id: profesorId,
+                    ajustar_clases: ajustar
                 })
-            }).then(response => response.json());
+            }).then(response => {
+                 if (!response.ok) { 
+                      return response.json().then(errData => { 
+                           throw new Error(errData.message || `Error del servidor: ${response.status}`); 
+                      });
+                 }
+                 return response.json();
+             });
         }
         
-        // Función para abrir el modal para una nueva asignatura arrastrada
         function openModalForNewAsignatura(asignaturaId, dia, hora) {
+             console.log(`[Modal Nuevo] Abriendo para nueva asignatura ${asignaturaId} en ${dia} ${hora}° hora`);
             currentDia = dia;
             currentHora = hora;
             
-            // Establecer información en el modal
             document.getElementById('modal-dia').textContent = capitalize(currentDia);
             document.getElementById('modal-hora').textContent = currentHora + '° hora';
             
-            // Preseleccionar la asignatura
             selectedAsignaturaId = asignaturaId;
-            selectedProfesorId = null;
+            selectedProfesorId = null; 
             
-            // Marcar la asignatura como seleccionada
             document.querySelectorAll('.subject-option').forEach(option => {
-                option.classList.remove('selected');
-                if (option.dataset.id === asignaturaId) {
-                    option.classList.add('selected');
-                }
+                option.classList.toggle('selected', option.dataset.id === asignaturaId);
             });
             
-            // Mostrar profesores disponibles
             updateProfesoresList();
+            verificarConflictos(); // Verificar inmediatamente
             
-            // Verificar conflictos
-            verificarConflictos();
+            // Habilitar/Deshabilitar botón de eliminar (no aplica para nuevo)
+             document.getElementById('btn-eliminar').style.display = 'none'; 
             
-            // Mostrar el modal
             const asignarModal = new bootstrap.Modal(document.getElementById('asignarModal'));
             asignarModal.show();
         }
         
-        // Función para abrir el modal de asignación
         function openModal(event) {
             const celda = event.currentTarget;
+            console.log(`[Modal Editar/Nuevo] Abriendo para celda ${celda.dataset.dia} ${celda.dataset.hora}° hora`);
             currentDia = celda.dataset.dia;
             currentHora = celda.dataset.hora;
             
-            // Establecer información en el modal
             document.getElementById('modal-dia').textContent = capitalize(currentDia);
             document.getElementById('modal-hora').textContent = currentHora + '° hora';
             
-            // Comprobar si ya hay una asignación
-            selectedAsignaturaId = celda.dataset.asignaturaId || null;
-            selectedProfesorId = celda.dataset.profesorId || null;
+            const asignaturaIdActual = celda.dataset.asignaturaId || null;
+            const profesorIdActual = celda.dataset.profesorId || null;
             
-            // Restablecer selecciones
+            selectedAsignaturaId = asignaturaIdActual;
+            selectedProfesorId = profesorIdActual;
+            
+            console.log(`[Modal Editar/Nuevo] Estado inicial: Asig=${selectedAsignaturaId}, Prof=${selectedProfesorId}`);
+
             document.querySelectorAll('.subject-option').forEach(option => {
-                option.classList.remove('selected');
-                if (selectedAsignaturaId && option.dataset.id === selectedAsignaturaId) {
-                    option.classList.add('selected');
-                }
+                option.classList.toggle('selected', selectedAsignaturaId && option.dataset.id === selectedAsignaturaId);
             });
             
-            // Mostrar profesores disponibles para la asignatura seleccionada
-            updateProfesoresList();
+            updateProfesoresList(); // Llama a verificarConflictos dentro
+
+             // Habilitar/Deshabilitar botón de eliminar
+             document.getElementById('btn-eliminar').style.display = asignaturaIdActual ? 'inline-block' : 'none'; 
             
-            // Verificar disponibilidad de profesores para esta hora
-            verificarConflictos();
-            
-            // Mostrar el modal
             const asignarModal = new bootstrap.Modal(document.getElementById('asignarModal'));
             asignarModal.show();
         }
         
-        // Función para seleccionar una asignatura
         function selectAsignatura(event) {
             const option = event.currentTarget;
+            const nuevoAsignaturaId = option.dataset.id;
+             console.log(`[Modal Select Asig] Seleccionada asignatura ID: ${nuevoAsignaturaId}`);
+
             document.querySelectorAll('.subject-option').forEach(opt => opt.classList.remove('selected'));
             option.classList.add('selected');
             
-            selectedAsignaturaId = option.dataset.id;
-            selectedProfesorId = null; // Resetear selección de profesor
+            selectedAsignaturaId = nuevoAsignaturaId;
+            selectedProfesorId = null; // Resetear profesor al cambiar asignatura
             
-            // Actualizar lista de profesores disponibles
-            updateProfesoresList();
-            
-            // Verificar conflictos
-            verificarConflictos();
+            updateProfesoresList(); // Llama a verificarConflictos dentro
         }
         
-        // Función para actualizar la lista de profesores
         function updateProfesoresList() {
             const profesoresList = document.getElementById('profesores-list');
             profesoresList.innerHTML = '';
+             console.log(`[Modal Update Prof] Actualizando lista para Asig ID: ${selectedAsignaturaId}`);
             
             if (!selectedAsignaturaId) {
-                profesoresList.innerHTML = '<div class="alert alert-warning">Selecciona primero una asignatura</div>';
+                profesoresList.innerHTML = '<div class="alert alert-light border small">Seleccione una asignatura.</div>';
+                 verificarConflictos(); // Llamar para limpiar/resetear estado de conflicto y botón guardar
                 return;
             }
             
-            // Obtener profesores para esta asignatura
             const profesoresIds = asignaturasData[selectedAsignaturaId]?.profesores || [];
+            console.log(`[Modal Update Prof] IDs de profesores encontrados:`, profesoresIds);
             
             if (profesoresIds.length === 0) {
-                profesoresList.innerHTML = '<div class="alert alert-warning">No hay profesores asignados a esta asignatura</div>';
+                profesoresList.innerHTML = '<div class="alert alert-warning small">No hay profesores asignados a esta asignatura.</div>';
+                 verificarConflictos(); // Llamar para limpiar/resetear estado de conflicto y botón guardar
                 return;
             }
             
-            // Crear opciones de profesores
             profesoresIds.forEach(profesorId => {
                 const profesor = profesoresData[profesorId];
                 if (!profesor) return;
                 
                 const isSelected = profesorId == selectedProfesorId;
-                const divProfesor = document.createElement('div');
-                divProfesor.className = `profesor-option p-2 mb-2 border rounded ${isSelected ? 'bg-primary text-white' : ''}`;
-                divProfesor.dataset.id = profesorId;
-                divProfesor.innerHTML = profesor.nombre;
-                divProfesor.style.cursor = 'pointer';
+                const aProfesor = document.createElement('a');
+                aProfesor.href = "#";
+                aProfesor.className = `list-group-item list-group-item-action profesor-option ${isSelected ? 'selected' : ''}`;
+                aProfesor.dataset.id = profesorId;
+                aProfesor.textContent = profesor.nombre;
                 
-                divProfesor.addEventListener('click', function() {
-                    // Deseleccionar todos los profesores
-                    document.querySelectorAll('.profesor-option').forEach(p => {
-                        p.classList.remove('bg-primary', 'text-white');
-                    });
-                    
-                    // Seleccionar este profesor
-                    this.classList.add('bg-primary', 'text-white');
+                aProfesor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.profesor-option').forEach(p => p.classList.remove('selected'));
+                    this.classList.add('selected');
                     selectedProfesorId = this.dataset.id;
-                    
-                    // Verificar conflictos
-                    verificarConflictos();
+                     console.log(`[Modal Select Prof] Seleccionado profesor ID: ${selectedProfesorId}`);
+                    verificarConflictos(); // Verificar al seleccionar profesor
                 });
-                
-                profesoresList.appendChild(divProfesor);
+                profesoresList.appendChild(aProfesor);
             });
+
+             // Si había un profesor preseleccionado (al editar), verificar conflictos
+             if (selectedProfesorId) {
+                 verificarConflictos();
+             } else {
+                 // Si no hay profesor seleccionado, limpiar conflictos y deshabilitar guardar
+                 limpiarYDeshabilitarGuardar();
+             }
         }
+
+        // Llama a la API para verificar conflictos
+        function checkConflictsAPI(profesorId, dia, hora, claseId) {
+             console.log(`[API Check Conflicts] Verificando: Prof=${profesorId}, Dia=${dia}, Hora=${hora}, ClaseActual=${claseId}`);
+             if (!profesorId || !dia || !hora) {
+                 console.warn("[API Check Conflicts] Datos insuficientes para verificar.");
+                 // Devolver una promesa resuelta como si no hubiera conflicto para no bloquear
+                 return Promise.resolve({ conflict: false, message: 'Datos insuficientes para verificar' }); 
+             }
+             // Asegurarse de que la hora es un número para la URL (si la API espera número)
+             const horaNum = parseInt(hora); // Asume que `hora` es algo como '1', '2', etc.
+             if (isNaN(horaNum)) {
+                 console.error(`[API Check Conflicts] Formato de hora inválido: ${hora}`);
+                 return Promise.resolve({ conflict: true, message: `Formato de hora inválido: ${hora}`});
+             }
+             
+             const url = `/schedules/check_conflicts?profesor_id=${profesorId}&dia=${dia}&hora=${horaNum}&clase_id=${claseId}`;
+             return fetch(url)
+                 .then(response => {
+                     if (!response.ok) { throw new Error(`Error ${response.status} verificando conflictos`); }
+                     return response.json();
+                 })
+                 .catch(error => {
+                     console.error("[API Check Conflicts] Error en fetch:", error);
+                     // Devolver un objeto de conflicto para manejarlo consistentemente
+                     return { conflict: true, message: `Error al conectar: ${error.message}` }; 
+                 });
+         }
         
-        // Función para verificar conflictos 
+        // Actualiza el div de conflictos y el botón guardar en el modal
         function verificarConflictos() {
             const conflictoDiv = document.getElementById('conflicto-info');
-            conflictoDiv.innerHTML = '';
+            const btnGuardar = document.getElementById('btn-guardar');
+            conflictoDiv.innerHTML = '<span class="text-muted small"><i class="fas fa-spinner fa-spin me-1"></i>Verificando...</span>'; // Mensaje con spinner
+            btnGuardar.disabled = true; // Deshabilitar mientras se verifica
             
-            if (!selectedProfesorId || !currentDia || !currentHora) {
+            if (!selectedProfesorId || !selectedAsignaturaId) {
+                 console.log("[Check Conflicts UI] Faltan asignatura o profesor.");
+                 limpiarYDeshabilitarGuardar();
+                 return;
+             }
+            
+            // Asegurarse de que currentHora es el número correcto
+            const horaNumParaCheck = parseInt(currentHora); 
+            if (isNaN(horaNumParaCheck)) {
+                console.error("[Check Conflicts UI] Hora actual inválida:", currentHora);
+                mostrarAlertaEnModal("Error interno: Hora inválida.", "danger");
+                limpiarYDeshabilitarGuardar();
                 return;
             }
-            
-            // Consultar disponibilidad del profesor
-            fetch(`/schedules/check_conflicts?profesor_id=${selectedProfesorId}&dia=${currentDia}&hora=${currentHora}&clase_id=${currentClaseId}`)
-                .then(response => response.json())
+
+            checkConflictsAPI(selectedProfesorId, currentDia, horaNumParaCheck, currentClaseId)
                 .then(data => {
+                    console.log("[Check Conflicts UI] Respuesta de API:", data);
                     if (data.conflict) {
-                        conflictoDiv.innerHTML = `
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                ${data.message}
-                            </div>
-                        `;
-                        document.getElementById('btn-guardar').setAttribute('disabled', 'disabled');
+                        // Verificar si el conflicto es porque el profesor ya tiene clase en otro grupo
+                        if (data.conflict_type === 'profesor_asignado' && data.conflicting_class) {
+                            // En lugar de mostrar error, guardar datos para el modal de unir clases
+                            window.unionClasesData = {
+                                dia: currentDia,
+                                hora: currentHora,
+                                asignatura_actual_id: selectedAsignaturaId,
+                                asignatura_actual_nombre: asignaturasData[selectedAsignaturaId]?.nombre || 'No disponible',
+                                clase_actual_id: currentClaseId,
+                                clase_actual_nombre: '{{ clase.nombre }}',
+                                profesor_id: selectedProfesorId,
+                                profesor_nombre: profesoresData[selectedProfesorId]?.nombre || 'No disponible',
+                                clase_existente_id: data.conflicting_class.clase_id,
+                                clase_existente_nombre: data.conflicting_class.clase_nombre || 'Clase desconocida',
+                                asignatura_existente_id: data.conflicting_class.asignatura_id,
+                                asignatura_existente_nombre: data.conflicting_class.asignatura_nombre || 'No disponible'
+                            };
+                            
+                            // Mostrar modal de unir clases
+                            mostrarModalUnirClases();
+                            
+                            // Ocultar modal actual
+                            bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
+                        } else {
+                            // Otro tipo de conflicto, mostrar mensaje de error normal
+                            mostrarAlertaEnModal(`Conflicto: ${data.message}`, 'danger');
+                            btnGuardar.disabled = true;
+                        }
                     } else {
-                        conflictoDiv.innerHTML = `
-                            <div class="alert alert-success">
-                                <i class="fas fa-check-circle me-2"></i>
-                                El profesor está disponible en este horario
-                            </div>
-                        `;
-                        document.getElementById('btn-guardar').removeAttribute('disabled');
+                        mostrarAlertaEnModal('Profesor disponible y sin conflictos detectados.', 'success');
+                        btnGuardar.disabled = false; // Habilitar solo si no hay conflicto
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    conflictoDiv.innerHTML = `
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Error al verificar disponibilidad
-                        </div>
-                    `;
-                });
+                     // El error ya debería haber sido manejado en checkConflictsAPI y devuelto como {conflict: true}
+                     console.error("[Check Conflicts UI] Error inesperado en la verificación (esto no debería ocurrir si checkConflictsAPI maneja errores):");
+                     mostrarAlertaEnModal(`Error al verificar disponibilidad: ${error.message}`, 'warning');
+                     btnGuardar.disabled = true;
+                 });
+        }
+
+        // Función para mostrar el modal de unir clases
+        function mostrarModalUnirClases() {
+            if (!window.unionClasesData) {
+                console.error("[Unir Clases] No hay datos para mostrar el modal");
+                return;
+            }
+            
+            const data = window.unionClasesData;
+            
+            // Actualizar datos en el modal
+            document.getElementById('unir-clases-actual').textContent = data.clase_actual_nombre;
+            document.getElementById('unir-clases-asignatura-actual').textContent = data.asignatura_actual_nombre;
+            document.getElementById('unir-clases-existente').textContent = data.clase_existente_nombre;
+            document.getElementById('unir-clases-asignatura-existente').textContent = data.asignatura_existente_nombre;
+            
+            // Personalizar mensaje
+            document.getElementById('unir-clases-mensaje').textContent = 
+                `El profesor ${data.profesor_nombre} ya está asignado a la clase ${data.clase_existente_nombre} en este horario (${capitalize(data.dia)}, ${data.hora}° hora).`;
+            
+            // Configurar botón de confirmar
+            const btnConfirmarUnir = document.getElementById('btn-confirmar-unir');
+            const spinnerUnir = document.getElementById('spinnerUnir');
+            
+            // Eliminar listener previo si existe
+            btnConfirmarUnir.onclick = null;
+            
+            // Agregar nuevo listener
+            btnConfirmarUnir.addEventListener('click', confirmarUnirClases);
+            
+            // Mostrar modal
+            const unirClasesModal = new bootstrap.Modal(document.getElementById('unirClasesModal'));
+            unirClasesModal.show();
         }
         
-        // Función para mostrar alertas
-        function mostrarAlerta(mensaje, tipo) {
-            const alertaDiv = document.createElement('div');
-            alertaDiv.className = `alert alert-${tipo} alert-dismissible fade show mt-3`;
-            alertaDiv.innerHTML = `
-                ${mensaje}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
+        // Función para confirmar unión de clases
+        function confirmarUnirClases() {
+            if (!window.unionClasesData) {
+                console.error("[Unir Clases] No hay datos para unir clases");
+                return;
+            }
             
-            const container = document.querySelector('.container-fluid');
-            container.insertBefore(alertaDiv, container.firstChild);
+            const data = window.unionClasesData;
+            const btnConfirmarUnir = document.getElementById('btn-confirmar-unir');
+            const spinnerUnir = document.getElementById('spinnerUnir');
+            
+            // Deshabilitar botón y mostrar spinner
+            btnConfirmarUnir.disabled = true;
+            spinnerUnir.classList.remove('d-none');
+            
+            // Llamar a la API para unir clases
+            fetch('/schedules/unir_clases', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({
+                    clase_actual_id: data.clase_actual_id,
+                    clase_existente_id: data.clase_existente_id,
+                    profesor_id: data.profesor_id,
+                    asignatura_actual_id: data.asignatura_actual_id,
+                    asignatura_existente_id: data.asignatura_existente_id,
+                    dia: data.dia,
+                    hora: data.hora
+                })
+            })
+            .then(response => {
+                if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
+                return response.json();
+            })
+            .then(respData => {
+                if (respData.success) {
+                    // Cerrar modal
+                    bootstrap.Modal.getInstance(document.getElementById('unirClasesModal')).hide();
+                    
+                    // Actualizar UI si es necesario
+                    actualizarCelda(data.dia, data.hora, data.asignatura_actual_id, data.profesor_id);
+                    
+                    // Mostrar mensaje de éxito
+                    mostrarAlerta('Clases unidas correctamente', 'success');
+                } else {
+                    throw new Error(respData.message || 'Error al unir clases');
+                }
+            })
+            .catch(error => {
+                console.error('[Unir Clases] Error:', error);
+                mostrarAlerta(`Error al unir clases: ${error.message}`, 'danger');
+            })
+            .finally(() => {
+                // Restaurar botón
+                btnConfirmarUnir.disabled = false;
+                spinnerUnir.classList.add('d-none');
+            });
+        }
+
+        function limpiarYDeshabilitarGuardar() {
+             const conflictoDiv = document.getElementById('conflicto-info');
+             const btnGuardar = document.getElementById('btn-guardar');
+             conflictoDiv.innerHTML = '<span class="text-muted small">Seleccione asignatura y profesor.</span>';
+             btnGuardar.disabled = true;
+         }
+
+        function mostrarAlertaEnModal(mensaje, tipo = 'info') {
+             const conflictoDiv = document.getElementById('conflicto-info');
+             conflictoDiv.innerHTML = `
+                 <div class="alert alert-${tipo} alert-dismissible fade show small py-1" role="alert">
+                     ${tipo === 'danger' ? '<i class="fas fa-exclamation-triangle me-1"></i>' : ''}
+                     ${tipo === 'success' ? '<i class="fas fa-check-circle me-1"></i>' : ''}
+                ${mensaje}
+                     <button type="button" class="btn-close py-1 px-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+                 </div>
+             `;
+             console.log(`[Modal Alert ${tipo}]: ${mensaje}`);
+         }
+        
+        // Mostrar alertas generales
+        function mostrarAlerta(mensaje, tipo) {
+            console.log(`[Alerta General ${tipo}]: ${mensaje}`);
+            const alertPlaceholder = document.querySelector('.container-fluid'); // O un div específico para alertas
+            if (!alertPlaceholder) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = [
+                `<div class="alert alert-${tipo} alert-dismissible fade show" role="alert">`,
+                `   <div>${mensaje}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('');
+
+            alertPlaceholder.insertBefore(wrapper.firstChild, alertPlaceholder.firstChild);
             
             // Auto-eliminar después de 5 segundos
+            const alertElement = wrapper.firstChild;
             setTimeout(() => {
-                alertaDiv.classList.remove('show');
-                setTimeout(() => alertaDiv.remove(), 300);
+                 if(alertElement.parentNode) { 
+                     alertElement.classList.remove('show');
+                     alertElement.addEventListener('transitionend', () => alertElement.remove());
+                 }
             }, 5000);
         }
         
         function capitalize(string) {
+             if (!string) return '';
             return string.charAt(0).toUpperCase() + string.slice(1);
         }
+
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+
+        // --- Inicialización --- 
+        console.log('[Init] Editor de horarios listo.');
+
     });
 </script>
 {% endblock %} 

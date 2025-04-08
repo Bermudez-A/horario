@@ -7,20 +7,22 @@ class Horario(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     clase_id = db.Column(db.Integer, db.ForeignKey('clases.id', ondelete='CASCADE'), nullable=False)
-    dia = db.Column(db.String(10), nullable=False)  # lunes, martes, etc.
-    hora = db.Column(db.String(20), nullable=False)  # formato: "8:00 - 8:55"
+    dia = db.Column(db.String(15), nullable=False)  # lunes, martes, etc.
+    hora = db.Column(db.String(15), nullable=False)  # formato: "8:00 - 8:55"
     asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
     profesor_id = db.Column(db.Integer, db.ForeignKey('profesores.id'), nullable=False)
+    unido_con_clase_id = db.Column(db.Integer, db.ForeignKey('clases.id'), nullable=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
-    fecha_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ultima_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relaciones
-    clase = db.relationship('Clase', back_populates='horarios')
+    clase = db.relationship('Clase', back_populates='horarios', foreign_keys=[clase_id])
     asignatura = db.relationship('Asignatura', back_populates='horarios')
     profesor = db.relationship('Profesor', back_populates='horarios')
+    clase_unida = db.relationship('Clase', foreign_keys=[unido_con_clase_id])
     
     def __repr__(self):
-        return f'<Horario {self.id}: {self.dia} {self.hora} - Clase: {self.clase_id}, Asignatura: {self.asignatura_id}, Profesor: {self.profesor_id}>'
+        return f'<Horario: {self.clase.nombre}, {self.dia} {self.hora}, {self.asignatura.nombre}>'
     
     @classmethod
     def get_by_clase_dia_hora(cls, clase_id, dia, hora):
