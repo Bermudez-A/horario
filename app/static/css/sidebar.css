@@ -1,0 +1,264 @@
+/* Estilos para la barra lateral */
+
+/* Estilos base y tipografía */
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+.admin-layout {
+    min-height: 100vh;
+}
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background: #2c3e50; /* Fondo más oscuro y profesional */
+    color: #ecf0f1;
+    transition: all 0.3s;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+    box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: 0.3px;
+    z-index: 1030;
+}
+
+#sidebar:hover {
+    overflow-y: auto;
+}
+
+/* Ocultar la scrollbar pero mantener funcionalidad */
+#sidebar::-webkit-scrollbar {
+    width: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 3px;
+}
+
+#sidebar .sidebar-header {
+    padding: 15px 10px;  /* Reducido el padding horizontal */
+    background: #1a2632; /* Encabezado más oscuro */
+    text-align: center;
+    border-bottom: 1px solid #34495e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#sidebar .sidebar-header button {
+    background: transparent;
+    border: none;
+    color: #ecf0f1;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: none;
+}
+
+#sidebar .sidebar-brand {
+    font-size: 1.25em;
+    font-weight: 600;
+    color: #ecf0f1;
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;  /* Mejor centrado */
+}
+
+#sidebar .sidebar-brand i {
+    margin-right: 8px;  /* Espacio consistente para el icono */
+}
+
+/* Información del usuario en la parte superior */
+#sidebar .user-info {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid #34495e;
+    background-color: #243342;
+}
+
+#sidebar .user-info a {
+    color: #ecf0f1;
+    text-decoration: none;
+    font-size: 0.9em;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#sidebar .user-info .dropdown-menu {
+    background-color: #34495e;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+#sidebar .user-info .dropdown-menu a {
+    color: #ecf0f1;
+    padding: 8px 15px;
+    font-weight: 400;
+}
+
+#sidebar .user-info .dropdown-menu a:hover {
+    background-color: #2c3e50;
+}
+
+/* Secciones del menú */
+#sidebar .section-title {
+    font-size: 0.65em;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #7f8c8d;
+    padding: 15px 15px 5px;
+    margin-top: 5px;  /* Reducido el espacio superior */
+    font-weight: 600;
+}
+
+/* Primer section-title necesita menos espacio */
+#sidebar .section-title:first-of-type {
+    margin-top: 0;
+}
+
+#sidebar .components {
+    padding: 0;
+}
+
+#sidebar .nav-item {
+    padding: 0;
+    margin: 3px 0;
+}
+
+#sidebar .nav-item a {
+    padding: 10px 15px;
+    font-size: 0.85em;
+    display: block;
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
+
+#sidebar .nav-item a:hover {
+    color: #ecf0f1;
+    background: #34495e;
+    border-left: 3px solid #3498db;
+}
+
+#sidebar .nav-item.active > a {
+    color: #ecf0f1;
+    background: #34495e;
+    border-left: 3px solid #3498db;
+    font-weight: 500;
+}
+
+/* Separador de secciones */
+#sidebar .nav-divider {
+    height: 1px;
+    margin: 10px 15px;
+    overflow: hidden;
+    background-color: #34495e;
+}
+
+/* Login link */
+#sidebar .login-link {
+    padding: 15px;
+    text-align: center;
+    border-top: 1px solid #34495e;
+    margin-top: auto;
+}
+
+#sidebar .login-link a {
+    color: #bdc3c7;
+    text-decoration: none;
+    font-weight: 400;
+    font-size: 0.9em;
+}
+
+/* Badges para notificaciones */
+.badge-admin {
+    background-color: #3498db;
+    color: white;
+    font-size: 0.65em;
+    padding: 3px 7px;
+    border-radius: 10px;
+    margin-left: 8px;  /* Espacio a la izquierda */
+    margin-right: 8px; /* Espacio antes de la flecha */
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+/* Mejora de iconos */
+#sidebar .nav-item a i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+    font-size: 0.95em;
+}
+
+/* Toggle button para sidebar en móviles */
+#sidebarToggleBtn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 999;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+/* Ajustes para dispositivos móviles */
+@media (max-width: 767.98px) {
+    #sidebar {
+        margin-left: -250px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100%;
+        z-index: 1050;
+    }
+    
+    #sidebar.active {
+        margin-left: 0;
+    }
+    
+    #content-wrapper {
+        width: 100%;
+    }
+    
+    #sidebar .sidebar-header button {
+        display: block;
+    }
+    
+    .admin-layout #content-wrapper {
+        padding-top: 60px; /* Espacio para el botón de toggle */
+    }
+}
+
+/* Ajustes para pantallas muy pequeñas */
+@media (max-width: 575.98px) {
+    #sidebar {
+        min-width: 85%;
+        max-width: 85%;
+    }
+}
+
+/* Transiciones suaves para el sidebar */
+#sidebar, #content-wrapper {
+    transition: all 0.3s ease;
+}

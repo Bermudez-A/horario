@@ -4,23 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Generador de Horarios{% endblock %}</title>
+
+    <!-- Google Fonts - Poppins para un aspecto más profesional -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    
-    <!-- Custom CSS -->
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
-    <!-- Chart.js -->
+    {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
+    {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"></script>
-    
+
     {% block extra_css %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
-    <!-- Barra de navegación -->
+<body class="{% if current_user.is_authenticated and current_user.rol == 'admin' %}d-flex admin-layout{% else %}standard-layout{% endif %}">
+    
+    {% if not current_user.is_authenticated or current_user.rol != 'admin' %}
+    <!-- Barra de navegación para usuarios no administradores -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
@@ -39,7 +42,7 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('schedules.index') }}">Horarios</a>
                         </li>
-                        {% if current_user.rol in ['admin', 'profesor'] %}
+                        {% if current_user.rol == 'profesor' %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('schedules.availability') }}">Disponibilidad</a>
                             </li>
@@ -47,20 +50,6 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('stats.index') }}">Estadísticas</a>
                         </li>
-                        {% if current_user.rol == 'admin' %}
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                    Admin
-                                </a>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">Usuarios</a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('admin.profesores') }}">Profesores</a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('admin.asignaturas') }}">Asignaturas</a></li>
-                                    <li><a class="dropdown-item" href="{{ url_for('admin.clases') }}">Clases</a></li>
-                                </ul>
-                            </li>
-                        {% endif %}
                     {% endif %}
                 </ul>
                 
@@ -71,9 +60,9 @@
                                 <i class="fas fa-user me-1"></i>{{ current_user.nombre or current_user.username }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#">Mi Perfil</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                             </ul>
                         </li>
                     {% else %}
@@ -87,40 +76,173 @@
             </div>
         </div>
     </nav>
+    {% endif %}
     
-    <!-- Mensajes flash -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="container mt-3">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
-                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-    
-    <!-- Contenido principal -->
-    <main class="container my-4 flex-grow-1">
-        {% block content %}{% endblock %}
-    </main>
-    
-    <!-- Pie de página -->
-    <footer class="bg-dark text-white py-4 mt-auto">
-        <div class="container text-center">
-                <p class="mb-0">&copy; 2023 Generador de Horarios. Todos los derechos reservados.</p>
+    {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+    <!-- Sidebar solo para administradores -->
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <a class="sidebar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-calendar-alt"></i>Horarios
+            </a>
+            <button id="sidebarCollapseBtn" class="d-md-none">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-    </footer>
-    
-    <!-- Bootstrap Bundle con Popper -->
+        
+        <div class="user-info">
+            <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown">
+                <i class="fas fa-user-circle"></i>
+                <span>{{ current_user.nombre or current_user.username }}</span>
+                <span class="badge-admin">Admin</span>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
+                <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Configuración</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+            </ul>
+        </div>
+        
+        <ul class="list-unstyled components">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('index') }}">
+                    <i class="fas fa-home me-2"></i>Inicio
+                </a>
+            </li>
+            
+            <div class="section-title">GESTIÓN ACADÉMICA</div>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('schedules.index') }}">
+                    <i class="fas fa-clock me-2"></i>Horarios
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('schedules.availability') }}">
+                    <i class="fas fa-calendar-check me-2"></i>Disponibilidad
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stats.index') }}">
+                    <i class="fas fa-chart-line me-2"></i>Estadísticas
+                </a>
+            </li>
+            
+            <div class="nav-divider"></div>
+            <div class="section-title">ADMINISTRACIÓN</div>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin.users') }}">
+                    <i class="fas fa-users-cog me-2"></i>Gestión Usuarios
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin.profesores') }}">
+                    <i class="fas fa-chalkboard-teacher me-2"></i>Profesores
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin.asignaturas') }}">
+                    <i class="fas fa-book me-2"></i>Asignaturas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('admin.clases') }}">
+                    <i class="fas fa-graduation-cap me-2"></i>Clases
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fas fa-cogs me-2"></i>Configuración
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fas fa-database me-2"></i>Respaldo
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    <div id="content-wrapper" class="d-flex flex-column {% if not current_user.is_authenticated or current_user.rol != 'admin' %}w-100{% endif %}">
+        {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+        <!-- Toggle button para sidebar en dispositivos móviles - solo para admin -->
+        <button id="sidebarToggleBtn" class="btn btn-primary d-md-none m-2">
+            <i class="fas fa-bars"></i>
+        </button>
+        {% endif %}
+        
+        <div id="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="container mt-3">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                {{ message }}
+                                <button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <main class="container my-4 flex-grow-1">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+
+        <footer class="bg-dark text-white py-4 mt-auto">
+            <div class="container text-center">
+                <p class="mb-0">&copy; 2023 Generador de Horarios. Todos los derechos reservados.</p>
+            </div>
+        </footer>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JS -->
-    <!-- <script src="{{ url_for('static', filename='js/main.js') }}"></script> --> <!-- Temporalmente comentado para depuración -->
-    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    {% if current_user.is_authenticated and current_user.rol == 'admin' %}
+    <!-- Script para controlar el sidebar en móviles (solo para admin) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+            const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarToggleBtn) {
+                sidebarToggleBtn.addEventListener('click', function() {
+                    if (sidebar) {
+                        sidebar.classList.toggle('active');
+                    }
+                });
+            }
+            
+            if (sidebarCollapseBtn) {
+                sidebarCollapseBtn.addEventListener('click', function() {
+                    if (sidebar) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            }
+            
+            // Cerrar sidebar al hacer clic en un enlace (en dispositivos móviles)
+            const sidebarLinks = document.querySelectorAll('#sidebar .nav-link');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768 && sidebar) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            });
+        });
+    </script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
-    {% block scripts %}{% endblock %} <!-- Asegurarse que este bloque existe -->
 </body>
-</html> 
+</html>
