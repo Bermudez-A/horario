@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="card shadow-lg border-0 rounded-lg mt-4">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h3 class="mb-0">
+                    {% if asignatura %}
+                    <i class="fas fa-edit me-2"></i>Editar Asignatura
+                    {% else %}
+                    <i class="fas fa-plus me-2"></i>Nueva Asignatura
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">{{ form.nombre.label }}</label>
+                                {{ form.nombre(class="form-control", placeholder="Nombre de la asignatura") }}
+                                {% for error in form.nombre.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="codigo" class="form-label">{{ form.codigo.label }}</label>
+                                {{ form.codigo(class="form-control", placeholder="Código único") }}
+                                {% for error in form.codigo.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="horas_semanales" class="form-label">{{ form.horas_semanales.label }}</label>
+                                {{ form.horas_semanales(class="form-control", min=1, max=20) }}
+                                {% for error in form.horas_semanales.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                <small class="text-muted">Cantidad de horas semanales para esta asignatura</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="color" class="form-label">{{ form.color.label }}</label>
+                                <div class="input-group">
+                                    {{ form.color(class="form-control", type="color") }}
+                                    <span class="input-group-text">{{ form.color.data or "#3498db" }}</span>
+                                </div>
+                                {% for error in form.color.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                <small class="text-muted">Color para identificar visualmente la asignatura</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="icono" class="form-label">{{ form.icono.label }}</label>
+                        {{ form.icono(class="form-control", placeholder="Clase CSS del icono (ej: fas fa-book)") }}
+                        {% for error in form.icono.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        <small class="text-muted">Icono de Font Awesome para representar esta asignatura</small>
+                        
+                        <div class="mt-2 mb-3">
+                            <p class="mb-1">Iconos sugeridos:</p>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-book">
+                                    <i class="fas fa-book"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-calculator">
+                                    <i class="fas fa-calculator"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-flask">
+                                    <i class="fas fa-flask"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-globe">
+                                    <i class="fas fa-globe"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-language">
+                                    <i class="fas fa-language"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-music">
+                                    <i class="fas fa-music"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-paint-brush">
+                                    <i class="fas fa-paint-brush"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary icon-option" data-icon="fas fa-dumbbell">
+                                    <i class="fas fa-dumbbell"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.bloques_continuos(class="form-check-input") }}
+                        <label class="form-check-label" for="bloques_continuos">{{ form.bloques_continuos.label }}</label>
+                        <small class="form-text text-muted d-block">Si está marcado, esta asignatura preferirá bloques de horas consecutivas</small>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.activa(class="form-check-input") }}
+                        <label class="form-check-label" for="activa">{{ form.activa.label }}</label>
+                        <small class="form-text text-muted d-block">Desmarcar para desactivar temporalmente esta asignatura</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                        <a href="{{ url_for('admin.asignaturas') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Script para seleccionar iconos
+        const iconOptions = document.querySelectorAll('.icon-option');
+        const iconInput = document.getElementById('icono');
+        
+        iconOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const icon = this.getAttribute('data-icon');
+                iconInput.value = icon;
+                
+                // Resaltar el botón seleccionado
+                iconOptions.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            });
+            
+            // Marcar el icono actualmente seleccionado
+            if (option.getAttribute('data-icon') === iconInput.value) {
+                option.classList.add('active');
+            }
+        });
+    });
+</script>
+{% endblock %} 

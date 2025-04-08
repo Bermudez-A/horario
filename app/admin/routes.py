@@ -106,6 +106,24 @@ def delete_user(id):
     flash('Usuario eliminado con éxito', 'success')
     return redirect(url_for('admin.users'))
 
+@admin.route('/users/toggle_status/<int:id>')
+@login_required
+@admin_required
+def toggle_user_status(id):
+    user = User.query.get_or_404(id)
+    
+    if user.id == current_user.id:
+        flash('No puedes cambiar el estado de tu propio usuario', 'danger')
+        return redirect(url_for('admin.users'))
+    
+    user.activo = not user.activo
+    db.session.commit()
+    
+    estado = "activado" if user.activo else "desactivado"
+    flash(f'Usuario {user.username} {estado} con éxito', 'success')
+    
+    return redirect(url_for('admin.users'))
+
 # Gestión de Profesores
 @admin.route('/profesores')
 @login_required
@@ -115,38 +133,115 @@ def profesores():
     profesores = Profesor.query.join(User).filter(User.activo == True).paginate(page=page, per_page=10)
     return render_template('admin/profesores.html', title='Gestión de Profesores', profesores=profesores)
 
-@admin.route('/profesores/add/<int:user_id>', methods=['GET', 'POST'])
+@admin.route('/profesores/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def add_profesor(user_id):
-    user = User.query.get_or_404(user_id)
+def add_profesor():
+    # Verificar si hay asignaturas disponibles
+    asignaturas_disponibles = Asignatura.query.filter_by(activa=True).all()
     
-    if user.profesor:
-        flash('Este usuario ya tiene un perfil de profesor', 'warning')
-        return redirect(url_for('admin.profesores'))
+    if not asignaturas_disponibles:
+        flash('No hay asignaturas disponibles. Primero debe crear alguna asignatura.', 'warning')
+        return render_template('admin/profesor_form.html', 
+                               title='Añadir Profesor', 
+                               no_asignaturas=True, 
+                               asignaturas_url=url_for('admin.add_asignatura'))
     
     form = ProfesorForm()
+    # Agregar las asignaturas disponibles al campo select
+    form.asignatura_id.choices = [(a.id, f"{a.nombre} ({a.codigo})") for a in asignaturas_disponibles]
+    
+    # Cargar usuarios no administradores y sin perfil de profesor para el selector
+    usuarios_disponibles = User.query.filter(
+        User.rol != 'admin',  # No permitir administradores
+        ~User.id.in_(db.session.query(Profesor.usuario_id))  # Solo usuarios sin perfil de profesor
+    ).all()
+    
+    form.usuario_id.choices = [(u.id, f"{u.nombre} {u.apellido} ({u.username})") for u in usuarios_disponibles]
     
     if form.validate_on_submit():
+        usuario_id = None
+        
+        if form.usuario_tipo.data == 'existente':
+            # Usar un usuario existente
+            usuario_id = form.usuario_id.data
+            usuario = User.query.get(usuario_id)
+            
+            if not usuario:
+                flash('El usuario seleccionado no existe.', 'danger')
+                return redirect(url_for('admin.add_profesor'))
+                
+            if usuario.rol == 'admin':
+                flash('No se puede asignar un perfil de profesor a un administrador.', 'danger')
+                return redirect(url_for('admin.add_profesor'))
+                
+            # Cambiar el rol del usuario a profesor si no lo es
+            if usuario.rol != 'profesor':
+                usuario.rol = 'profesor'
+                db.session.commit()
+                
+        else:  # form.usuario_tipo.data == 'nuevo'
+            # Crear un usuario automáticamente para este profesor
+            username = f"{form.nombre.data.lower()}.{form.apellido.data.lower()}".replace(" ", "")
+            email = f"{username}@docente.com"
+            
+            # Asegurarse de que el username sea único
+            base_username = username
+            count = 1
+            while User.query.filter_by(username=username).first():
+                username = f"{base_username}{count}"
+                count += 1
+            
+            # Crear el usuario
+            user = User(
+                username=username,
+                email=email,
+                nombre=form.nombre.data,
+                apellido=form.apellido.data,
+                rol='profesor'
+            )
+            user.activo = True
+            user.set_password('profesor123')  # Contraseña por defecto
+            
+            db.session.add(user)
+            db.session.flush()  # Para obtener el ID del usuario
+            
+            usuario_id = user.id
+            usuario = user
+        
+        # Crear el perfil de profesor
         foto_file = None
         if form.foto.data:
             foto_file = save_picture(form.foto.data, 'profesores')
         
         profesor = Profesor(
-            usuario_id=user.id,
-            especialidad=form.especialidad.data,
+            usuario_id=usuario_id,
+            especialidad=Asignatura.query.get(form.asignatura_id.data).nombre,
             bio=form.bio.data,
             max_horas_diarias=form.max_horas_diarias.data,
             foto=foto_file
         )
         
         db.session.add(profesor)
+        db.session.flush()
+        
+        # Crear la relación entre profesor y asignatura
+        asignatura_profesor = AsignaturaProfesor(
+            asignatura_id=form.asignatura_id.data,
+            profesor_id=profesor.id
+        )
+        
+        db.session.add(asignatura_profesor)
         db.session.commit()
         
-        flash('Perfil de profesor creado con éxito', 'success')
+        mensaje = 'Profesor creado con éxito'
+        if form.usuario_tipo.data == 'nuevo':
+            mensaje += f". Usuario: {username}, Contraseña: profesor123"
+            
+        flash(mensaje, 'success')
         return redirect(url_for('admin.profesores'))
     
-    return render_template('admin/profesor_form.html', title='Añadir Profesor', form=form, user=user)
+    return render_template('admin/profesor_form.html', title='Añadir Profesor', form=form)
 
 @admin.route('/profesores/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -155,23 +250,50 @@ def edit_profesor(id):
     profesor = Profesor.query.get_or_404(id)
     form = ProfesorForm()
     
+    # Obtener asignaturas disponibles para el select
+    asignaturas_disponibles = Asignatura.query.filter_by(activa=True).all()
+    form.asignatura_id.choices = [(a.id, f"{a.nombre} ({a.codigo})") for a in asignaturas_disponibles]
+    
     if form.validate_on_submit():
+        # Actualizar datos del usuario vinculado
+        profesor.usuario.nombre = form.nombre.data
+        profesor.usuario.apellido = form.apellido.data
+        
         if form.foto.data:
             foto_file = save_picture(form.foto.data, 'profesores')
             profesor.foto = foto_file
         
-        profesor.especialidad = form.especialidad.data
+        # Actualizar especialidad
+        asignatura = Asignatura.query.get(form.asignatura_id.data)
+        profesor.especialidad = asignatura.nombre
         profesor.bio = form.bio.data
         profesor.max_horas_diarias = form.max_horas_diarias.data
+        
+        # Actualizar la relación con asignaturas
+        # Primero, eliminar todas las relaciones actuales
+        AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).delete()
+        
+        # Luego, crear la nueva relación
+        asignatura_profesor = AsignaturaProfesor(
+            asignatura_id=form.asignatura_id.data,
+            profesor_id=profesor.id
+        )
+        db.session.add(asignatura_profesor)
         
         db.session.commit()
         flash('Perfil de profesor actualizado con éxito', 'success')
         return redirect(url_for('admin.profesores'))
     
     if request.method == 'GET':
-        form.especialidad.data = profesor.especialidad
+        form.nombre.data = profesor.usuario.nombre
+        form.apellido.data = profesor.usuario.apellido
         form.bio.data = profesor.bio
         form.max_horas_diarias.data = profesor.max_horas_diarias
+        
+        # Seleccionar la asignatura actual (si existe)
+        asignatura_actual = AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).first()
+        if asignatura_actual:
+            form.asignatura_id.data = asignatura_actual.asignatura_id
     
     return render_template('admin/profesor_form.html', 
                            title='Editar Profesor', 
@@ -244,6 +366,27 @@ def edit_asignatura(id):
     
     return render_template('admin/asignatura_form.html', title='Editar Asignatura', form=form, asignatura=asignatura)
 
+@admin.route('/asignaturas/delete/<int:id>')
+@login_required
+@admin_required
+def delete_asignatura(id):
+    asignatura = Asignatura.query.get_or_404(id)
+    
+    # Verificar si la asignatura está en uso en horarios
+    if asignatura.horarios:
+        flash(f'No se puede eliminar la asignatura {asignatura.nombre} porque está asignada a horarios.', 'danger')
+        return redirect(url_for('admin.asignaturas'))
+    
+    # Primero eliminar todas las relaciones con profesores
+    AsignaturaProfesor.query.filter_by(asignatura_id=asignatura.id).delete()
+    
+    # Luego eliminar la asignatura
+    db.session.delete(asignatura)
+    db.session.commit()
+    
+    flash(f'Asignatura {asignatura.nombre} eliminada con éxito', 'success')
+    return redirect(url_for('admin.asignaturas'))
+
 # Gestión de Clases
 @admin.route('/clases')
 @login_required
@@ -303,4 +446,95 @@ def edit_clase(id):
         form.color.data = clase.color
         form.activa.data = clase.activa
     
-    return render_template('admin/clase_form.html', title='Editar Clase', form=form, clase=clase) 
+    return render_template('admin/clase_form.html', title='Editar Clase', form=form, clase=clase)
+
+# Ruta para gestionar la disponibilidad de un profesor
+@admin.route('/profesores/disponibilidad/<int:profesor_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def disponibilidad_profesor(profesor_id):
+    profesor = Profesor.query.get_or_404(profesor_id)
+    
+    # Obtener la disponibilidad actual del profesor
+    disponibilidad = {
+        'lunes': [0] * 24,
+        'martes': [0] * 24,
+        'miercoles': [0] * 24,
+        'jueves': [0] * 24,
+        'viernes': [0] * 24,
+        'sabado': [0] * 24,
+        'domingo': [0] * 24
+    }
+    
+    # Cargar disponibilidad existente en DB
+    for disp in profesor.disponibilidad:
+        disponibilidad[disp.dia][disp.hora] = disp.disponible
+    
+    if request.method == 'POST':
+        # Actualizar disponibilidad desde el formulario
+        from app.models.disponibilidad import Disponibilidad
+        
+        # Eliminar registros existentes
+        for disp in profesor.disponibilidad:
+            db.session.delete(disp)
+        
+        # Crear nuevos registros según el formulario
+        for dia in disponibilidad.keys():
+            for hora in range(24):
+                estado = request.form.get(f'{dia}_{hora}', '0')
+                if estado == '1':  # Solo guardar las horas disponibles
+                    nueva_disp = Disponibilidad(
+                        profesor_id=profesor.id,
+                        dia=dia,
+                        hora=hora,
+                        disponible=1
+                    )
+                    db.session.add(nueva_disp)
+        
+        db.session.commit()
+        flash('Disponibilidad actualizada correctamente', 'success')
+        return redirect(url_for('admin.profesores'))
+    
+    dias_semana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+    horas = list(range(24))
+    
+    return render_template('admin/disponibilidad_profesor.html', 
+                           title=f'Disponibilidad de {profesor.get_nombre_completo()}',
+                           profesor=profesor,
+                           disponibilidad=disponibilidad,
+                           dias_semana=dias_semana,
+                           horas=horas)
+
+# Ruta para cambiar el estado del profesor (activo/inactivo)
+@admin.route('/profesores/toggle_status/<int:id>')
+@login_required
+@admin_required
+def toggle_profesor_status(id):
+    profesor = Profesor.query.get_or_404(id)
+    usuario = profesor.usuario
+    
+    usuario.activo = not usuario.activo
+    db.session.commit()
+    
+    estado = "activado" if usuario.activo else "desactivado"
+    flash(f'Profesor {profesor.get_nombre_completo()} {estado} correctamente', 'success')
+    
+    return redirect(url_for('admin.profesores'))
+
+# Ruta para eliminar un profesor
+@admin.route('/profesores/delete/<int:id>')
+@login_required
+@admin_required
+def delete_profesor(id):
+    profesor = Profesor.query.get_or_404(id)
+    usuario = profesor.usuario
+    
+    # Eliminar profesor (las relaciones se eliminarán en cascada)
+    db.session.delete(profesor)
+    # Eliminar usuario asociado
+    db.session.delete(usuario)
+    
+    db.session.commit()
+    flash('Profesor eliminado correctamente', 'success')
+    
+    return redirect(url_for('admin.profesores')) 

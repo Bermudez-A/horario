@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Horarios - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4 mb-4"><i class="fas fa-calendar-alt me-2"></i>Administración de Horarios</h1>
+    
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0"><i class="fas fa-calendar-week me-2"></i>Horarios Actuales</h4>
+                    <div class="d-flex align-items-center mt-2">
+                        <h2 class="mb-0">{{ horarios_activos }}</h2>
+                        <div class="ms-auto">
+                            <i class="fas fa-calendar-check fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('schedules.list') }}">Ver todos los horarios</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0"><i class="fas fa-chalkboard me-2"></i>Clases</h4>
+                    <div class="d-flex align-items-center mt-2">
+                        <h2 class="mb-0">{{ clases_total }}</h2>
+                        <div class="ms-auto">
+                            <i class="fas fa-chalkboard-teacher fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('admin.clases') }}">Administrar clases</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0"><i class="fas fa-book me-2"></i>Asignaturas</h4>
+                    <div class="d-flex align-items-center mt-2">
+                        <h2 class="mb-0">{{ asignaturas_total }}</h2>
+                        <div class="ms-auto">
+                            <i class="fas fa-book-open fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('admin.asignaturas') }}">Administrar asignaturas</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-danger text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Conflictos</h4>
+                    <div class="d-flex align-items-center mt-2">
+                        <h2 class="mb-0">{{ conflictos_total }}</h2>
+                        <div class="ms-auto">
+                            <i class="fas fa-exclamation-circle fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('schedules.conflictos') }}">Ver conflictos</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-table me-1"></i>
+                        Horarios Recientes
+                    </div>
+                    <a href="{{ url_for('schedules.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Nuevo Horario
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if horarios %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Periodo</th>
+                                    <th>Creado</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for horario in horarios %}
+                                <tr>
+                                    <td>{{ horario.nombre }}</td>
+                                    <td>{{ horario.periodo }}</td>
+                                    <td>{{ horario.fecha_creacion.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        {% if horario.activo %}
+                                        <span class="badge bg-success">Activo</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('schedules.view', horario_id=horario.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('schedules.edit', horario_id=horario.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No hay horarios creados. <a href="{{ url_for('schedules.create') }}">Crear un nuevo horario</a>.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    Carga Semanal
+                </div>
+                <div class="card-body">
+                    <canvas id="cargaSemanalChart" width="100%" height="200"></canvas>
+                </div>
+                <div class="card-footer small text-muted">
+                    Distribución de horas por día de la semana
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-tasks me-1"></i>
+                    Acciones Rápidas
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('schedules.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Horario
+                        </a>
+                        <a href="{{ url_for('schedules.generate') }}" class="btn btn-success">
+                            <i class="fas fa-magic me-2"></i>Generar Horario Automático
+                        </a>
+                        <a href="{{ url_for('schedules.export') }}" class="btn btn-info">
+                            <i class="fas fa-file-export me-2"></i>Exportar Horarios
+                        </a>
+                        <a href="{{ url_for('schedules.import') }}" class="btn btn-warning">
+                            <i class="fas fa-file-import me-2"></i>Importar Datos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gráfico de carga semanal
+        const ctxBar = document.getElementById('cargaSemanalChart').getContext('2d');
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
+                datasets: [{
+                    label: 'Horas asignadas',
+                    data: {{ carga_semanal|safe }},
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(255, 99, 132, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %} 

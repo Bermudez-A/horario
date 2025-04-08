@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Disponibilidad - {{ profesor.get_nombre_completo() }}{% endblock %}
+
+{% block styles %}
+<style>
+    .disponibilidad-grid {
+        width: 100%;
+        overflow-x: auto;
+    }
+    .disponibilidad-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .disponibilidad-table th,
+    .disponibilidad-table td {
+        border: 1px solid #dee2e6;
+        text-align: center;
+        padding: 8px;
+        height: 40px;
+    }
+    .hora-cell {
+        font-weight: bold;
+        background-color: #f8f9fa;
+    }
+    .disponible {
+        background-color: #d4edda;
+        cursor: pointer;
+    }
+    .no-disponible {
+        background-color: #f8d7da;
+        cursor: pointer;
+    }
+    .horarios-escolares {
+        background-color: #e2e3e5;
+    }
+    .weekend {
+        background-color: #f8f9fa;
+    }
+    .dias-header {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+    }
+    .hora-column {
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa;
+        z-index: 5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4"><i class="fas fa-calendar-alt me-2"></i>Disponibilidad de {{ profesor.get_nombre_completo() }}</h1>
+        <a href="{{ url_for('admin.profesores') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-clock me-1"></i>
+            Horario de disponibilidad
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Haga clic en las celdas para marcar/desmarcar su disponibilidad. Verde = disponible, Rojo = no disponible.
+            </div>
+            
+            <form method="POST">
+                <div class="disponibilidad-grid">
+                    <table class="disponibilidad-table">
+                        <thead>
+                            <tr class="dias-header">
+                                <th>Hora</th>
+                                {% for dia in dias_semana %}
+                                <th class="{% if dia in ['sabado', 'domingo'] %}weekend{% endif %}">
+                                    {{ dia|capitalize }}
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hora in horas %}
+                            <tr>
+                                <td class="hora-cell hora-column">{{ '%02d'|format(hora) }}:00</td>
+                                {% for dia in dias_semana %}
+                                {% set estado = disponibilidad[dia][hora] %}
+                                <td class="{% if estado == 1 %}disponible{% else %}no-disponible{% endif %} {% if dia in ['sabado', 'domingo'] %}weekend{% endif %} {% if hora >= 8 and hora <= 15 and dia not in ['sabado', 'domingo'] %}horarios-escolares{% endif %}"
+                                    data-dia="{{ dia }}" data-hora="{{ hora }}" onclick="toggleDisponibilidad(this)">
+                                    <input type="hidden" name="{{ dia }}_{{ hora }}" value="{{ estado }}" id="input_{{ dia }}_{{ hora }}">
+                                    <i class="{% if estado == 1 %}fas fa-check text-success{% else %}fas fa-times text-danger{% endif %}"></i>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4 d-flex justify-content-between">
+                    <div>
+                        <button type="button" class="btn btn-outline-success me-2" id="seleccionarTodo">
+                            <i class="fas fa-check-double me-1"></i>Seleccionar todo
+                        </button>
+                        <button type="button" class="btn btn-outline-danger me-2" id="desSeleccionarTodo">
+                            <i class="fas fa-times me-1"></i>Desmarcar todo
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="seleccionarHorarioEscolar">
+                            <i class="fas fa-school me-1"></i>Seleccionar horario escolar
+                        </button>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleDisponibilidad(element) {
+        const dia = element.dataset.dia;
+        const hora = element.dataset.hora;
+        const input = document.getElementById(`input_${dia}_${hora}`);
+        const currentValue = input.value;
+        
+        if (currentValue === '1') {
+            input.value = '0';
+            element.classList.remove('disponible');
+            element.classList.add('no-disponible');
+            element.querySelector('i').className = 'fas fa-times text-danger';
+        } else {
+            input.value = '1';
+            element.classList.remove('no-disponible');
+            element.classList.add('disponible');
+            element.querySelector('i').className = 'fas fa-check text-success';
+        }
+    }
+    
+    document.getElementById('seleccionarTodo').addEventListener('click', function() {
+        document.querySelectorAll('.disponibilidad-table td[data-dia]').forEach(td => {
+            const dia = td.dataset.dia;
+            const hora = td.dataset.hora;
+            const input = document.getElementById(`input_${dia}_${hora}`);
+            
+            input.value = '1';
+            td.classList.remove('no-disponible');
+            td.classList.add('disponible');
+            td.querySelector('i').className = 'fas fa-check text-success';
+        });
+    });
+    
+    document.getElementById('desSeleccionarTodo').addEventListener('click', function() {
+        document.querySelectorAll('.disponibilidad-table td[data-dia]').forEach(td => {
+            const dia = td.dataset.dia;
+            const hora = td.dataset.hora;
+            const input = document.getElementById(`input_${dia}_${hora}`);
+            
+            input.value = '0';
+            td.classList.remove('disponible');
+            td.classList.add('no-disponible');
+            td.querySelector('i').className = 'fas fa-times text-danger';
+        });
+    });
+    
+    document.getElementById('seleccionarHorarioEscolar').addEventListener('click', function() {
+        document.querySelectorAll('.disponibilidad-table td[data-dia]').forEach(td => {
+            const dia = td.dataset.dia;
+            const hora = parseInt(td.dataset.hora);
+            const input = document.getElementById(`input_${dia}_${hora}`);
+            
+            if (hora >= 8 && hora <= 15 && !['sabado', 'domingo'].includes(dia)) {
+                input.value = '1';
+                td.classList.remove('no-disponible');
+                td.classList.add('disponible');
+                td.querySelector('i').className = 'fas fa-check text-success';
+            } else {
+                input.value = '0';
+                td.classList.remove('disponible');
+                td.classList.add('no-disponible');
+                td.querySelector('i').className = 'fas fa-times text-danger';
+            }
+        });
+    });
+</script>
+{% endblock %} 
