@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Administración de Clases - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4 mb-4"><i class="fas fa-chalkboard me-2"></i>Administración de Clases</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-table me-1"></i>
+                Lista de Clases
+            </div>
+            <a href="{{ url_for('admin.add_clase') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nueva Clase
+            </a>
+        </div>
+        <div class="card-body">
+            {% if clases %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="clasesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Nivel</th>
+                            <th>Curso</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for clase in clases %}
+                        <tr>
+                            <td>{{ clase.id }}</td>
+                            <td>
+                                <span class="badge" style="background-color: {{ clase.color }}">
+                                    <i class="fas fa-circle me-1"></i>
+                                </span>
+                                {{ clase.nombre }}
+                            </td>
+                            <td>{{ clase.nivel }}</td>
+                            <td>{{ clase.curso }}</td>
+                            <td>
+                                {% if clase.activa %}
+                                <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin.edit_clase', id=clase.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" data-bs-target="#deleteClaseModal{{ clase.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <!-- Modal de confirmación para eliminar -->
+                                    <div class="modal fade" id="deleteClaseModal{{ clase.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmar eliminación</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    ¿Estás seguro de que deseas eliminar la clase <strong>{{ clase.nombre }}</strong>?
+                                                    <div class="alert alert-warning mt-3">
+                                                        Esta acción eliminará también todos los horarios asociados a esta clase.
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <a href="{{ url_for('admin.delete_clase', id=clase.id) }}" class="btn btn-danger">Eliminar</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No hay clases registradas. <a href="{{ url_for('admin.add_clase') }}">Crear una nueva clase</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar DataTable
+        new DataTable('#clasesTable', {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+            },
+            order: [[0, 'asc']]
+        });
+    });
+</script>
+{% endblock %} 

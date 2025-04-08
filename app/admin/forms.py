@@ -102,6 +102,7 @@ class AsignaturaForm(FlaskForm):
 
 class ClaseForm(FlaskForm):
     nombre = StringField('Nombre', validators=[DataRequired(), Length(max=100)])
+    descripcion = TextAreaField('Descripción', validators=[Optional(), Length(max=500)])
     nivel = SelectField('Nivel', choices=[
         ('1', 'Primer Año'),
         ('2', 'Segundo Año'),
@@ -110,8 +111,8 @@ class ClaseForm(FlaskForm):
         ('5', 'Quinto Año'),
         ('6', 'Sexto Año')
     ], validators=[DataRequired()])
-    seccion = StringField('Sección', validators=[DataRequired(), Length(max=10)])
-    capacidad = IntegerField('Capacidad', validators=[DataRequired(), NumberRange(min=1, max=50)])
+    curso = StringField('Curso académico', validators=[DataRequired(), Length(max=20)])
+    color = StringField('Color', validators=[DataRequired()], default='#3498db')
     activa = BooleanField('Clase Activa', default=True)
     submit = SubmitField('Guardar')
 

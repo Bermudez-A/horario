@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, abort
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify
 from flask_login import login_required, current_user
 import os
 from werkzeug.utils import secure_filename
@@ -448,6 +448,24 @@ def edit_clase(id):
     
     return render_template('admin/clase_form.html', title='Editar Clase', form=form, clase=clase)
 
+@admin.route('/clases/delete/<int:id>')
+@login_required
+@admin_required
+def delete_clase(id):
+    clase = Clase.query.get_or_404(id)
+    
+    # Verificar si la clase está en uso en horarios
+    if hasattr(clase, 'horarios') and clase.horarios:
+        flash(f'No se puede eliminar la clase {clase.nombre} porque tiene horarios asignados.', 'danger')
+        return redirect(url_for('admin.clases'))
+    
+    nombre = clase.nombre
+    db.session.delete(clase)
+    db.session.commit()
+    
+    flash(f'Clase {nombre} eliminada con éxito', 'success')
+    return redirect(url_for('admin.clases'))
+
 # Ruta para gestionar la disponibilidad de un profesor
 @admin.route('/profesores/disponibilidad/<int:profesor_id>', methods=['GET', 'POST'])
 @login_required
@@ -537,4 +555,491 @@ def delete_profesor(id):
     db.session.commit()
     flash('Profesor eliminado correctamente', 'success')
     
-    return redirect(url_for('admin.profesores')) 
+    return redirect(url_for('admin.profesores'))
+
+# Gestión de Horarios
+@admin.route('/horarios')
+@login_required
+@admin_required
+def horarios():
+    clases = Clase.query.filter_by(activa=True).all()
+    
+    # Calcular estadísticas de horarios
+    stats = {
+        'clases': len(clases),
+        'asignaturas': Asignatura.query.filter_by(activa=True).count(),
+        'profesores': Profesor.query.join(User).filter(User.activo == True).count(),
+        'horas': 0  # Se calculará a continuación
+    }
+    
+    # Calcular porcentaje de completado para cada clase
+    for clase in clases:
+        # Intentar obtener horarios desde la base de datos
+        if hasattr(clase, 'horarios'):
+            bloques_totales = 35  # 7 horas x 5 días
+            bloques_asignados = len(clase.horarios)
+            porcentaje = round((bloques_asignados / bloques_totales) * 100) if bloques_totales > 0 else 0
+            clase.porcentaje_completado = porcentaje
+            stats['horas'] += bloques_asignados
+        else:
+            clase.porcentaje_completado = 0
+    
+    return render_template('admin/horarios.html', title='Gestión de Horarios', clases=clases, stats=stats)
+
+@admin.route('/horarios/editar/<int:clase_id>')
+@login_required
+@admin_required
+def editar_horario(clase_id):
+    clase = Clase.query.get_or_404(clase_id)
+    
+    # Definir días y horas para el horario
+    dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+    horas = ['8:00 - 8:55', '9:00 - 9:55', '10:00 - 10:55', '11:00 - 11:55', 
+             '12:00 - 12:55', '13:00 - 13:55', '14:00 - 14:55']
+    
+    # Obtener horario actual (si existe)
+    from app.models.horario import Horario
+    horarios_clase = Horario.query.filter_by(clase_id=clase.id).all()
+    
+    # Convertir a un diccionario para más fácil acceso
+    horario = {}
+    for h in horarios_clase:
+        asignatura = Asignatura.query.get(h.asignatura_id)
+        profesor = Profesor.query.get(h.profesor_id)
+        
+        # Verificar si hay conflictos (profesor ya asignado en esta hora/día en otra clase)
+        conflicto = Horario.query.filter(
+            Horario.clase_id != clase.id,
+            Horario.dia == h.dia,
+            Horario.hora == h.hora,
+            Horario.profesor_id == h.profesor_id
+        ).first() is not None
+        
+        horario[(h.dia, h.hora)] = {
+            'asignatura_id': h.asignatura_id,
+            'asignatura_nombre': asignatura.nombre if asignatura else "Asignatura no encontrada",
+            'profesor_id': h.profesor_id,
+            'profesor_nombre': profesor.get_nombre_completo() if profesor else "Profesor no encontrado",
+            'color': asignatura.color if asignatura else "#cccccc",
+            'conflicto': conflicto
+        }
+    
+    # Obtener asignaturas disponibles
+    asignaturas = []
+    for asignatura in Asignatura.query.filter_by(activa=True).all():
+        # Calcular horas ya asignadas
+        horas_asignadas = Horario.query.filter_by(clase_id=clase.id, asignatura_id=asignatura.id).count()
+        
+        asignaturas.append({
+            'id': asignatura.id,
+            'nombre': asignatura.nombre,
+            'codigo': asignatura.codigo,
+            'color': asignatura.color,
+            'horas_totales': asignatura.horas_semanales,
+            'horas_asignadas': horas_asignadas,
+            'horas_pendientes': asignatura.horas_semanales - horas_asignadas
+        })
+    
+    # Filtrar asignaturas pendientes
+    asignaturas_pendientes = [a for a in asignaturas if a['horas_pendientes'] > 0]
+    
+    # Obtener profesores disponibles
+    profesores = []
+    for profesor in Profesor.query.join(User).filter(User.activo == True).all():
+        # Obtener asignaturas que puede impartir
+        asignaturas_profesor = [ap.asignatura_id for ap in profesor.asignaturas]
+        
+        # Calcular disponibilidad
+        disponibilidad = 100  # TODO: Calcular en base a tabla de disponibilidad
+        
+        profesores.append({
+            'id': profesor.id,
+            'nombre': profesor.get_nombre_completo(),
+            'asignaturas': asignaturas_profesor,
+            'disponibilidad': disponibilidad
+        })
+    
+    # Calcular carga de profesores
+    profesores_carga = []
+    for profesor in Profesor.query.join(User).filter(User.activo == True).all():
+        horas_asignadas = Horario.query.filter_by(profesor_id=profesor.id).count()
+        horas_disponibles = profesor.max_horas_diarias * 5  # 5 días a la semana
+        porcentaje = round((horas_asignadas / horas_disponibles) * 100) if horas_disponibles > 0 else 0
+        
+        profesores_carga.append({
+            'id': profesor.id,
+            'nombre': profesor.get_nombre_completo(),
+            'horas_asignadas': horas_asignadas,
+            'horas_disponibles': horas_disponibles,
+            'porcentaje': porcentaje
+        })
+    
+    # Calcular estadísticas
+    bloques_totales = len(dias) * len(horas)
+    bloques_asignados = len(horarios_clase)
+    bloques_pendientes = bloques_totales - bloques_asignados
+    
+    # Contar conflictos
+    conflictos = sum(1 for h in horario.values() if h.get('conflicto', False))
+    
+    stats = {
+        'bloques_totales': bloques_totales,
+        'bloques_asignados': bloques_asignados,
+        'bloques_pendientes': bloques_pendientes,
+        'conflictos': conflictos,
+        'porcentaje_completado': round((bloques_asignados / bloques_totales) * 100) if bloques_totales > 0 else 0
+    }
+    
+    return render_template('admin/editar_horario.html', 
+                          title=f'Editar Horario - {clase.nombre}',
+                          clase=clase,
+                          dias=dias,
+                          horas=horas,
+                          horario=horario,
+                          asignaturas=asignaturas,
+                          asignaturas_pendientes=asignaturas_pendientes,
+                          profesores=profesores,
+                          profesores_carga=profesores_carga,
+                          stats=stats)
+
+@admin.route('/horarios/get_data/<int:clase_id>')
+@login_required
+@admin_required
+def get_horario_data(clase_id):
+    """API para obtener datos del horario en formato JSON"""
+    clase = Clase.query.get_or_404(clase_id)
+    
+    # Obtener horario actual
+    from app.models.horario import Horario
+    horarios_clase = Horario.query.filter_by(clase_id=clase.id).all()
+    
+    horario = {}
+    for h in horarios_clase:
+        asignatura = Asignatura.query.get(h.asignatura_id)
+        profesor = Profesor.query.get(h.profesor_id)
+        
+        horario[f"{h.dia}_{h.hora}"] = {
+            'asignatura_id': h.asignatura_id,
+            'asignatura_nombre': asignatura.nombre if asignatura else "Desconocida",
+            'profesor_id': h.profesor_id,
+            'profesor_nombre': profesor.get_nombre_completo() if profesor else "Desconocido",
+            'color': asignatura.color if asignatura else "#cccccc"
+        }
+    
+    return jsonify({'success': True, 'horario': horario})
+
+@admin.route('/horarios/verificar_conflictos')
+@login_required
+@admin_required
+def verificar_conflictos():
+    """API para verificar conflictos al asignar un horario"""
+    clase_id = request.args.get('clase_id', type=int)
+    dia = request.args.get('dia')
+    hora = request.args.get('hora')
+    profesor_id = request.args.get('profesor_id', type=int)
+    
+    if not all([clase_id, dia, hora, profesor_id]):
+        return jsonify({'success': False, 'message': 'Faltan parámetros requeridos'})
+    
+    # Verificar si el profesor ya está asignado en este horario en otra clase
+    from app.models.horario import Horario
+    conflicto_profesor = Horario.query.filter(
+        Horario.clase_id != clase_id,
+        Horario.dia == dia,
+        Horario.hora == hora,
+        Horario.profesor_id == profesor_id
+    ).first() is not None
+    
+    # Verificar si esta asignatura ya está asignada en este horario para otra clase
+    asignatura_id = request.args.get('asignatura_id', type=int)
+    conflicto_asignatura = False
+    if asignatura_id:
+        conflicto_asignatura = Horario.query.filter(
+            Horario.clase_id != clase_id,
+            Horario.dia == dia,
+            Horario.hora == hora,
+            Horario.asignatura_id == asignatura_id
+        ).first() is not None
+    
+    # Verificar disponibilidad del profesor
+    from app.models.disponibilidad import Disponibilidad
+    disponibilidad = Disponibilidad.query.filter_by(
+        profesor_id=profesor_id,
+        dia=dia,
+        hora=int(hora.split(':')[0])  # Convertir "8:00 - 8:55" a 8
+    ).first()
+    
+    conflicto_disponibilidad = disponibilidad is not None and not disponibilidad.disponible
+    
+    return jsonify({
+        'success': True,
+        'conflicto_profesor': conflicto_profesor,
+        'conflicto_asignatura': conflicto_asignatura,
+        'conflicto_disponibilidad': conflicto_disponibilidad
+    })
+
+@admin.route('/horarios/guardar_bloque', methods=['POST'])
+@login_required
+@admin_required
+def guardar_bloque_horario():
+    """API para guardar un bloque de horario"""
+    data = request.json
+    
+    clase_id = data.get('clase_id')
+    dia = data.get('dia')
+    hora = data.get('hora')
+    asignatura_id = data.get('asignatura_id')
+    profesor_id = data.get('profesor_id')
+    ignorar_conflictos = data.get('ignorar_conflictos', False)
+    
+    if not all([clase_id, dia, hora, asignatura_id, profesor_id]):
+        return jsonify({'success': False, 'message': 'Faltan parámetros requeridos'})
+    
+    # Verificar que la clase, asignatura y profesor existan
+    clase = Clase.query.get(clase_id)
+    asignatura = Asignatura.query.get(asignatura_id)
+    profesor = Profesor.query.get(profesor_id)
+    
+    if not all([clase, asignatura, profesor]):
+        return jsonify({'success': False, 'message': 'Clase, asignatura o profesor no encontrado'})
+    
+    # Verificar conflictos solo si no se están ignorando
+    if not ignorar_conflictos:
+        # Verificar si el profesor ya está asignado en este horario en otra clase
+        from app.models.horario import Horario
+        conflicto_profesor = Horario.query.filter(
+            Horario.clase_id != clase_id,
+            Horario.dia == dia,
+            Horario.hora == hora,
+            Horario.profesor_id == profesor_id
+        ).first()
+        
+        if conflicto_profesor:
+            return jsonify({
+                'success': False, 
+                'message': f'Este profesor ya está asignado en este horario para la clase {Clase.query.get(conflicto_profesor.clase_id).nombre}'
+            })
+        
+        # Verificar disponibilidad del profesor
+        from app.models.disponibilidad import Disponibilidad
+        hora_num = int(hora.split(':')[0])  # Convertir "8:00 - 8:55" a 8
+        disponibilidad = Disponibilidad.query.filter_by(
+            profesor_id=profesor_id,
+            dia=dia,
+            hora=hora_num
+        ).first()
+        
+        if disponibilidad and not disponibilidad.disponible:
+            return jsonify({
+                'success': False, 
+                'message': f'El profesor no está disponible en este horario'
+            })
+    
+    # Guardar o actualizar horario
+    from app.models.horario import Horario
+    horario_existente = Horario.query.filter_by(
+        clase_id=clase_id,
+        dia=dia,
+        hora=hora
+    ).first()
+    
+    if horario_existente:
+        horario_existente.asignatura_id = asignatura_id
+        horario_existente.profesor_id = profesor_id
+    else:
+        horario = Horario(
+            clase_id=clase_id,
+            dia=dia,
+            hora=hora,
+            asignatura_id=asignatura_id,
+            profesor_id=profesor_id
+        )
+        db.session.add(horario)
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
+@admin.route('/horarios/eliminar_bloque', methods=['POST'])
+@login_required
+@admin_required
+def eliminar_bloque_horario():
+    """API para eliminar un bloque de horario"""
+    data = request.json
+    
+    clase_id = data.get('clase_id')
+    dia = data.get('dia')
+    hora = data.get('hora')
+    
+    if not all([clase_id, dia, hora]):
+        return jsonify({'success': False, 'message': 'Faltan parámetros requeridos'})
+    
+    # Eliminar horario
+    from app.models.horario import Horario
+    horario = Horario.query.filter_by(
+        clase_id=clase_id,
+        dia=dia,
+        hora=hora
+    ).first()
+    
+    if horario:
+        db.session.delete(horario)
+        db.session.commit()
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Horario no encontrado'})
+
+@admin.route('/horarios/guardar_completo/<int:clase_id>', methods=['POST'])
+@login_required
+@admin_required
+def guardar_horario_completo(clase_id):
+    """Guardar todo el horario y finalizar edición"""
+    clase = Clase.query.get_or_404(clase_id)
+    
+    # TODO: Aquí se podría implementar lógica adicional de validación
+    
+    return jsonify({'success': True, 'message': 'Horario guardado correctamente'})
+
+@admin.route('/horarios/resetear/<int:clase_id>')
+@login_required
+@admin_required
+def resetear_horario(clase_id):
+    """Eliminar todas las asignaciones de horario para una clase"""
+    clase = Clase.query.get_or_404(clase_id)
+    
+    # Eliminar todos los horarios de esta clase
+    from app.models.horario import Horario
+    Horario.query.filter_by(clase_id=clase.id).delete()
+    db.session.commit()
+    
+    flash(f'Horario de {clase.nombre} reseteado correctamente', 'success')
+    return redirect(url_for('admin.horarios'))
+
+@admin.route('/horarios/autocompletar/<int:clase_id>', methods=['POST'])
+@login_required
+@admin_required
+def autocompletar_horario(clase_id):
+    """Autocompletar horario basado en disponibilidad y preferencias"""
+    clase = Clase.query.get_or_404(clase_id)
+    
+    # Obtener asignaturas pendientes
+    asignaturas_pendientes = []
+    for asignatura in Asignatura.query.filter_by(activa=True).all():
+        from app.models.horario import Horario
+        horas_asignadas = Horario.query.filter_by(clase_id=clase.id, asignatura_id=asignatura.id).count()
+        horas_pendientes = asignatura.horas_semanales - horas_asignadas
+        
+        if horas_pendientes > 0:
+            asignaturas_pendientes.append({
+                'id': asignatura.id,
+                'nombre': asignatura.nombre,
+                'horas_pendientes': horas_pendientes,
+                'bloques_continuos': asignatura.bloques_continuos
+            })
+    
+    # Si no hay asignaturas pendientes, terminar
+    if not asignaturas_pendientes:
+        return jsonify({'success': True, 'message': 'No hay asignaturas pendientes para asignar'})
+    
+    # Definir días y horas disponibles
+    dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+    horas = ['8:00 - 8:55', '9:00 - 9:55', '10:00 - 10:55', '11:00 - 11:55', 
+             '12:00 - 12:55', '13:00 - 13:55', '14:00 - 14:55']
+    
+    # Obtener bloques ya asignados
+    from app.models.horario import Horario
+    bloques_asignados = Horario.query.filter_by(clase_id=clase.id).all()
+    bloques_ocupados = set([(h.dia, h.hora) for h in bloques_asignados])
+    
+    # Intentar asignar asignaturas pendientes
+    from app.models.asignatura import AsignaturaProfesor
+    asignaciones_realizadas = 0
+    
+    for asignatura in asignaturas_pendientes:
+        # Obtener profesores que pueden impartir esta asignatura
+        profesores_disponibles = Profesor.query.join(AsignaturaProfesor).filter(
+            AsignaturaProfesor.asignatura_id == asignatura['id']
+        ).all()
+        
+        if not profesores_disponibles:
+            continue  # Si no hay profesores para esta asignatura, saltar
+        
+        # Para cada hora pendiente de esta asignatura
+        for _ in range(asignatura['horas_pendientes']):
+            asignado = False
+            
+            # Probar cada combinación día/hora
+            for dia in dias:
+                if asignado:
+                    break
+                    
+                for hora in horas:
+                    # Si este bloque ya está ocupado, saltar
+                    if (dia, hora) in bloques_ocupados:
+                        continue
+                    
+                    # Probar cada profesor
+                    for profesor in profesores_disponibles:
+                        # Verificar si el profesor ya está asignado en este horario en otra clase
+                        conflicto_profesor = Horario.query.filter(
+                            Horario.clase_id != clase.id,
+                            Horario.dia == dia,
+                            Horario.hora == hora,
+                            Horario.profesor_id == profesor.id
+                        ).first() is not None
+                        
+                        if conflicto_profesor:
+                            continue  # Este profesor ya está ocupado, probar otro
+                        
+                        # Verificar disponibilidad del profesor
+                        from app.models.disponibilidad import Disponibilidad
+                        hora_num = int(hora.split(':')[0])  # Convertir "8:00 - 8:55" a 8
+                        disponibilidad = Disponibilidad.query.filter_by(
+                            profesor_id=profesor.id,
+                            dia=dia,
+                            hora=hora_num
+                        ).first()
+                        
+                        conflicto_disponibilidad = disponibilidad is not None and not disponibilidad.disponible
+                        
+                        if conflicto_disponibilidad:
+                            continue  # Este profesor no está disponible en este horario
+                        
+                        # Asignar horario
+                        horario = Horario(
+                            clase_id=clase.id,
+                            dia=dia,
+                            hora=hora,
+                            asignatura_id=asignatura['id'],
+                            profesor_id=profesor.id
+                        )
+                        db.session.add(horario)
+                        bloques_ocupados.add((dia, hora))
+                        asignado = True
+                        asignaciones_realizadas += 1
+                        break  # Pasar a la siguiente hora pendiente
+                    
+                    if asignado:
+                        break  # Pasar al siguiente día
+    
+    db.session.commit()
+    
+    if asignaciones_realizadas > 0:
+        return jsonify({'success': True, 'message': f'Se realizaron {asignaciones_realizadas} asignaciones automáticamente'})
+    else:
+        return jsonify({'success': False, 'message': 'No se pudo completar ninguna asignación automáticamente'})
+
+@admin.route('/horarios/generar')
+@login_required
+@admin_required
+def generar_horarios():
+    """Generar horarios para todas las clases automáticamente"""
+    clases = Clase.query.filter_by(activa=True).all()
+    
+    if not clases:
+        flash('No hay clases activas para generar horarios', 'warning')
+        return redirect(url_for('admin.horarios'))
+    
+    # TODO: Implementar algoritmo más avanzado para generar horarios completos
+    
+    flash('Generación automática de horarios iniciada. Revise cada clase para completar manualmente si es necesario.', 'info')
+    return redirect(url_for('admin.horarios')) 

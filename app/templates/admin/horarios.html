@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Administración de Horarios - Generador de Horarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4 mb-4"><i class="fas fa-calendar-alt me-2"></i>Administración de Horarios</h1>
+    
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0">{{ stats.clases }} Clases</h4>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('admin.clases') }}">Ver detalles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0">{{ stats.asignaturas }} Asignaturas</h4>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('admin.asignaturas') }}">Ver detalles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0">{{ stats.profesores }} Profesores</h4>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('admin.profesores') }}">Ver detalles</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <h4 class="mb-0">{{ stats.horas }} Horas asignadas</h4>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <span class="small text-white">Total de periodos</span>
+                    <div class="small text-white"><i class="fas fa-clipboard-check"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-table me-1"></i>
+                Horarios por clase
+            </div>
+            {% if clases %}
+            <a href="{{ url_for('admin.generar_horarios') }}" class="btn btn-success">
+                <i class="fas fa-magic me-1"></i>Generar horarios automáticamente
+            </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if clases %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="horariosTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Clase</th>
+                            <th>Nivel</th>
+                            <th>Curso</th>
+                            <th>Estado</th>
+                            <th>Progreso</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for clase in clases %}
+                        <tr>
+                            <td>
+                                <span class="badge" style="background-color: {{ clase.color }}">
+                                    <i class="fas fa-circle me-1"></i>
+                                </span>
+                                {{ clase.nombre }}
+                            </td>
+                            <td>{{ clase.nivel }}</td>
+                            <td>{{ clase.curso }}</td>
+                            <td>
+                                {% if clase.activa %}
+                                <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set completado = clase.porcentaje_completado|default(0) %}
+                                <div class="progress">
+                                    <div class="progress-bar {% if completado < 50 %}bg-danger{% elif completado < 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ completado }}%;" 
+                                         aria-valuenow="{{ completado }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ completado }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin.editar_horario', clase_id=clase.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit me-1"></i>Editar horario
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" data-bs-target="#resetHorarioModal{{ clase.id }}">
+                                        <i class="fas fa-trash me-1"></i>Resetear
+                                    </button>
+                                    <!-- Modal de confirmación para resetear horario -->
+                                    <div class="modal fade" id="resetHorarioModal{{ clase.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmar acción</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    ¿Estás seguro de que deseas resetear el horario de la clase <strong>{{ clase.nombre }}</strong>?
+                                                    <div class="alert alert-warning mt-3">
+                                                        Esta acción eliminará todas las asignaciones de horarios para esta clase.
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <a href="{{ url_for('admin.resetear_horario', clase_id=clase.id) }}" class="btn btn-danger">Resetear horario</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No hay clases registradas. <a href="{{ url_for('admin.add_clase') }}">Crear una nueva clase</a> para comenzar a generar horarios.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar DataTable
+        new DataTable('#horariosTable', {
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+            },
+            order: [[1, 'asc'], [0, 'asc']]
+        });
+    });
+</script>
+{% endblock %} 

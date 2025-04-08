@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Generador de Horarios{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-lg border-0 rounded-lg mt-4">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h3 class="mb-0">
+                    {% if clase %}
+                    <i class="fas fa-edit me-2"></i>Editar Clase
+                    {% else %}
+                    <i class="fas fa-plus-circle me-2"></i>Nueva Clase
+                    {% endif %}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">{{ form.nombre.label }}</label>
+                        {{ form.nombre(class="form-control", placeholder="Nombre de la clase") }}
+                        {% for error in form.nombre.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">{{ form.descripcion.label }}</label>
+                        {{ form.descripcion(class="form-control", rows=3, placeholder="Descripción o detalles adicionales") }}
+                        {% for error in form.descripcion.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nivel" class="form-label">{{ form.nivel.label }}</label>
+                                {{ form.nivel(class="form-select") }}
+                                {% for error in form.nivel.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="curso" class="form-label">{{ form.curso.label }}</label>
+                                {{ form.curso(class="form-control", placeholder="Ejemplo: 2023-2024") }}
+                                {% for error in form.curso.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="color" class="form-label">{{ form.color.label }}</label>
+                        <div class="input-group">
+                            {{ form.color(class="form-control", readonly=true) }}
+                            <span class="input-group-text p-0">
+                                <button type="button" id="color-picker" class="btn" style="height: 100%; border: none;"></button>
+                            </span>
+                        </div>
+                        {% for error in form.color.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        <small class="text-muted">Color para identificar la clase en el horario</small>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.activa(class="form-check-input") }}
+                        <label class="form-check-label" for="activa">{{ form.activa.label }}</label>
+                        {% for error in form.activa.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                        <a href="{{ url_for('admin.clases') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configuración del selector de color
+        const colorInput = document.getElementById('color');
+        const colorButton = document.getElementById('color-picker');
+        
+        if (colorInput && colorButton) {
+            // Establecer el color de fondo del botón
+            colorButton.style.backgroundColor = colorInput.value || '#3498db';
+            
+            // Inicializar Pickr
+            const pickr = Pickr.create({
+                el: colorButton,
+                theme: 'classic',
+                default: colorInput.value || '#3498db',
+                swatches: [
+                    '#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#34495e',
+                    '#16a085', '#27ae60', '#2980b9', '#8e44ad', '#2c3e50',
+                    '#f1c40f', '#e67e22', '#e74c3c', '#ecf0f1', '#95a5a6',
+                    '#f39c12', '#d35400', '#c0392b', '#bdc3c7', '#7f8c8d'
+                ],
+                components: {
+                    preview: true,
+                    opacity: true,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        rgba: true,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }
+                }
+            });
+            
+            // Al seleccionar un color, actualizar el input
+            pickr.on('save', (color, instance) => {
+                const hexColor = color.toHEXA().toString();
+                colorInput.value = hexColor;
+                colorButton.style.backgroundColor = hexColor;
+                instance.hide();
+            });
+        }
+    });
+</script>
+{% endblock %} 

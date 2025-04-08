@@ -2,28 +2,25 @@ from app import db
 from datetime import datetime
 
 class Horario(db.Model):
+    """Modelo para los bloques de horario"""
     __tablename__ = 'horarios'
     
     id = db.Column(db.Integer, primary_key=True)
-    clase_id = db.Column(db.Integer, db.ForeignKey('clases.id'), nullable=False)
+    clase_id = db.Column(db.Integer, db.ForeignKey('clases.id', ondelete='CASCADE'), nullable=False)
+    dia = db.Column(db.String(10), nullable=False)  # lunes, martes, etc.
+    hora = db.Column(db.String(20), nullable=False)  # formato: "8:00 - 8:55"
     asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
     profesor_id = db.Column(db.Integer, db.ForeignKey('profesores.id'), nullable=False)
-    dia = db.Column(db.String(10), nullable=False)  # lunes, martes, miércoles, jueves, viernes
-    hora = db.Column(db.Integer, nullable=False)  # 1-7
-    fecha_asignacion = db.Column(db.DateTime, default=datetime.utcnow)
-    modificado_por = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relaciones
     clase = db.relationship('Clase', back_populates='horarios')
     asignatura = db.relationship('Asignatura', back_populates='horarios')
     profesor = db.relationship('Profesor', back_populates='horarios')
     
-    __table_args__ = (
-        db.UniqueConstraint('clase_id', 'dia', 'hora', name='uq_horario_clase_dia_hora'),
-    )
-    
     def __repr__(self):
-        return f'<Horario {self.clase.nombre} - {self.dia} - Hora {self.hora}>'
+        return f'<Horario {self.id}: {self.dia} {self.hora} - Clase: {self.clase_id}, Asignatura: {self.asignatura_id}, Profesor: {self.profesor_id}>'
     
     @classmethod
     def get_by_clase_dia_hora(cls, clase_id, dia, hora):

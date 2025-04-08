@@ -1,0 +1,723 @@
+{% extends 'base.html' %}
+
+{% block title %}Horario: {{ clase.nombre }} - Generador de Horarios{% endblock %}
+
+{% block styles %}
+<style>
+    .horario-grid {
+        width: 100%;
+        overflow-x: auto;
+    }
+    .horario-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .horario-table th,
+    .horario-table td {
+        border: 1px solid #dee2e6;
+        text-align: center;
+        padding: 0;
+        height: 110px;
+        vertical-align: middle;
+        position: relative;
+    }
+    .horario-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        height: 50px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .hora-cell {
+        width: 80px;
+        min-width: 80px;
+        font-weight: bold;
+        background-color: #f8f9fa;
+        position: sticky;
+        left: 0;
+        z-index: 5;
+    }
+    .bloque-horario {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .bloque-horario:hover {
+        background-color: rgba(0,0,0,0.05);
+    }
+    .bloque-horario.asignado {
+        color: white;
+    }
+    .bloque-asignatura {
+        font-weight: bold;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+    .bloque-profesor {
+        font-size: 0.8rem;
+        margin-bottom: 3px;
+    }
+    .bloque-acciones {
+        margin-top: auto;
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    .panel-derecho {
+        position: sticky;
+        top: 80px;
+    }
+    .sidebar-section {
+        margin-bottom: 20px;
+    }
+    .sidebar-titulo {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .asignatura-item, .profesor-item {
+        margin-bottom: 8px;
+        padding: 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .asignatura-item:hover, .profesor-item:hover {
+        transform: translateX(5px);
+    }
+    .asignatura-item .badge, .profesor-item .badge {
+        float: right;
+    }
+    .conflicto {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        font-size: 0.75rem;
+        color: red;
+    }
+    .stats-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4">
+            <span class="badge me-2" style="background-color: {{ clase.color }}">
+                <i class="fas fa-circle"></i>
+            </span>
+            Horario: {{ clase.nombre }}
+        </h1>
+        <div>
+            <a href="{{ url_for('admin.horarios') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+            <button id="btnGuardarHorario" class="btn btn-success ms-2">
+                <i class="fas fa-save me-1"></i>Guardar cambios
+            </button>
+            <button id="btnAutocompletar" class="btn btn-primary ms-2">
+                <i class="fas fa-magic me-1"></i>Autocompletar
+            </button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    Horario semanal
+                </div>
+                <div class="card-body">
+                    <div class="horario-grid">
+                        <table class="horario-table">
+                            <thead>
+                                <tr>
+                                    <th class="hora-cell">Hora</th>
+                                    <th>Lunes</th>
+                                    <th>Martes</th>
+                                    <th>Miércoles</th>
+                                    <th>Jueves</th>
+                                    <th>Viernes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for hora in horas %}
+                                <tr>
+                                    <td class="hora-cell">{{ hora }}</td>
+                                    {% for dia in dias %}
+                                    <td>
+                                        {% set bloque = horario.get((dia, hora), {}) %}
+                                        {% set tiene_asignacion = bloque.asignatura_id is defined and bloque.asignatura_id %}
+                                        {% set tiene_conflicto = bloque.conflicto is defined and bloque.conflicto %}
+                                        
+                                        <div class="bloque-horario {% if tiene_asignacion %}asignado{% endif %}" 
+                                             data-dia="{{ dia }}" 
+                                             data-hora="{{ hora }}"
+                                             data-bs-toggle="modal" 
+                                             data-bs-target="#modalEditarBloque"
+                                             {% if tiene_asignacion %}
+                                             style="background-color: {{ bloque.color }};"
+                                             data-asignatura-id="{{ bloque.asignatura_id }}"
+                                             data-profesor-id="{{ bloque.profesor_id }}"
+                                             {% endif %}
+                                             >
+                                            
+                                            {% if tiene_asignacion %}
+                                                {% if tiene_conflicto %}
+                                                <div class="conflicto" title="Existe un conflicto con este horario">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                                {% endif %}
+                                                <div class="bloque-asignatura">{{ bloque.asignatura_nombre }}</div>
+                                                <div class="bloque-profesor">
+                                                    <i class="fas fa-user-tie me-1"></i>{{ bloque.profesor_nombre }}
+                                                </div>
+                                                <div class="bloque-acciones">
+                                                    <i class="fas fa-edit"></i> Click para editar
+                                                </div>
+                                            {% else %}
+                                                <div class="bloque-acciones">
+                                                    <i class="fas fa-plus-circle"></i> Click para asignar
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3">
+            <div class="panel-derecho">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Estadísticas
+                    </div>
+                    <div class="card-body">
+                        <div class="sidebar-section">
+                            <div class="stats-item">
+                                <span>Bloques totales:</span>
+                                <span class="badge bg-secondary">{{ stats.bloques_totales }}</span>
+                            </div>
+                            <div class="stats-item">
+                                <span>Asignados:</span>
+                                <span class="badge bg-success">{{ stats.bloques_asignados }}</span>
+                            </div>
+                            <div class="stats-item">
+                                <span>Pendientes:</span>
+                                <span class="badge bg-warning">{{ stats.bloques_pendientes }}</span>
+                            </div>
+                            <div class="stats-item">
+                                <span>Conflictos:</span>
+                                <span class="badge bg-danger">{{ stats.conflictos }}</span>
+                            </div>
+                            
+                            <div class="progress mt-3">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ stats.porcentaje_completado }}%;" 
+                                     aria-valuenow="{{ stats.porcentaje_completado }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ stats.porcentaje_completado }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-book me-1"></i>
+                        Asignaturas pendientes
+                    </div>
+                    <div class="card-body">
+                        <div class="sidebar-section">
+                            <div class="sidebar-titulo">
+                                <span>Horas por asignar</span>
+                            </div>
+                            <div id="asignaturas-pendientes">
+                                {% for asignatura in asignaturas_pendientes %}
+                                <div class="asignatura-item" style="background-color: {{ asignatura.color }}33;">
+                                    <span>{{ asignatura.nombre }}</span>
+                                    <span class="badge bg-secondary">{{ asignatura.horas_pendientes }} / {{ asignatura.horas_totales }}</span>
+                                </div>
+                                {% endfor %}
+                                {% if not asignaturas_pendientes %}
+                                <div class="alert alert-success">
+                                    Todas las asignaturas están asignadas.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-chalkboard-teacher me-1"></i>
+                        Carga de profesores
+                    </div>
+                    <div class="card-body">
+                        <div class="sidebar-section">
+                            <div class="sidebar-titulo">
+                                <span>Asignaciones</span>
+                            </div>
+                            <div id="profesores-carga">
+                                {% for profesor in profesores_carga %}
+                                <div class="profesor-item" style="background-color: #f8f9fa;">
+                                    <span>{{ profesor.nombre }}</span>
+                                    <span class="badge {% if profesor.porcentaje > 80 %}bg-danger{% elif profesor.porcentaje > 60 %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ profesor.horas_asignadas }} / {{ profesor.horas_disponibles }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                                {% if not profesores_carga %}
+                                <div class="alert alert-info">
+                                    No hay profesores con horas asignadas.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar bloque -->
+<div class="modal fade" id="modalEditarBloque" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Asignar bloque horario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editar_dia" value="">
+                <input type="hidden" id="editar_hora" value="">
+                
+                <div class="mb-3">
+                    <label for="editar_asignatura" class="form-label">Asignatura</label>
+                    <select class="form-select" id="editar_asignatura">
+                        <option value="">-- Seleccionar asignatura --</option>
+                        {% for asignatura in asignaturas %}
+                        <option value="{{ asignatura.id }}" data-color="{{ asignatura.color }}">
+                            {{ asignatura.nombre }} ({{ asignatura.horas_pendientes }}/{{ asignatura.horas_totales }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div id="conflicto_asignatura" class="form-text text-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i> Esta asignatura ya está asignada en este horario para otra clase.
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="editar_profesor" class="form-label">Profesor</label>
+                    <select class="form-select" id="editar_profesor">
+                        <option value="">-- Seleccionar profesor --</option>
+                        {% for profesor in profesores %}
+                        <option value="{{ profesor.id }}" class="profesor-opcion" data-asignaturas="{{ profesor.asignaturas|join(',') }}">
+                            {{ profesor.nombre }} ({{ profesor.disponibilidad }}%)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div id="conflicto_profesor" class="form-text text-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i> Este profesor ya está asignado en este horario para otra clase.
+                    </div>
+                    <div id="conflicto_disponibilidad" class="form-text text-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i> El profesor no está disponible en este horario.
+                    </div>
+                    <div id="conflicto_asignatura_profesor" class="form-text text-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i> Este profesor no imparte esta asignatura.
+                    </div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="ignorar_conflictos">
+                    <label class="form-check-label" for="ignorar_conflictos">
+                        Ignorar conflictos (no recomendado)
+                    </label>
+                </div>
+                
+                <div id="editar_bloque_alertas"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="btnEliminarAsignacion">Eliminar asignación</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarAsignacion">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Referencias a elementos del modal
+        const modal = document.getElementById('modalEditarBloque');
+        const editarDia = document.getElementById('editar_dia');
+        const editarHora = document.getElementById('editar_hora');
+        const editarAsignatura = document.getElementById('editar_asignatura');
+        const editarProfesor = document.getElementById('editar_profesor');
+        const btnEliminarAsignacion = document.getElementById('btnEliminarAsignacion');
+        const btnGuardarAsignacion = document.getElementById('btnGuardarAsignacion');
+        const ignorarConflictos = document.getElementById('ignorar_conflictos');
+        const alertasContainer = document.getElementById('editar_bloque_alertas');
+        
+        // Elementos de conflicto
+        const conflictoAsignatura = document.getElementById('conflicto_asignatura');
+        const conflictoProfesor = document.getElementById('conflicto_profesor');
+        const conflictoDisponibilidad = document.getElementById('conflicto_disponibilidad');
+        const conflictoAsignaturaProfesor = document.getElementById('conflicto_asignatura_profesor');
+        
+        // Horario actual (se llenará desde el servidor)
+        let horarioActual = {};
+        
+        // Cargar el horario actual
+        fetch(`{{ url_for('admin.get_horario_data', clase_id=clase.id) }}`)
+            .then(response => response.json())
+            .then(data => {
+                horarioActual = data.horario;
+                console.log("Horario cargado:", horarioActual);
+            })
+            .catch(error => {
+                console.error("Error al cargar el horario:", error);
+                mostrarAlerta("Error al cargar datos del horario. Intente recargar la página.", "danger");
+            });
+            
+        // Función para mostrar alertas
+        function mostrarAlerta(mensaje, tipo = "info") {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${mensaje}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.querySelector('.container-fluid').prepend(alertDiv);
+            
+            // Auto-cerrar después de 5 segundos
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+        
+        // Inicializar tooltip para los conflictos
+        document.querySelectorAll('.conflicto').forEach(el => {
+            new bootstrap.Tooltip(el);
+        });
+        
+        // Evento para abrir el modal y cargar datos
+        modal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const dia = button.getAttribute('data-dia');
+            const hora = button.getAttribute('data-hora');
+            const asignaturaId = button.getAttribute('data-asignatura-id');
+            const profesorId = button.getAttribute('data-profesor-id');
+            
+            // Resetear el formulario
+            editarDia.value = dia;
+            editarHora.value = hora;
+            editarAsignatura.value = asignaturaId || '';
+            editarProfesor.value = profesorId || '';
+            ignorarConflictos.checked = false;
+            
+            // Ocultar todos los mensajes de conflicto
+            conflictoAsignatura.style.display = 'none';
+            conflictoProfesor.style.display = 'none';
+            conflictoDisponibilidad.style.display = 'none';
+            conflictoAsignaturaProfesor.style.display = 'none';
+            
+            // Mostrar/ocultar el botón de eliminar
+            btnEliminarAsignacion.style.display = asignaturaId ? 'block' : 'none';
+            
+            // Filtrar profesores que pueden impartir la asignatura seleccionada
+            filtrarProfesores();
+            
+            // Verificar conflictos iniciales
+            verificarConflictos();
+        });
+        
+        // Filtrar profesores según la asignatura seleccionada
+        editarAsignatura.addEventListener('change', filtrarProfesores);
+        
+        function filtrarProfesores() {
+            const asignaturaId = editarAsignatura.value;
+            if (!asignaturaId) {
+                // Si no hay asignatura seleccionada, mostrar todos los profesores
+                document.querySelectorAll('#editar_profesor option').forEach(option => {
+                    option.style.display = option.value === '' ? 'block' : 'block';
+                });
+                return;
+            }
+            
+            // Filtrar profesores que pueden impartir esta asignatura
+            document.querySelectorAll('#editar_profesor option').forEach(option => {
+                if (option.value === '') {
+                    option.style.display = 'block'; // Siempre mostrar la opción vacía
+                    return;
+                }
+                
+                const asignaturas = option.getAttribute('data-asignaturas').split(',');
+                option.style.display = asignaturas.includes(asignaturaId) ? 'block' : 'none';
+            });
+            
+            // Si el profesor seleccionado actualmente no puede impartir esta asignatura, deseleccionarlo
+            const profesorOption = editarProfesor.options[editarProfesor.selectedIndex];
+            if (profesorOption && profesorOption.value !== '' && profesorOption.style.display === 'none') {
+                editarProfesor.value = '';
+            }
+            
+            // Verificar conflictos
+            verificarConflictos();
+        }
+        
+        // Verificar conflictos al cambiar profesor
+        editarProfesor.addEventListener('change', verificarConflictos);
+        
+        function verificarConflictos() {
+            const dia = editarDia.value;
+            const hora = editarHora.value;
+            const asignaturaId = editarAsignatura.value;
+            const profesorId = editarProfesor.value;
+            
+            // Resetear mensajes de conflicto
+            conflictoAsignatura.style.display = 'none';
+            conflictoProfesor.style.display = 'none';
+            conflictoDisponibilidad.style.display = 'none';
+            conflictoAsignaturaProfesor.style.display = 'none';
+            
+            if (!asignaturaId || !profesorId) return;
+            
+            // Verificar si el profesor ya está asignado en este horario en otra clase
+            fetch(`{{ url_for('admin.verificar_conflictos') }}?clase_id={{ clase.id }}&dia=${dia}&hora=${hora}&profesor_id=${profesorId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.conflicto_profesor) {
+                        conflictoProfesor.style.display = 'block';
+                    }
+                    
+                    if (data.conflicto_disponibilidad) {
+                        conflictoDisponibilidad.style.display = 'block';
+                    }
+                    
+                    if (data.conflicto_asignatura) {
+                        conflictoAsignatura.style.display = 'block';
+                    }
+                    
+                    // Verificar si el profesor puede impartir la asignatura
+                    const profesorOption = Array.from(editarProfesor.options).find(opt => opt.value === profesorId);
+                    if (profesorOption) {
+                        const asignaturas = profesorOption.getAttribute('data-asignaturas').split(',');
+                        if (!asignaturas.includes(asignaturaId)) {
+                            conflictoAsignaturaProfesor.style.display = 'block';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al verificar conflictos:", error);
+                });
+        }
+        
+        // Guardar asignación
+        btnGuardarAsignacion.addEventListener('click', function() {
+            const dia = editarDia.value;
+            const hora = editarHora.value;
+            const asignaturaId = editarAsignatura.value;
+            const profesorId = editarProfesor.value;
+            
+            if (!asignaturaId || !profesorId) {
+                alertasContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        Debe seleccionar una asignatura y un profesor.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Verificar si hay conflictos visibles y si no se está ignorando
+            const hayConflictos = 
+                conflictoAsignatura.style.display === 'block' ||
+                conflictoProfesor.style.display === 'block' ||
+                conflictoDisponibilidad.style.display === 'block' ||
+                conflictoAsignaturaProfesor.style.display === 'block';
+                
+            if (hayConflictos && !ignorarConflictos.checked) {
+                alertasContainer.innerHTML = `
+                    <div class="alert alert-warning">
+                        Hay conflictos que deben resolverse. Si desea continuar de todos modos, marque la casilla "Ignorar conflictos".
+                    </div>
+                `;
+                return;
+            }
+            
+            // Actualizar horario en el servidor
+            const data = {
+                clase_id: {{ clase.id }},
+                dia: dia,
+                hora: hora,
+                asignatura_id: asignaturaId,
+                profesor_id: profesorId,
+                ignorar_conflictos: ignorarConflictos.checked
+            };
+            
+            fetch('{{ url_for('admin.guardar_bloque_horario') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar modal y recargar página
+                    bootstrap.Modal.getInstance(modal).hide();
+                    mostrarAlerta("Bloque horario actualizado correctamente.", "success");
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    // Mostrar error
+                    alertasContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            ${data.message || "Error al guardar el bloque horario."}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error("Error al guardar bloque:", error);
+                alertasContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        Error de conexión. Intente nuevamente.
+                    </div>
+                `;
+            });
+        });
+        
+        // Eliminar asignación
+        btnEliminarAsignacion.addEventListener('click', function() {
+            const dia = editarDia.value;
+            const hora = editarHora.value;
+            
+            // Confirmar eliminación
+            if (!confirm("¿Está seguro de eliminar esta asignación?")) {
+                return;
+            }
+            
+            // Eliminar horario del servidor
+            const data = {
+                clase_id: {{ clase.id }},
+                dia: dia,
+                hora: hora
+            };
+            
+            fetch('{{ url_for('admin.eliminar_bloque_horario') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar modal y recargar página
+                    bootstrap.Modal.getInstance(modal).hide();
+                    mostrarAlerta("Asignación eliminada correctamente.", "success");
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    // Mostrar error
+                    alertasContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            ${data.message || "Error al eliminar la asignación."}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error("Error al eliminar bloque:", error);
+                alertasContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        Error de conexión. Intente nuevamente.
+                    </div>
+                `;
+            });
+        });
+        
+        // Guardar todo el horario
+        document.getElementById('btnGuardarHorario').addEventListener('click', function() {
+            fetch('{{ url_for('admin.guardar_horario_completo', clase_id=clase.id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarAlerta("Horario guardado correctamente.", "success");
+                } else {
+                    mostrarAlerta(data.message || "Error al guardar el horario.", "danger");
+                }
+            })
+            .catch(error => {
+                console.error("Error al guardar horario:", error);
+                mostrarAlerta("Error de conexión. Intente nuevamente.", "danger");
+            });
+        });
+        
+        // Autocompletar horario
+        document.getElementById('btnAutocompletar').addEventListener('click', function() {
+            if (!confirm("¿Está seguro de autocompletar el horario? Esto intentará asignar automáticamente las asignaturas y profesores a los bloques vacíos.")) {
+                return;
+            }
+            
+            fetch('{{ url_for('admin.autocompletar_horario', clase_id=clase.id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarAlerta("Horario autocompletado correctamente.", "success");
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    mostrarAlerta(data.message || "Error al autocompletar el horario.", "danger");
+                }
+            })
+            .catch(error => {
+                console.error("Error al autocompletar horario:", error);
+                mostrarAlerta("Error de conexión. Intente nuevamente.", "danger");
+            });
+        });
+    });
+</script>
+{% endblock %} 
