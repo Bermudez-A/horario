@@ -136,4 +136,60 @@ def update():
     except Exception as e:
         current_app.logger.error(f"Error al actualizar horario: {str(e)}")
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}) 
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@schedules_bp.route('/api/actividades-especiales', methods=['GET'])
+@login_required
+def get_actividades_especiales():
+    """Obtener todas las actividades especiales"""
+    actividades = ActividadEspecial.query.all()
+    return jsonify([{
+        'id': a.id,
+        'nombre': a.nombre,
+        'descripcion': a.descripcion,
+        'dia': a.dia,
+        'hora': a.hora,
+        'color': a.color
+    } for a in actividades])
+
+@schedules_bp.route('/api/actividades-especiales', methods=['POST'])
+@login_required
+def create_actividad_especial():
+    """Crear una nueva actividad especial"""
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not all(key in data for key in ['nombre', 'slots']):
+            return jsonify({'success': False, 'message': 'Faltan datos requeridos'})
+        
+        # Crear la actividad para cada slot seleccionado
+        for slot in data['slots']:
+            actividad = ActividadEspecial(
+                nombre=data['nombre'],
+                descripcion=data.get('descripcion', ''),
+                dia=slot['dia'],
+                hora=slot['hora'],
+                color=data.get('color', '#3498db')
+            )
+            db.session.add(actividad)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Actividad especial creada correctamente'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+@schedules_bp.route('/api/actividades-especiales/<int:id>', methods=['DELETE'])
+@login_required
+def delete_actividad_especial(id):
+    """Eliminar una actividad especial"""
+    try:
+        actividad = ActividadEspecial.query.get_or_404(id)
+        db.session.delete(actividad)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Actividad especial eliminada correctamente'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}) 

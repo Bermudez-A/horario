@@ -1,6 +1,23 @@
 from app.extensions import db
 from datetime import datetime
 
+class ClaseAsignatura(db.Model):
+    """Modelo para la relación entre clases y asignaturas"""
+    __tablename__ = 'clases_asignaturas'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    clase_id = db.Column(db.Integer, db.ForeignKey('clases.id'), nullable=False)
+    asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
+    horas_semanales = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    clase = db.relationship('Clase', backref=db.backref('asignaturas_rel', lazy=True))
+    asignatura = db.relationship('Asignatura', backref=db.backref('clases_rel', lazy=True))
+    
+    def __repr__(self):
+        return f'<ClaseAsignatura {self.clase_id}-{self.asignatura_id}>'
+
 class Clase(db.Model):
     __tablename__ = 'clases'
     
@@ -34,15 +51,28 @@ class Clase(db.Model):
             # Convertir hora a índice (hora viene como texto "1", "2", etc.)
             try:
                 hora_idx = int(h.hora) - 1
-                horario[h.dia][hora_idx] = {
-                    'id': h.id,
-                    'asignatura': h.asignatura.nombre,
-                    'profesor': h.profesor.get_nombre_completo() if h.profesor else None,
-                    'color': h.asignatura.color,
-                    'icono': h.asignatura.icono,
-                    'asignatura_id': h.asignatura_id,
-                    'profesor_id': h.profesor_id
-                }
+                if h.es_actividad_especial:
+                    horario[h.dia][hora_idx] = {
+                        'id': h.id,
+                        'asignatura': h.nombre_actividad_especial,
+                        'profesor': None,
+                        'color': h.color_actividad_especial,
+                        'icono': None,
+                        'asignatura_id': None,
+                        'profesor_id': None,
+                        'es_actividad_especial': True
+                    }
+                else:
+                    horario[h.dia][hora_idx] = {
+                        'id': h.id,
+                        'asignatura': h.asignatura.nombre,
+                        'profesor': h.profesor.get_nombre_completo() if h.profesor else None,
+                        'color': h.asignatura.color,
+                        'icono': h.asignatura.icono,
+                        'asignatura_id': h.asignatura_id,
+                        'profesor_id': h.profesor_id,
+                        'es_actividad_especial': False
+                    }
             except (ValueError, IndexError) as e:
                 # Manejar errores de conversión o índices fuera de rango
                 print(f"Error al procesar hora '{h.hora}' para día '{h.dia}': {str(e)}")
