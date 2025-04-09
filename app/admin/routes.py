@@ -789,7 +789,6 @@ def guardar_bloque_horario():
     hora = data.get('hora')
     asignatura_id = data.get('asignatura_id')
     profesor_id = data.get('profesor_id')
-    unido_con_clase_id = data.get('unido_con_clase_id')  # Nuevo campo para unión de clases
     ignorar_conflictos = data.get('ignorar_conflictos', False)
     
     if not all([clase_id, dia, hora, asignatura_id, profesor_id]):
@@ -846,15 +845,13 @@ def guardar_bloque_horario():
     if horario_existente:
         horario_existente.asignatura_id = asignatura_id
         horario_existente.profesor_id = profesor_id
-        horario_existente.unido_con_clase_id = unido_con_clase_id  # Actualizar unión de clases
     else:
         horario = Horario(
             clase_id=clase_id,
             dia=dia,
             hora=hora,
             asignatura_id=asignatura_id,
-            profesor_id=profesor_id,
-            unido_con_clase_id=unido_con_clase_id  # Incluir unión de clases
+            profesor_id=profesor_id
         )
         db.session.add(horario)
     
