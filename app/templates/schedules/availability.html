@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración de Actividades Especiales - Generador de Horarios{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: 100px repeat(5, 1fr);
+        gap: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .schedule-header {
+        background-color: #f8f9fa;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .schedule-cell {
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        min-height: 80px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .schedule-cell.dragover {
+        background-color: #e3f2fd;
+        border: 2px dashed #2196f3;
+    }
+    
+    .activity-container {
+        position: relative;
+        padding: 10px;
+        background-color: #fff;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .draggable-activities {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .activity-item {
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: move;
+        user-select: none;
+        font-weight: 500;
+        text-align: center;
+        min-width: 120px;
+    }
+
+    .activity-item.deporte {
+        background-color: #e8f5e9;
+        border: 1px solid #4caf50;
+        color: #2e7d32;
+    }
+
+    .activity-item.ingles {
+        background-color: #e3f2fd;
+        border: 1px solid #2196f3;
+        color: #1565c0;
+    }
+
+    .activity-item.baron {
+        background-color: #fff3e0;
+        border: 1px solid #ff9800;
+        color: #ef6c00;
+    }
+
+    .activity-item.tutoria {
+        background-color: #f3e5f5;
+        border: 1px solid #9c27b0;
+        color: #7b1fa2;
+    }
+
+    .activity-item.bon {
+        background-color: #fce4ec;
+        border: 1px solid #e91e63;
+        color: #c2185b;
+    }
+
+    .activity-item.examen {
+        background-color: #ffebee;
+        border: 1px solid #f44336;
+        color: #c62828;
+    }
+
+    .cell-activity {
+        padding: 5px;
+        border-radius: 3px;
+        margin-bottom: 5px;
+        position: relative;
+    }
+
+    .remove-activity {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 2px;
+        display: none;
+    }
+
+    .cell-activity:hover .remove-activity {
+        display: block;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: relative;
+        background-color: #fff;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 5px;
+        width: 80%;
+        max-width: 500px;
+    }
+
+    .close-modal {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        font-size: 24px;
+        cursor: pointer;
+    }
+
+    .time-slot {
+        font-weight: 500;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-0">
+                <i class="fas fa-calendar-alt me-2"></i>Configuración de Actividades Especiales
+            </h1>
+            <p class="text-muted">Configure las actividades especiales que se aplicarán a todos los grupos.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="draggable-activities">
+                <div class="activity-item deporte" draggable="true" data-activity="Deporte">
+                    <i class="fas fa-running me-2"></i>Deporte
+                </div>
+                <div class="activity-item ingles" draggable="true" data-activity="Inglés">
+                    <i class="fas fa-language me-2"></i>Inglés
+                </div>
+                <div class="activity-item baron" draggable="true" data-activity="Barón de Warsage">
+                    <i class="fas fa-school me-2"></i>Barón de Warsage
+                </div>
+                <div class="activity-item tutoria" draggable="true" data-activity="Tutoría">
+                    <i class="fas fa-users me-2"></i>Tutoría
+                </div>
+                <div class="activity-item bon" draggable="true" data-activity="Disposición BON">
+                    <i class="fas fa-file-alt me-2"></i>Disposición BON
+                </div>
+                <div class="activity-item examen" draggable="true" data-activity="Examen">
+                    <i class="fas fa-edit me-2"></i>Examen
+                </div>
+            </div>
+            
+            <div class="schedule-grid">
+                <div class="schedule-header">Sesión</div>
+                <div class="schedule-header">Lunes</div>
+                <div class="schedule-header">Martes</div>
+                <div class="schedule-header">Miércoles</div>
+                <div class="schedule-header">Jueves</div>
+                <div class="schedule-header">Viernes</div>
+                
+                {% for sesion in ['Primera', 'Segunda', 'Tercera', 'Cuarta', 'Quinta', 'Sexta', 'Séptima'] %}
+                <div class="schedule-header time-slot">{{ sesion }}</div>
+                {% for dia in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'] %}
+                <div class="schedule-cell" data-dia="{{ dia }}" data-sesion="{{ sesion }}"></div>
+                {% endfor %}
+                {% endfor %}
+            </div>
+            
+            <div class="d-flex justify-content-end mt-4">
+                <button id="saveActivities" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Actividades
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para selección de asignatura -->
+<div id="examModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h5>Seleccionar Asignatura para Examen</h5>
+        <select id="subjectSelect" class="form-select mb-3">
+            <option value="">Seleccione una asignatura...</option>
+            {% for asignatura in asignaturas %}
+            <option value="{{ asignatura.id }}">{{ asignatura.nombre }}</option>
+            {% endfor %}
+        </select>
+        <button id="confirmExam" class="btn btn-primary">Confirmar</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cells = document.querySelectorAll('.schedule-cell');
+    const activityItems = document.querySelectorAll('.activity-item');
+    const saveButton = document.getElementById('saveActivities');
+    const examModal = document.getElementById('examModal');
+    const closeModal = document.querySelector('.close-modal');
+    const confirmExamBtn = document.getElementById('confirmExam');
+    let currentActivities = {};
+    let draggedActivity = null;
+    let targetCell = null;
+
+    // Cargar actividades existentes
+    const actividadesExistentes = JSON.parse('{{ actividades_existentes|tojson|safe }}');
+    
+    // Inicializar actividades existentes
+    function initializeExistingActivities() {
+        for (const [dia, sesiones] of Object.entries(actividadesExistentes)) {
+            for (const [sesion, actividades] of Object.entries(sesiones)) {
+                const cell = document.querySelector(`.schedule-cell[data-dia="${dia}"][data-sesion="${sesion}"]`);
+                if (cell) {
+                    actividades.forEach(actividad => {
+                        if (actividad.startsWith('Examen')) {
+                            const [nombre, asignatura] = actividad.split(' - ');
+                            addActivityToCell(cell, nombre, asignatura);
+                        } else {
+                            addActivityToCell(cell, actividad);
+                        }
+                    });
+                }
+            }
+        }
+        updateActivities();
+    }
+
+    // Configurar drag and drop
+    activityItems.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            draggedActivity = this;
+            e.dataTransfer.setData('text/plain', this.dataset.activity);
+        });
+    });
+
+    cells.forEach(cell => {
+        cell.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        cell.addEventListener('dragleave', function() {
+            this.classList.remove('dragover');
+        });
+
+        cell.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            const activity = e.dataTransfer.getData('text/plain');
+            
+            if (activity === 'Examen') {
+                targetCell = this;
+                examModal.style.display = 'block';
+            } else {
+                addActivityToCell(this, activity);
+            }
+        });
+    });
+
+    // Funciones para manejar actividades
+    function addActivityToCell(cell, activity, subject = '') {
+        const activityDiv = document.createElement('div');
+        activityDiv.className = `cell-activity ${activity.toLowerCase().replace(/\s+/g, '-')}`;
+        
+        let activityText = activity;
+        if (activity === 'Examen' && subject) {
+            activityText += ` - ${subject}`;
+        }
+        
+        activityDiv.innerHTML = `
+            ${activityText}
+            <button class="remove-activity" title="Eliminar actividad">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        // Añadir botón para eliminar
+        const removeBtn = activityDiv.querySelector('.remove-activity');
+        removeBtn.addEventListener('click', function() {
+            activityDiv.remove();
+            updateActivities();
+        });
+
+        cell.appendChild(activityDiv);
+        updateActivities();
+    }
+
+    function updateActivities() {
+        currentActivities = {};
+        cells.forEach(cell => {
+            const dia = cell.dataset.dia;
+            const sesion = cell.dataset.sesion;
+            const activities = Array.from(cell.querySelectorAll('.cell-activity'))
+                .map(act => act.textContent.trim());
+            
+            if (activities.length > 0) {
+                if (!currentActivities[dia]) {
+                    currentActivities[dia] = {};
+                }
+                currentActivities[dia][sesion] = activities;
+            }
+        });
+    }
+
+    // Manejar modal de exámenes
+    closeModal.addEventListener('click', () => {
+        examModal.style.display = 'none';
+        targetCell = null;
+    });
+
+    confirmExamBtn.addEventListener('click', () => {
+        const subjectSelect = document.getElementById('subjectSelect');
+        const selectedSubject = subjectSelect.options[subjectSelect.selectedIndex].text;
+        
+        if (targetCell && selectedSubject) {
+            addActivityToCell(targetCell, 'Examen', selectedSubject);
+            examModal.style.display = 'none';
+            subjectSelect.value = '';
+            targetCell = null;
+        }
+    });
+
+    // Guardar actividades
+    saveButton.addEventListener('click', function() {
+        updateActivities();
+        fetch('/schedules/save_special_activities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(currentActivities)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Actividades especiales guardadas correctamente');
+            } else {
+                alert('Error al guardar las actividades especiales');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar las actividades especiales');
+        });
+    });
+
+    // Inicializar actividades existentes al cargar la página
+    initializeExistingActivities();
+});
+</script>
+{% endblock %} 

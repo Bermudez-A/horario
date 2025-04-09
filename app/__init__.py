@@ -1,51 +1,48 @@
 import os
-import sys
-from flask import Flask, request
+from flask import Flask, render_template
 from dotenv import load_dotenv
 from app.extensions import db, migrate, login_manager, babel
 
 # Cargar variables de entorno
 load_dotenv()
 
-def get_locale():
-    return request.accept_languages.best_match(['es', 'en'])
-
 def create_app():
     app = Flask(__name__)
     
     # Configuración
-    app.config.from_object('app.config.Config')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://localhost/horarios')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
-    # Asegurar que Flask use UTF-8
-    app.config['JSON_AS_ASCII'] = False
-    
-    # Inicializar extensiones con la app
+    # Inicializar extensiones
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
-    login_manager.login_message_category = 'info'
+    babel.init_app(app)
     
-    # Inicializar Babel para internacionalización
-    babel.init_app(app, locale_selector=get_locale)
+    # Importar modelos
+    from .models import (
+        User, Profesor, Asignatura, Clase, ClaseAsignatura,
+        Horario, Disponibilidad, ActividadEspecial
+    )
     
     # Registrar blueprints
-    from app.auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    from app.auth import auth as auth_bp
+    from app.admin import admin as admin_bp
+    from app.schedules import schedules as schedules_bp
+    from app.stats import stats_bp
     
-    from app.admin import admin as admin_blueprint
-    app.register_blueprint(admin_blueprint, url_prefix='/admin')
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(schedules_bp, url_prefix='/schedules')
+    app.register_blueprint(stats_bp, url_prefix='/stats')
     
-    from app.schedules import schedules as schedules_blueprint
-    app.register_blueprint(schedules_blueprint, url_prefix='/schedules')
-    
-    from app.stats import stats_bp as stats_blueprint
-    app.register_blueprint(stats_blueprint, url_prefix='/stats')
+    # Configurar login
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
     
     # Ruta principal
-    from flask import render_template
-    
     @app.route('/')
     def index():
         return render_template('index.html')

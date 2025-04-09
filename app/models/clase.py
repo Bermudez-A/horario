@@ -1,6 +1,23 @@
 from app.extensions import db
 from datetime import datetime
 
+class ClaseAsignatura(db.Model):
+    """Modelo para la relación entre clases y asignaturas"""
+    __tablename__ = 'clases_asignaturas'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    clase_id = db.Column(db.Integer, db.ForeignKey('clases.id'), nullable=False)
+    asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
+    horas_semanales = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    clase = db.relationship('Clase', backref=db.backref('asignaturas_rel', lazy=True))
+    asignatura = db.relationship('Asignatura', backref=db.backref('clases_rel', lazy=True))
+    
+    def __repr__(self):
+        return f'<ClaseAsignatura {self.clase_id}-{self.asignatura_id}>'
+
 class Clase(db.Model):
     __tablename__ = 'clases'
     
