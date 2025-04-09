@@ -18,11 +18,11 @@
                 <i class="fas fa-magic me-1"></i> Generar
             </a>
             {% endif %}
-            <button class="btn btn-info" id="btn-imprimir">
-                <i class="fas fa-print me-1"></i> Imprimir
-            </button>
             <button class="btn btn-outline-primary" id="btn-exportar">
-                <i class="fas fa-file-excel me-1"></i> Exportar
+                <i class="fas fa-file-excel me-1"></i> CSV
+            </button>
+            <button class="btn btn-outline-danger" id="btn-pdf">
+                <i class="fas fa-file-pdf me-1"></i> PDF
             </button>
         </div>
     </div>
@@ -117,6 +117,16 @@
                     <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Distribución por Día</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Hidden div to store data for JavaScript -->
+                    <div id="data-dias" class="d-none" 
+                        data-lunes="{{ distribucion_dias.lunes }}"
+                        data-martes="{{ distribucion_dias.martes }}"
+                        data-miercoles="{{ distribucion_dias.miercoles }}"
+                        data-jueves="{{ distribucion_dias.jueves }}"
+                        data-viernes="{{ distribucion_dias.viernes }}">
+                    </div>
+                    <!-- Hidden div for export URL -->
+                    <div id="data-export" class="d-none" data-url="{{ url_for('schedules.index') }}?export={{ clase.id }}"></div>
                     <canvas id="grafico-distribucion"></canvas>
                 </div>
             </div>
@@ -126,68 +136,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Gráfico de distribución de horas
-        const ctxPie = document.getElementById('grafico-distribucion').getContext('2d');
-        new Chart(ctxPie, {
-            type: 'bar',
-            data: {
-                labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
-                datasets: [{
-                    label: 'Horas de clase',
-                    data: [
-                        {{ distribucion_dias.lunes }},
-                        {{ distribucion_dias.martes }},
-                        {{ distribucion_dias.miercoles }},
-                        {{ distribucion_dias.jueves }},
-                        {{ distribucion_dias.viernes }}
-                    ],
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(255, 206, 86, 0.6)',
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(153, 102, 255, 0.6)'
-                    ],
-                    borderColor: [
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 7,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Botón de imprimir
-        document.getElementById('btn-imprimir').addEventListener('click', function() {
-            window.print();
-        });
-        
-        // Botón de exportar a Excel
-        document.getElementById('btn-exportar').addEventListener('click', function() {
-            window.location.href = "{{ url_for('schedules.index') }}?export={{ clase.id }}";
-        });
-    });
-</script>
-{% endblock %} 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="{{ url_for('static', filename='js/views.js') }}"></script>
+{% endblock %}
