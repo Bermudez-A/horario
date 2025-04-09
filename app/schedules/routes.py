@@ -721,14 +721,103 @@ def move_class():
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
 
+<<<<<<< HEAD
 @schedules.route('/save_special_activities', methods=['POST'])
 @login_required
 def save_special_activities():
     """Guardar actividades especiales"""
+=======
+@schedules.route('/unir_clases', methods=['POST'])
+@login_required
+def unir_clases():
+    """Unir dos clases para que el mismo profesor imparta la misma asignatura a ambos grupos"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'message': 'No se recibieron datos'})
+        
+        # Obtener datos necesarios
+        clase_actual_id = data.get('clase_actual_id')
+        profesor_id = data.get('profesor_id')
+        asignatura_actual_id = data.get('asignatura_actual_id')
+        dia = data.get('dia')
+        hora = data.get('hora')
+        
+        # Validar datos obligatorios
+        if not all([clase_actual_id, profesor_id, asignatura_actual_id, dia, hora]):
+            return jsonify({'success': False, 'message': 'Faltan datos obligatorios'})
+        
+        # Verificar que la clase exista
+        clase_actual = Clase.query.get(clase_actual_id)
+        if not clase_actual:
+            return jsonify({'success': False, 'message': 'La clase no existe'})
+        
+        # Verificar que el profesor exista
+        profesor = Profesor.query.get(profesor_id)
+        if not profesor:
+            return jsonify({'success': False, 'message': 'El profesor no existe'})
+        
+        # Verificar la asignatura
+        asignatura_actual = Asignatura.query.get(asignatura_actual_id)
+        if not asignatura_actual:
+            return jsonify({'success': False, 'message': 'La asignatura no existe'})
+        
+        # Verificar si ya existe un horario en esta posición
+        horario_existente = Horario.query.filter_by(
+            clase_id=clase_actual_id,
+            dia=dia,
+            hora=hora
+        ).first()
+        
+        if horario_existente:
+            # Si existe, actualizarlo
+            horario_existente.asignatura_id = asignatura_actual_id
+            horario_existente.profesor_id = profesor_id
+        else:
+            # Si no existe, crear uno nuevo
+            horario = Horario(
+                clase_id=clase_actual_id,
+                dia=dia,
+                hora=hora,
+                asignatura_id=asignatura_actual_id,
+                profesor_id=profesor_id
+            )
+            db.session.add(horario)
+        
+        # Eliminar cualquier otro horario de la misma asignatura en esta clase
+        # pero en diferente posición
+        Horario.query.filter(
+            Horario.clase_id == clase_actual_id,
+            Horario.asignatura_id == asignatura_actual_id,
+            Horario.dia != dia,
+            Horario.hora != hora
+        ).delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Clase actualizada correctamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[Unir Clases] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
+
+@schedules.route('/clear_all/<int:clase_id>', methods=['POST'])
+@login_required
+def clear_all(clase_id):
+    """Elimina todas las asignaciones de horario para una clase específica"""
+    # Solo administradores pueden limpiar horarios
+>>>>>>> 270550446b4b8a77cc12f49870042ae8af22be5e
     if not current_user.rol == 'admin':
         return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
     
     try:
+<<<<<<< HEAD
         data = request.get_json()
         
         # Primero, eliminar todas las actividades especiales existentes
@@ -781,3 +870,22 @@ def save_special_activities():
         db.session.rollback()
         print(f"Error al guardar actividades especiales: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500 
+=======
+        # Verificar que la clase existe
+        clase = Clase.query.get(clase_id)
+        if not clase:
+            return jsonify({'success': False, 'message': 'Clase no encontrada'}), 404
+        
+        # Eliminar todos los horarios de esta clase
+        Horario.query.filter_by(clase_id=clase_id).delete()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Horario limpiado con éxito'})
+    
+    except Exception as e:
+        db.session.rollback()
+        print(f"[Clear All] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
+>>>>>>> 270550446b4b8a77cc12f49870042ae8af22be5e

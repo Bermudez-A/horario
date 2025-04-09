@@ -11,7 +11,6 @@ class Horario(db.Model):
     hora = db.Column(db.String(15), nullable=False)  # formato: "8:00 - 8:55"
     asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
     profesor_id = db.Column(db.Integer, db.ForeignKey('profesores.id'), nullable=False)
-    unido_con_clase_id = db.Column(db.Integer, db.ForeignKey('clases.id'), nullable=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -19,7 +18,6 @@ class Horario(db.Model):
     clase = db.relationship('Clase', back_populates='horarios', foreign_keys=[clase_id])
     asignatura = db.relationship('Asignatura', back_populates='horarios')
     profesor = db.relationship('Profesor', back_populates='horarios')
-    clase_unida = db.relationship('Clase', foreign_keys=[unido_con_clase_id])
     
     def __repr__(self):
         return f'<Horario: {self.clase.nombre}, {self.dia} {self.hora}, {self.asignatura.nombre}>'
