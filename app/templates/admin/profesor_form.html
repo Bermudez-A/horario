@@ -139,18 +139,27 @@
                             <h5 class="mb-0">Foto de perfil</h5>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label for="foto" class="form-label">{{ form.foto.label }}</label>
-                                {{ form.foto(class="form-control") }}
-                                {% for error in form.foto.errors %}
-                                    <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% if profesor and profesor.foto %}
-                                <div class="mt-2">
-                                    <img src="{{ url_for('static', filename='uploads/profesores/' + profesor.foto) }}" class="img-thumbnail" width="100" alt="Foto actual">
-                                    <small class="text-muted d-block">Foto actual</small>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="foto" class="form-label">{{ form.foto.label }}</label>
+                                        {{ form.foto(class="form-control") }}
+                                        {% for error in form.foto.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle me-1"></i>Formatos permitidos: JPG, PNG. Tamaño máximo: 5MB.
+                                        </small>
+                                    </div>
                                 </div>
-                                {% endif %}
+                                <div class="col-md-4 text-center">
+                                    <div id="preview-container">
+                                        {% if profesor and profesor.foto %}
+                                        <img id="img-preview" src="{{ url_for('static', filename='uploads/profesores/' + profesor.foto) }}" class="img-fluid rounded-circle mb-3" style="max-width: 150px; max-height: 150px; object-fit: cover;" alt="Foto actual">
+                                        <small class="text-muted d-block">Foto actual</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -191,6 +200,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/imagen-preview.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Referencias a los elementos del formulario

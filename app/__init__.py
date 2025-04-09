@@ -40,7 +40,7 @@ def create_app():
     from app.schedules import schedules as schedules_blueprint
     app.register_blueprint(schedules_blueprint, url_prefix='/schedules')
     
-    from app.stats import stats as stats_blueprint
+    from app.stats import stats_bp as stats_blueprint
     app.register_blueprint(stats_blueprint, url_prefix='/stats')
     
     # Ruta principal

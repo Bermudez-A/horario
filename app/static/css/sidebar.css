@@ -27,6 +27,42 @@ body {
     z-index: 1030;
 }
 
+#sidebar.collapsed {
+    min-width: 80px;
+    max-width: 80px;
+    text-align: center;
+}
+
+#sidebar.collapsed .sidebar-brand span,
+#sidebar.collapsed .user-info span,
+#sidebar.collapsed .section-title,
+#sidebar.collapsed .nav-item span {
+    display: none;
+}
+
+#sidebar.collapsed .nav-item a i {
+    font-size: 1.25em;
+    margin-right: 0;
+    display: block;
+    margin-bottom: 5px;
+    text-align: center;
+    width: 100%;
+}
+
+#sidebar.collapsed .user-info .badge-admin {
+    display: none;
+}
+
+#sidebar.collapsed .user-info a {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+#sidebar.collapsed .user-info {
+    text-align: center;
+    padding: 15px 5px;
+}
+
 #sidebar:hover {
     overflow-y: auto;
 }
@@ -58,6 +94,40 @@ body {
     font-size: 1.2em;
     cursor: pointer;
     display: none;
+}
+
+#sidebarCollapse {
+    background: transparent;
+    border: none;
+    color: #ecf0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.3s;
+    position: fixed;
+    top: 20px;
+    left: 210px;
+    z-index: 1031;
+}
+
+#sidebarCollapse:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+#sidebar.collapsed #sidebarCollapse {
+    left: 40px;
+}
+
+#sidebarCollapse i {
+    transition: all 0.3s;
+}
+
+#sidebar.collapsed #sidebarCollapse i {
+    transform: rotate(180deg);
 }
 
 #sidebar .sidebar-brand {
@@ -207,19 +277,19 @@ body {
     font-size: 0.95em;
 }
 
-/* Toggle button para sidebar en móviles */
-#sidebarToggleBtn {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 999;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Transiciones suaves para el sidebar */
+#sidebar, #content-wrapper {
+    transition: all 0.3s ease;
+}
+
+#content-wrapper {
+    width: calc(100% - 250px);
+    padding-left: 0;
     transition: all 0.3s;
+}
+
+#content-wrapper.expanded {
+    width: calc(100% - 80px);
 }
 
 /* Ajustes para dispositivos móviles */
@@ -236,9 +306,26 @@ body {
     #sidebar.active {
         margin-left: 0;
     }
+
+    #sidebar.collapsed {
+        margin-left: -80px;
+    }
+    
+    #sidebar.collapsed.active {
+        margin-left: 0;
+    }
     
     #content-wrapper {
         width: 100%;
+        padding-left: 0;
+    }
+    
+    #content-wrapper.expanded {
+        width: 100%;
+    }
+
+    #sidebarCollapse {
+        display: none;
     }
     
     #sidebar .sidebar-header button {
@@ -256,9 +343,9 @@ body {
         min-width: 85%;
         max-width: 85%;
     }
-}
 
-/* Transiciones suaves para el sidebar */
-#sidebar, #content-wrapper {
-    transition: all 0.3s ease;
+    #sidebar.collapsed {
+        min-width: 85%;
+        max-width: 85%;
+    }
 }

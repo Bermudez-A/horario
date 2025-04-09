@@ -13,14 +13,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
     {% if current_user.is_authenticated and current_user.rol == 'admin' %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"></script>
+    
+    <!-- SweetAlert2 para notificaciones visuales -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% if current_user.is_authenticated and current_user.rol == 'admin' %}d-flex admin-layout{% else %}standard-layout{% endif %}">
+<body class="{% if current_user.is_authenticated and current_user.rol == 'admin' %}d-flex admin-layout{% else %}standard-layout{% endif %} page-transition">
     
     {% if not current_user.is_authenticated or current_user.rol != 'admin' %}
     <!-- Barra de navegación para usuarios no administradores -->
@@ -83,12 +88,17 @@
     <nav id="sidebar">
         <div class="sidebar-header">
             <a class="sidebar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-calendar-alt"></i>Horarios
+                <i class="fas fa-calendar-alt"></i><span>Horarios</span>
             </a>
             <button id="sidebarCollapseBtn" class="d-md-none">
                 <i class="fas fa-times"></i>
             </button>
         </div>
+        
+        <!-- Botón para colapsar sidebar (visible en desktop) -->
+        <button id="sidebarCollapse" type="button">
+            <i class="fas fa-chevron-left"></i>
+        </button>
         
         <div class="user-info">
             <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown">
@@ -104,27 +114,27 @@
             </ul>
         </div>
         
-        <ul class="list-unstyled components">
+        <ul class="list-unstyled components animate-stagger">
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('index') }}">
-                    <i class="fas fa-home me-2"></i>Inicio
+                    <i class="fas fa-home me-2"></i><span>Inicio</span>
                 </a>
             </li>
             
             <div class="section-title">GESTIÓN ACADÉMICA</div>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('schedules.index') }}">
-                    <i class="fas fa-clock me-2"></i>Horarios
+                    <i class="fas fa-clock me-2"></i><span>Horarios</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('schedules.availability') }}">
-                    <i class="fas fa-calendar-check me-2"></i>Disponibilidad
+                    <i class="fas fa-calendar-check me-2"></i><span>Clases Fijas</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('stats.index') }}">
-                    <i class="fas fa-chart-line me-2"></i>Estadísticas
+                    <i class="fas fa-chart-line me-2"></i><span>Estadísticas</span>
                 </a>
             </li>
             
@@ -132,37 +142,37 @@
             <div class="section-title">ADMINISTRACIÓN</div>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('admin.users') }}">
-                    <i class="fas fa-users-cog me-2"></i>Gestión Usuarios
+                    <i class="fas fa-users-cog me-2"></i><span>Gestión Usuarios</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('admin.profesores') }}">
-                    <i class="fas fa-chalkboard-teacher me-2"></i>Profesores
+                    <i class="fas fa-chalkboard-teacher me-2"></i><span>Profesores</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('admin.asignaturas') }}">
-                    <i class="fas fa-book me-2"></i>Asignaturas
+                    <i class="fas fa-book me-2"></i><span>Asignaturas</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('admin.clases') }}">
-                    <i class="fas fa-graduation-cap me-2"></i>Clases
+                    <i class="fas fa-graduation-cap me-2"></i><span>Clases</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="#">
-                    <i class="fas fa-cogs me-2"></i>Configuración
+                    <i class="fas fa-cogs me-2"></i><span>Configuración</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="#">
-                    <i class="fas fa-database me-2"></i>Respaldo
+                    <i class="fas fa-database me-2"></i><span>Respaldo</span>
                 </a>
             </li>
         </ul>
@@ -172,7 +182,7 @@
     <div id="content-wrapper" class="d-flex flex-column {% if not current_user.is_authenticated or current_user.rol != 'admin' %}w-100{% endif %}">
         {% if current_user.is_authenticated and current_user.rol == 'admin' %}
         <!-- Toggle button para sidebar en dispositivos móviles - solo para admin -->
-        <button id="sidebarToggleBtn" class="btn btn-primary d-md-none m-2">
+        <button id="sidebarToggleBtn" class="btn btn-primary d-md-none m-2 btn-spring">
             <i class="fas fa-bars"></i>
         </button>
         {% endif %}
@@ -182,7 +192,7 @@
                 {% if messages %}
                     <div class="container mt-3">
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ category }}">
+                            <div class="alert alert-{{ category }} animate-slide-up shadow-smooth">
                                 {{ message }}
                                 <button type="button" class="btn-close float-end" data-bs-dismiss="alert"></button>
                             </div>
@@ -205,6 +215,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
 
     {% if current_user.is_authenticated and current_user.rol == 'admin' %}
     <!-- Script para controlar el sidebar en móviles (solo para admin) -->
@@ -213,7 +224,16 @@
             const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
             const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
             const sidebar = document.getElementById('sidebar');
+            const contentWrapper = document.getElementById('content-wrapper');
+            const sidebarCollapse = document.getElementById('sidebarCollapse');
             
+            // Establecer estado inicial desde localStorage si existe
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+                contentWrapper.classList.add('expanded');
+            }
+            
+            // Botón de hamburguesa en móviles
             if (sidebarToggleBtn) {
                 sidebarToggleBtn.addEventListener('click', function() {
                     if (sidebar) {
@@ -222,11 +242,22 @@
                 });
             }
             
+            // Botón de cierre en móviles
             if (sidebarCollapseBtn) {
                 sidebarCollapseBtn.addEventListener('click', function() {
                     if (sidebar) {
                         sidebar.classList.remove('active');
                     }
+                });
+            }
+            
+            // Botón de colapso en desktop
+            if (sidebarCollapse) {
+                sidebarCollapse.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                    contentWrapper.classList.toggle('expanded');
+                    // Guardar estado en localStorage
+                    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
                 });
             }
             

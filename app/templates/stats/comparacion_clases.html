@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+
+{% block title %}Comparación entre Clases{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Estadísticas</a></li>
+            <li class="breadcrumb-item active">Comparación entre Clases</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0 animate-fade-in">
+            <i class="fas fa-chart-bar me-2"></i>Comparación de Asignaturas por Clase
+        </h1>
+    </div>
+    
+    <!-- Loading spinner -->
+    <div id="loadingStats" class="text-center py-5">
+        <div class="custom-loader mx-auto"></div>
+        <p class="mt-3">Cargando datos de comparación...</p>
+    </div>
+    
+    <div id="statsContent" class="stats-dashboard" style="display: none;">
+        <!-- Gráfico principal -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="stats-card hover-lift shadow-smooth rounded-xl animate-fade-in">
+                    <div class="stats-card-header d-flex justify-content-between align-items-center">
+                        <h3 class="stats-card-title">Distribución de Horas por Clase</h3>
+                        <div class="chart-controls">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-primary active" id="viewBarBtn">
+                                    <i class="fas fa-chart-bar"></i> Barras
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="viewStackBtn">
+                                    <i class="fas fa-layer-group"></i> Apilado
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-card-body">
+                        <div class="chart-container" style="height: 500px;">
+                            <canvas id="comparacionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Análisis y métricas -->
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="stats-card h-100 hover-lift shadow-smooth rounded-xl animate-fade-in">
+                    <div class="stats-card-header">
+                        <h3 class="stats-card-title">Resumen</h3>
+                    </div>
+                    <div class="stats-card-body">
+                        <div class="metrics-summary">
+                            <div class="metric-card shadow-sm rounded-lg mb-3">
+                                <div class="metric-icon bg-primary-soft">
+                                    <i class="fas fa-chalkboard text-primary"></i>
+                                </div>
+                                <div class="metric-data">
+                                    <div class="metric-value text-primary" id="totalClases">...</div>
+                                    <div class="metric-label">Total Clases</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card shadow-sm rounded-lg mb-3">
+                                <div class="metric-icon bg-success-soft">
+                                    <i class="fas fa-book text-success"></i>
+                                </div>
+                                <div class="metric-data">
+                                    <div class="metric-value text-success" id="totalAsignaturas">...</div>
+                                    <div class="metric-label">Total Asignaturas</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card shadow-sm rounded-lg">
+                                <div class="metric-icon bg-info-soft">
+                                    <i class="fas fa-clock text-info"></i>
+                                </div>
+                                <div class="metric-data">
+                                    <div class="metric-value text-info" id="promedioHoras">...</div>
+                                    <div class="metric-label">Promedio Horas/Clase</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-8 mb-4">
+                <div class="stats-card h-100 hover-lift shadow-smooth rounded-xl animate-fade-in">
+                    <div class="stats-card-header">
+                        <h3 class="stats-card-title">Distribución de Asignaturas</h3>
+                    </div>
+                    <div class="stats-card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="distribucionChart"></canvas>
+                                </div>
+                                <p class="text-center mt-2">Distribución general de asignaturas</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="clase-selector mb-3">
+                                    <label for="claseSelect" class="form-label">Seleccionar Clase:</label>
+                                    <select class="form-select" id="claseSelect">
+                                        <option value="">Todas las clases</option>
+                                    </select>
+                                </div>
+                                <div id="claseStats">
+                                    <div class="alert alert-info">
+                                        Selecciona una clase para ver sus estadísticas específicas.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Datos de comparación desde la plantilla
+    var chartData = {{ chart_data|safe }};
+    
+    // Variables globales para los gráficos
+    var comparacionChart;
+    var distribucionChart;
+    var chartType = 'bar'; // Tipo inicial del gráfico
+    
+    // Simulamos carga y mostramos contenido
+    setTimeout(function() {
+        document.getElementById('loadingStats').style.display = 'none';
+        document.getElementById('statsContent').style.display = 'block';
+        
+        // Inicializar componentes
+        initCharts();
+        updateMetrics();
+        initClaseSelector();
+        
+        // Configurar botones de cambio de vista
+        setupViewButtons();
+    }, 800);
+    
+    // Inicializar gráficos
+    function initCharts() {
+        // Gráfico principal de comparación
+        var ctx = document.getElementById('comparacionChart').getContext('2d');
+        comparacionChart = new Chart(ctx, {
+            type: chartType,
+            data: chartData,
+            options: getChartOptions()
+        });
+        
+        // Gráfico de distribución general
+        initDistribucionChart();
+    }
+    
+    // Inicializar gráfico de distribución
+    function initDistribucionChart() {
+        var ctxDist = document.getElementById('distribucionChart').getContext('2d');
+        
+        // Calcular totales por asignatura
+        var totalesPorAsignatura = {};
+        var colores = getRandomColors(chartData.labels.length);
+        
+        // Sumamos los valores de todas las clases para cada asignatura
+        for (var i = 0; i < chartData.datasets.length; i++) {
+            var dataset = chartData.datasets[i];
+            for (var j = 0; j < dataset.data.length; j++) {
+                var asignatura = chartData.labels[j];
+                totalesPorAsignatura[asignatura] = (totalesPorAsignatura[asignatura] || 0) + dataset.data[j];
+            }
+        }
+        
+        // Preparar datos para el gráfico de donut
+        var asignaturas = Object.keys(totalesPorAsignatura);
+        var valores = asignaturas.map(function(a) { return totalesPorAsignatura[a]; });
+        
+        distribucionChart = new Chart(ctxDist, {
+            type: 'doughnut',
+            data: {
+                labels: asignaturas,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: colores,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Poppins',
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.label || '';
+                                var value = context.raw;
+                                var total = context.dataset.data.reduce(function(a, b) { 
+                                    return a + b; 
+                                }, 0);
+                                var percentage = Math.round((value / total) * 100);
+                                return label + ': ' + value + ' horas (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
+                }
+            }
+        });
+    }
+    
+    // Actualizar métricas generales
+    function updateMetrics() {
+        var totalClases = chartData.datasets.length;
+        var totalAsignaturas = chartData.labels.length;
+        
+        // Calcular promedio de horas por clase
+        var totalHoras = 0;
+        for (var i = 0; i < chartData.datasets.length; i++) {
+            var suma = chartData.datasets[i].data.reduce(function(a, b) {
+                return a + b;
+            }, 0);
+            totalHoras += suma;
+        }
+        var promedioHoras = totalHoras / totalClases;
+        
+        // Actualizar UI
+        document.getElementById('totalClases').textContent = totalClases;
+        document.getElementById('totalAsignaturas').textContent = totalAsignaturas;
+        document.getElementById('promedioHoras').textContent = promedioHoras.toFixed(1);
+    }
+    
+    // Inicializar selector de clases
+    function initClaseSelector() {
+        var select = document.getElementById('claseSelect');
+        
+        // Agregar opciones al select
+        chartData.datasets.forEach(function(dataset, index) {
+            var option = document.createElement('option');
+            option.value = index;
+            option.textContent = dataset.label;
+            select.appendChild(option);
+        });
+        
+        // Manejar cambios en la selección
+        select.addEventListener('change', function() {
+            var selectedIndex = this.value;
+            
+            if (selectedIndex === '') {
+                // Mostrar mensaje general si no hay selección
+                document.getElementById('claseStats').innerHTML = `
+                    <div class="alert alert-info">
+                        Selecciona una clase para ver sus estadísticas específicas.
+                    </div>
+                `;
+            } else {
+                // Mostrar estadísticas de la clase seleccionada
+                var dataset = chartData.datasets[selectedIndex];
+                var totalHoras = dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                
+                // Encontrar la asignatura con más y menos horas
+                var maxHoras = Math.max(...dataset.data);
+                var minHoras = Math.min(...dataset.data.filter(h => h > 0));
+                var maxIndex = dataset.data.indexOf(maxHoras);
+                var minIndex = dataset.data.indexOf(minHoras);
+                
+                var statsHTML = `
+                    <div class="clase-stats p-3 bg-light rounded">
+                        <h5 class="mb-3">Estadísticas de ${dataset.label}</h5>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Total de horas
+                                <span class="badge bg-primary rounded-pill">${totalHoras}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Asignatura con más horas
+                                <span class="badge bg-success rounded-pill">${chartData.labels[maxIndex]} (${maxHoras}h)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Asignatura con menos horas
+                                <span class="badge bg-warning rounded-pill">${chartData.labels[minIndex]} (${minHoras}h)</span>
+                            </li>
+                        </ul>
+                        <div class="progress mb-2" style="height: 20px;">
+                            ${generateProgressBars(dataset.data, totalHoras, chartData.labels)}
+                        </div>
+                        <div class="legend-container mt-2">
+                            <div class="row g-2">
+                                ${generateLegends(dataset.data, totalHoras, chartData.labels)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('claseStats').innerHTML = statsHTML;
+            }
+        });
+    }
+    
+    // Generar barras de progreso para la distribución de asignaturas
+    function generateProgressBars(data, total, labels) {
+        var bars = '';
+        var colors = ['bg-primary', 'bg-success', 'bg-warning', 'bg-info', 'bg-danger', 
+                     'bg-secondary', 'bg-dark', 'bg-primary', 'bg-success', 'bg-warning'];
+        
+        for (var i = 0; i < data.length; i++) {
+            if (data[i] > 0) {
+                var percentage = (data[i] / total) * 100;
+                bars += `<div class="progress-bar ${colors[i % colors.length]}" 
+                            role="progressbar" style="width: ${percentage}%" 
+                            aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"
+                            title="${labels[i]}: ${data[i]} horas"></div>`;
+            }
+        }
+        
+        return bars;
+    }
+    
+    // Generar leyendas para las barras de progreso
+    function generateLegends(data, total, labels) {
+        var legends = '';
+        var colors = ['bg-primary', 'bg-success', 'bg-warning', 'bg-info', 'bg-danger', 
+                     'bg-secondary', 'bg-dark', 'bg-primary', 'bg-success', 'bg-warning'];
+        
+        for (var i = 0; i < data.length; i++) {
+            if (data[i] > 0) {
+                var percentage = ((data[i] / total) * 100).toFixed(1);
+                legends += `
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <div class="color-dot ${colors[i % colors.length]}"></div>
+                            <small>${labels[i]}: ${data[i]}h (${percentage}%)</small>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        return legends;
+    }
+    
+    // Configurar botones de cambio de vista
+    function setupViewButtons() {
+        document.getElementById('viewBarBtn').addEventListener('click', function() {
+            if (chartType !== 'bar') {
+                chartType = 'bar';
+                updateChartType();
+                toggleActiveButton(this);
+            }
+        });
+        
+        document.getElementById('viewStackBtn').addEventListener('click', function() {
+            if (chartType !== 'stack') {
+                chartType = 'stack';
+                updateChartType();
+                toggleActiveButton(this);
+            }
+        });
+    }
+    
+    // Actualizar tipo de gráfico
+    function updateChartType() {
+        comparacionChart.destroy();
+        var ctx = document.getElementById('comparacionChart').getContext('2d');
+        comparacionChart = new Chart(ctx, {
+            type: chartType === 'stack' ? 'bar' : 'bar',
+            data: chartData,
+            options: getChartOptions()
+        });
+    }
+    
+    // Marcar botón activo
+    function toggleActiveButton(button) {
+        document.querySelectorAll('.chart-controls .btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+        button.classList.add('active');
+    }
+    
+    // Obtener opciones de gráfico según el tipo
+    function getChartOptions() {
+        var common = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: {
+                            family: 'Poppins'
+                        },
+                        padding: 20
+                    }
+                }
+            },
+            animation: {
+                animateScale: true
+            }
+        };
+        
+        if (chartType === 'stack') {
+            return {
+                ...common,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Asignaturas'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Poppins'
+                            }
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Horas semanales'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Poppins'
+                            }
+                        }
+                    }
+                }
+            };
+        } else {
+            return {
+                ...common,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Asignaturas'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Poppins'
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Horas semanales'
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Poppins'
+                            }
+                        }
+                    }
+                }
+            };
+        }
+    }
+    
+    // Función para generar colores aleatorios
+    function getRandomColors(count) {
+        var colors = [
+            '#2ecc71', '#3498db', '#e74c3c', '#f39c12', '#9b59b6', 
+            '#1abc9c', '#d35400', '#34495e', '#7f8c8d', '#27ae60',
+            '#2980b9', '#8e44ad', '#c0392b', '#16a085', '#f1c40f'
+        ];
+        
+        if (count <= colors.length) {
+            return colors.slice(0, count);
+        }
+        
+        // Si necesitamos más colores, generamos adicionales
+        for (var i = colors.length; i < count; i++) {
+            var color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+            colors.push(color);
+        }
+        
+        return colors;
+    }
+    
+    // Añadir estilos CSS para los elementos generados dinámicamente
+    var style = document.createElement('style');
+    style.textContent = `
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .clase-stats {
+            transition: all 0.3s ease;
+        }
+        .chart-controls .btn {
+            transition: all 0.2s ease;
+        }
+        .chart-controls .btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %} 

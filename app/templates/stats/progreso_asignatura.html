@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+
+{% block title %}Progreso de Asignatura - {{ asignatura.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Estadísticas</a></li>
+            <li class="breadcrumb-item active">Progreso de {{ asignatura.nombre }}</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0 animate-fade-in">
+            <i class="fas fa-chart-pie me-2"></i>Progreso de Asignatura: {{ asignatura.nombre }}
+        </h1>
+    </div>
+    
+    <!-- Loading spinner -->
+    <div id="loadingStats" class="text-center py-5">
+        <div class="custom-loader mx-auto"></div>
+        <p class="mt-3">Cargando datos de progreso...</p>
+    </div>
+    
+    <div id="statsContent" class="stats-dashboard" style="display: none;">
+        <!-- Panel principal de estadísticas -->
+        <div class="row">
+            <div class="col-lg-7 mb-4">
+                <div class="stats-card h-100 hover-lift shadow-smooth rounded-xl animate-fade-in">
+                    <div class="stats-card-header">
+                        <h3 class="stats-card-title">Estado de Avance</h3>
+                    </div>
+                    <div class="stats-card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="height: 280px;">
+                                    <canvas id="progressChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex flex-column justify-content-center">
+                                <div class="text-center mb-4">
+                                    <h4 class="text-muted mb-3">Avance del Curso</h4>
+                                    <div class="display-1 fw-bold gradient-text animate-pulse">{{ porcentaje_cursado }}%</div>
+                                </div>
+                                
+                                <div class="progress-container">
+                                    <div class="progress-label">
+                                        <span>Progreso General</span>
+                                        <span>{{ porcentaje_cursado }}%</span>
+                                    </div>
+                                    <div class="progress" style="height: 10px;">
+                                        <div 
+                                            class="progress-bar gradient-btn" 
+                                            role="progressbar" 
+                                            aria-valuenow="{{ porcentaje_cursado }}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100" 
+                                            data-progress="{{ porcentaje_cursado }}"
+                                            id="progressBarMain"
+                                            style="width: 0%">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-5 mb-4">
+                <div class="stats-card h-100 hover-lift shadow-smooth rounded-xl animate-fade-in">
+                    <div class="stats-card-header">
+                        <h3 class="stats-card-title">Detalles de Horas</h3>
+                    </div>
+                    <div class="stats-card-body">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="metric-card shadow-sm rounded-lg">
+                                    <div class="metric-value text-primary">{{ asignatura.horas_semanales }}</div>
+                                    <div class="metric-label">Horas Totales</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metric-card shadow-sm rounded-lg">
+                                    <div class="metric-value text-success">{{ horas_cursadas }}</div>
+                                    <div class="metric-label">Horas Impartidas</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metric-card shadow-sm rounded-lg">
+                                    <div class="metric-value text-warning">{{ horas_restantes }}</div>
+                                    <div class="metric-label">Horas Restantes</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 pt-2">
+                            <h5 class="mb-3">Distribución Semanal</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Día</th>
+                                            <th>Horas Programadas</th>
+                                            <th>Horas Impartidas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dia in dias_semana %}
+                                        <tr>
+                                            <td>{{ dia.nombre }}</td>
+                                            <td>{{ dia.horas_programadas }}</td>
+                                            <td>{{ dia.horas_impartidas }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráfico de barras para comparar por semana -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="stats-card hover-lift shadow-smooth rounded-xl animate-fade-in">
+                    <div class="stats-card-header">
+                        <h3 class="stats-card-title">Progreso Semanal</h3>
+                    </div>
+                    <div class="stats-card-body">
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Pasamos los datos como JSON en elementos separados que no se ejecutan como JavaScript -->
+<script type="application/json" id="asignatura-data">
+{
+    "nombre": "{{ asignatura.nombre }}",
+    "horas_totales": {{ asignatura.horas_semanales }},
+    "horas_cursadas": {{ horas_cursadas }},
+    "horas_restantes": {{ horas_restantes }},
+    "porcentaje_cursado": {{ porcentaje_cursado }}
+}
+</script>
+
+<script type="application/json" id="semanas-data">
+{{ datos_semanales|tojson }}
+</script>
+
+<script>
+/* jshint ignore:start */
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener los datos desde los elementos HTML
+    var asignaturaData = JSON.parse(document.getElementById('asignatura-data').textContent);
+    var datosSemanales = JSON.parse(document.getElementById('semanas-data').textContent);
+    
+    // Extraer los datos de la asignatura
+    var asignaturaNombre = asignaturaData.nombre;
+    var horasTotales = asignaturaData.horas_totales;
+    var horasCursadas = asignaturaData.horas_cursadas;
+    var horasRestantes = asignaturaData.horas_restantes;
+    var porcentajeCursado = asignaturaData.porcentaje_cursado;
+    
+    // Establecer el ancho de la barra de progreso
+    var progressBar = document.getElementById('progressBarMain');
+    if (progressBar) {
+        setTimeout(function() {
+            progressBar.style.width = porcentajeCursado + '%';
+        }, 100); // pequeño retraso para permitir una animación suave
+    }
+    
+    // Simular carga y mostrar contenido
+    setTimeout(function() {
+        document.getElementById('loadingStats').style.display = 'none';
+        document.getElementById('statsContent').style.display = 'block';
+        
+        // Inicializar gráficos
+        initGraficos();
+        
+        // Añadir interactividad
+        inicializarInteractividad();
+        
+        // Animación de celebración si el progreso es significativo
+        if (porcentajeCursado > 50) {
+            setTimeout(function() {
+                launchConfetti(document.getElementById('statsContent'));
+            }, 500);
+        }
+    }, 1000);
+    
+    // Función para inicializar gráficos
+    function initGraficos() {
+        // Gráfico de dona para el progreso
+        var ctxProgress = document.getElementById('progressChart').getContext('2d');
+        new Chart(ctxProgress, {
+            type: 'doughnut',
+            data: {
+                labels: ['Horas Impartidas', 'Horas Restantes'],
+                datasets: [{
+                    data: [horasCursadas, horasRestantes],
+                    backgroundColor: ['#2ecc71', '#f1f1f1'],
+                    borderColor: ['#27ae60', '#e0e0e0'],
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Poppins',
+                                size: 12
+                            },
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var value = context.raw;
+                                var total = context.dataset.data.reduce(function(a, b) { 
+                                    return a + b; 
+                                }, 0);
+                                var percentage = Math.round((value / total) * 100);
+                                return context.label + ': ' + value + ' horas (' + percentage + '%)';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
+                }
+            }
+        });
+        
+        // Gráfico de barras semanal usando datos de la base de datos
+        var semanas = datosSemanales.map(function(item) {
+            return item.semana;
+        });
+        var horasProgramadas = datosSemanales.map(function(item) {
+            return item.horas_programadas;
+        });
+        var horasRealizadas = datosSemanales.map(function(item) {
+            return item.horas_realizadas;
+        });
+        
+        var ctxWeekly = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctxWeekly, {
+            type: 'bar',
+            data: {
+                labels: semanas,
+                datasets: [
+                    {
+                        label: 'Horas Programadas',
+                        data: horasProgramadas,
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Horas Realizadas',
+                        data: horasRealizadas,
+                        backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Horas'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Semana del curso'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                animation: {
+                    delay: function(context) {
+                        return context.dataIndex * 100;
+                    }
+                }
+            }
+        });
+    }
+    
+    // Función para inicializar interactividad
+    function inicializarInteractividad() {
+        // Hacer que las métricas sean interactivas
+        var metricValues = document.querySelectorAll('.metric-value');
+        metricValues.forEach(function(value) {
+            value.addEventListener('mouseenter', function() {
+                this.classList.add('animate-pulse');
+            });
+            value.addEventListener('mouseleave', function() {
+                this.classList.remove('animate-pulse');
+            });
+        });
+        
+        // Hacer que los gráficos reaccionen al hover
+        var chartContainers = document.querySelectorAll('.chart-container');
+        chartContainers.forEach(function(container) {
+            container.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.02)';
+            });
+            container.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    }
+});
+/* jshint ignore:end */
+</script>
+{% endblock %} 

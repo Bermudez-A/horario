@@ -35,9 +35,18 @@ def save_picture(form_picture, subfolder=''):
     # Redimensionar y guardar la imagen
     output_size = (300, 300)
     img = Image.open(form_picture)
-    img.thumbnail(output_size)
-    img.save(picture_path)
     
-    # Devolver la ruta relativa para guardarla en la BD
-    relative_path = os.path.join('uploads', subfolder, picture_fn) if subfolder else os.path.join('uploads', picture_fn)
-    return relative_path 
+    # Preservar relación de aspecto
+    img.thumbnail(output_size)
+    
+    # Asegurarse de que la imagen tenga un fondo blanco si es PNG
+    if img.mode == 'RGBA':
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+        img = background
+    
+    # Guardar con buena calidad
+    img.save(picture_path, quality=95, optimize=True)
+    
+    # Devolver solo el nombre del archivo para guardarlo en la BD
+    return picture_fn 

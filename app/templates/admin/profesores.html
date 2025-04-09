@@ -1,135 +1,295 @@
 {% extends 'base.html' %}
 
-{% block title %}Administración de Profesores - Generador de Horarios{% endblock %}
+{% block title %}Gestión de Profesores - Generador de Horarios{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <h1 class="mt-4 mb-4"><i class="fas fa-chalkboard-teacher me-2"></i>Administración de Profesores</h1>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">Gestión de Profesores</h1>
+        <a href="{{ url_for('admin.add_profesor') }}" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-2"></i>Nuevo Profesor
+        </a>
+    </div>
     
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
-                <i class="fas fa-table me-1"></i>
-                Lista de Profesores
+    <!-- Buscador y filtros -->
+    <div class="search-filters">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="search-input-group">
+                    <input type="text" id="searchProfesor" class="form-control" placeholder="Buscar por nombre o asignatura...">
+                    <i class="fas fa-search"></i>
+                </div>
             </div>
-            <a href="{{ url_for('admin.add_profesor') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>Nuevo Profesor
-            </a>
+            <div class="col-md-3">
+                <select id="filterAsignatura" class="form-select">
+                    <option value="">Todas las asignaturas</option>
+                    {% for asignatura in asignaturas %}
+                    <option value="{{ asignatura.id }}">{{ asignatura.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filterRol" class="form-select">
+                    <option value="">Todos los roles</option>
+                    <option value="profesor">Profesor</option>
+                    <option value="coordinador">Coordinador</option>
+                </select>
+            </div>
         </div>
-        <div class="card-body">
+        
+        <div class="filter-tags mt-3" id="filterTagsContainer">
+            <!-- Aquí se mostrarán los tags de filtros activos -->
+        </div>
+    </div>
+    
+    <!-- Spinner de carga -->
+    <div id="loadingIndicator" class="text-center py-5 d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3">Cargando profesores...</p>
+    </div>
+    
+    <!-- Mensaje de no resultados -->
+    <div id="noResults" class="alert alert-info d-none" role="alert">
+        <i class="fas fa-info-circle me-2"></i>No se encontraron profesores que coincidan con los criterios de búsqueda.
+    </div>
+    
+    <!-- Contenedor principal de tarjetas -->
+    <div class="profesor-cards-container">
+        {% for asignatura, profesores in profesores_por_asignatura.items() %}
+        <div class="profesor-group" data-asignatura-id="{{ asignatura.id }}">
+            <h2 class="profesor-heading animate-fade-in">
+                <i class="fas fa-book me-2"></i>{{ asignatura.nombre }}
+                <span class="badge bg-primary rounded-pill ms-2">{{ profesores|length }}</span>
+            </h2>
+            
             {% if profesores %}
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="profesoresTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Especialidad</th>
-                            <th>Horas Semanales</th>
-                            <th>Horas Asignadas</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for profesor in profesores %}
-                        <tr>
-                            <td>{{ profesor.id }}</td>
-                            <td>{{ profesor.get_nombre_completo() }}</td>
-                            <td>{{ profesor.especialidad }}</td>
-                            <td>{{ profesor.max_horas_diarias * 5 }}</td>
-                            <td>
-                                {% set horas_max = profesor.max_horas_diarias * 5 %}
-                                {% set horas_asignadas = profesor.get_carga_actual() %}
-                                {% set porcentaje = (horas_asignadas / horas_max * 100) if horas_max > 0 else 0 %}
-                                <div class="progress">
-                                    <div class="progress-bar {% if porcentaje > 90 %}bg-danger{% elif porcentaje > 70 %}bg-warning{% else %}bg-success{% endif %}" 
-                                         role="progressbar" 
-                                         style="width: {{ porcentaje }}%;" 
-                                         aria-valuenow="{{ porcentaje }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                        {{ horas_asignadas }}/{{ horas_max }}
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                {% if profesor.usuario.activo %}
-                                <span class="badge bg-success">Activo</span>
-                                {% else %}
-                                <span class="badge bg-danger">Inactivo</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}" class="btn btn-sm btn-outline-info" title="Disponibilidad">
-                                        <i class="fas fa-calendar-alt"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            data-bs-toggle="modal" data-bs-target="#deleteProfesorModal{{ profesor.id }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    <!-- Modal de confirmación para eliminar -->
-                                    <div class="modal fade" id="deleteProfesorModal{{ profesor.id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Confirmar eliminación</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    ¿Estás seguro de que deseas eliminar al profesor <strong>{{ profesor.get_nombre_completo() }}</strong>?
-                                                    <div class="alert alert-warning mt-3">
-                                                        Esta acción eliminará también todas las asignaciones de este profesor.
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <a href="{{ url_for('admin.delete_profesor', id=profesor.id) }}" class="btn btn-danger">Eliminar</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {% if profesor.usuario.activo %}
-                                    <a href="{{ url_for('admin.toggle_profesor_status', id=profesor.id) }}" class="btn btn-sm btn-outline-warning" title="Desactivar">
-                                        <i class="fas fa-user-slash"></i>
-                                    </a>
-                                    {% else %}
-                                    <a href="{{ url_for('admin.toggle_profesor_status', id=profesor.id) }}" class="btn btn-sm btn-outline-success" title="Activar">
-                                        <i class="fas fa-user-check"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="profesor-cards animate-stagger">
+                {% for profesor in profesores %}
+                <div class="profesor-card hover-lift glass shadow-smooth rounded-xl" data-profesor-id="{{ profesor.id }}" data-asignatura-id="{{ asignatura.id }}" data-rol="{{ profesor.usuario.rol }}">
+                    <div class="profesor-card-header">
+                        <div class="profesor-avatar">
+                            {% if profesor.foto %}
+                                <img src="{{ url_for('static', filename='uploads/profesores/' + profesor.foto) }}" alt="{{ profesor.get_nombre_completo() }}">
+                            {% else %}
+                                <i class="fas fa-user-circle" style="font-size: 2.5rem;"></i>
+                            {% endif %}
+                        </div>
+                        <h3 class="profesor-name">{{ profesor.get_nombre_completo() }}</h3>
+                        <div class="profesor-role">{{ profesor.usuario.rol|capitalize }}</div>
+                    </div>
+                    
+                    <div class="profesor-card-body">
+                        {% if profesor.especialidad %}
+                        <div class="profesor-asignatura mb-3">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>{{ profesor.especialidad }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="profesor-asignatura">
+                            <i class="fas fa-book"></i>
+                            <span>{{ asignatura.nombre }}</span>
+                        </div>
+                        
+                        {% if profesor.max_horas_diarias %}
+                        <div class="profesor-asignatura">
+                            <i class="fas fa-clock"></i>
+                            <span>Máx. {{ profesor.max_horas_diarias }} horas/día</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="profesor-card-footer">
+                        <div class="profesor-card-actions">
+                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}">
+                                <i class="fas fa-eye me-1"></i>Disponibilidad
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
             {% else %}
-            <div class="alert alert-info">
-                No hay profesores registrados. <a href="{{ url_for('admin.add_profesor') }}">Registrar un nuevo profesor</a>.
+            <div class="no-profesores animate-fade-in">
+                <i class="fas fa-user-slash me-2"></i>No hay profesores asignados a esta asignatura.
             </div>
             {% endif %}
         </div>
+        {% endfor %}
+        
+        {% if not profesores_por_asignatura %}
+        <div class="alert alert-info animate-fade-in shadow-smooth" role="alert">
+            <i class="fas fa-info-circle me-2"></i>No hay profesores registrados en el sistema.
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar DataTable
-        new DataTable('#profesoresTable', {
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
-            },
-            order: [[0, 'asc']]
-        });
+        // Variables para los elementos del DOM
+        const searchInput = document.getElementById('searchProfesor');
+        const asignaturaFilter = document.getElementById('filterAsignatura');
+        const rolFilter = document.getElementById('filterRol');
+        const profesorCards = document.querySelectorAll('.profesor-card');
+        const profesorGroups = document.querySelectorAll('.profesor-group');
+        const noResults = document.getElementById('noResults');
+        const filterTagsContainer = document.getElementById('filterTagsContainer');
+        
+        // Función para aplicar los filtros
+        function applyFilters() {
+            const searchText = searchInput.value.toLowerCase();
+            const asignaturaId = asignaturaFilter.value;
+            const rol = rolFilter.value;
+            
+            let hasVisibleCard = false;
+            
+            // Actualizar los tags de filtros
+            updateFilterTags(searchText, asignaturaId, rol);
+            
+            // Mostrar spinner de carga
+            document.getElementById('loadingIndicator').classList.remove('d-none');
+            
+            // Simular un delay para mostrar el spinner
+            setTimeout(() => {
+                // Filtrar tarjetas
+                profesorCards.forEach(card => {
+                    const cardAsignaturaId = card.getAttribute('data-asignatura-id');
+                    const cardRol = card.getAttribute('data-rol');
+                    const cardName = card.querySelector('.profesor-name').textContent.toLowerCase();
+                    const cardAsignatura = card.querySelector('.profesor-card-body .profesor-asignatura span').textContent.toLowerCase();
+                    
+                    const matchesSearch = searchText === '' || 
+                                         cardName.includes(searchText) || 
+                                         cardAsignatura.includes(searchText);
+                    
+                    const matchesAsignatura = asignaturaId === '' || cardAsignaturaId === asignaturaId;
+                    const matchesRol = rol === '' || cardRol === rol;
+                    
+                    if (matchesSearch && matchesAsignatura && matchesRol) {
+                        card.style.display = '';
+                        hasVisibleCard = true;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Mostrar/ocultar grupos de asignaturas según los filtros
+                profesorGroups.forEach(group => {
+                    const asignaturaId = group.getAttribute('data-asignatura-id');
+                    const visibleCards = group.querySelectorAll('.profesor-card[style=""]').length > 0;
+                    
+                    if ((asignaturaFilter.value === '' || asignaturaFilter.value === asignaturaId) && visibleCards) {
+                        group.style.display = '';
+                    } else {
+                        group.style.display = 'none';
+                    }
+                });
+                
+                // Mostrar mensaje de no resultados si no hay tarjetas visibles
+                if (!hasVisibleCard) {
+                    noResults.classList.remove('d-none');
+                } else {
+                    noResults.classList.add('d-none');
+                }
+                
+                // Ocultar spinner
+                document.getElementById('loadingIndicator').classList.add('d-none');
+            }, 300);
+        }
+        
+        // Función para actualizar los tags de filtros
+        function updateFilterTags(searchText, asignaturaId, rol) {
+            // Limpiar contenedor
+            filterTagsContainer.innerHTML = '';
+            
+            // Añadir tag de búsqueda si hay texto
+            if (searchText) {
+                const tag = createFilterTag('Búsqueda: ' + searchText, () => {
+                    searchInput.value = '';
+                    applyFilters();
+                });
+                filterTagsContainer.appendChild(tag);
+            }
+            
+            // Añadir tag de asignatura si hay selección
+            if (asignaturaId) {
+                const asignaturaText = asignaturaFilter.options[asignaturaFilter.selectedIndex].text;
+                const tag = createFilterTag('Asignatura: ' + asignaturaText, () => {
+                    asignaturaFilter.value = '';
+                    applyFilters();
+                });
+                filterTagsContainer.appendChild(tag);
+            }
+            
+            // Añadir tag de rol si hay selección
+            if (rol) {
+                const rolText = rolFilter.options[rolFilter.selectedIndex].text;
+                const tag = createFilterTag('Rol: ' + rolText, () => {
+                    rolFilter.value = '';
+                    applyFilters();
+                });
+                filterTagsContainer.appendChild(tag);
+            }
+        }
+        
+        // Función para crear un tag de filtro
+        function createFilterTag(text, removeCallback) {
+            const tag = document.createElement('div');
+            tag.className = 'filter-tag';
+            tag.innerHTML = text + '<i class="fas fa-times-circle"></i>';
+            
+            tag.querySelector('i').addEventListener('click', removeCallback);
+            
+            return tag;
+        }
+        
+        // Event listeners para los filtros
+        searchInput.addEventListener('input', debounce(applyFilters, 300));
+        asignaturaFilter.addEventListener('change', applyFilters);
+        rolFilter.addEventListener('change', applyFilters);
+        
+        // Función de debounce para evitar muchas llamadas seguidas
+        function debounce(func, delay) {
+            let timeoutId;
+            return function() {
+                const context = this;
+                const args = arguments;
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    func.apply(context, args);
+                }, delay);
+            };
+        }
+        
+        // Notificaciones con SweetAlert2
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                let icon = 'info';
+                if ('{{ category }}' === 'danger') {
+                    icon = 'error';
+                } else if ('{{ category }}' === 'success') {
+                    icon = 'success';
+                } else if ('{{ category }}' === 'warning') {
+                    icon = 'warning';
+                }
+                
+                Swal.fire({
+                    title: '{{ category|capitalize }}',
+                    text: '{{ message }}',
+                    icon: icon,
+                    confirmButtonText: 'Aceptar',
+                    confirmButtonColor: '#3498db'
+                });
+            {% endfor %}
+        {% endwith %}
     });
 </script>
 {% endblock %} 

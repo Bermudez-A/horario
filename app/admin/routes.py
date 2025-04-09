@@ -130,9 +130,27 @@ def toggle_user_status(id):
 @login_required
 @admin_required
 def profesores():
-    page = request.args.get('page', 1, type=int)
-    profesores = Profesor.query.join(User).filter(User.activo == True).paginate(page=page, per_page=10)
-    return render_template('admin/profesores.html', title='Gestión de Profesores', profesores=profesores)
+    profesores = Profesor.query.all()
+    asignaturas = Asignatura.query.all()
+    
+    # Agrupar profesores por asignatura
+    profesores_por_asignatura = {}
+    
+    # Primero obtenemos todas las asignaturas
+    for asignatura in asignaturas:
+        profesores_por_asignatura[asignatura] = []
+    
+    # Luego asignamos los profesores a sus asignaturas
+    for profesor in profesores:
+        for asignatura_profesor in profesor.asignaturas:
+            if asignatura_profesor.asignatura in profesores_por_asignatura:
+                if profesor not in profesores_por_asignatura[asignatura_profesor.asignatura]:
+                    profesores_por_asignatura[asignatura_profesor.asignatura].append(profesor)
+    
+    return render_template('admin/profesores.html', 
+                           title='Gestión de Profesores', 
+                           profesores_por_asignatura=profesores_por_asignatura,
+                           asignaturas=asignaturas)
 
 @admin.route('/profesores/add', methods=['GET', 'POST'])
 @login_required
