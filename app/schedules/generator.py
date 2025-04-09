@@ -70,6 +70,7 @@ def get_profesores_by_asignatura(asignatura_id, clase_id=None):
     Devuelve la lista de profesores asociados a la asignatura.
     Si se especifica clase_id, primero se consulta si existe asignación específica en
     AsignaturaProfesorClase para esa clase y se retorna ese profesor si existe.
+    Solo retorna profesores activos y disponibles.
     """
     if clase_id is not None:
         try:
@@ -78,8 +79,23 @@ def get_profesores_by_asignatura(asignatura_id, clase_id=None):
                 return [profesor_asignado]
         except Exception as e:
             print(f"Error al buscar profesor específico para clase {clase_id}: {str(e)}")
+    
     asignaciones = AsignaturaProfesor.query.filter_by(asignatura_id=asignatura_id).all()
-    profesores = [asig.profesor for asig in asignaciones if asig.profesor.usuario.activo]
+    profesores = []
+    for asig in asignaciones:
+        if asig.profesor.usuario.activo:
+            # Verificar que el profesor tenga disponibilidad configurada para todas las horas
+            disponibilidad_completa = True
+            for dia in DIAS:
+                for hora in HORAS:
+                    if not Disponibilidad.es_disponible(asig.profesor.id, dia, HORAS_TEXTO[hora]):
+                        disponibilidad_completa = False
+                        break
+                if not disponibilidad_completa:
+                    break
+            if disponibilidad_completa:
+                profesores.append(asig.profesor)
+    
     return profesores
 
 def hay_actividad_especial(dia, hora):
@@ -126,6 +142,7 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
                 profesor_disponible = True
                 for i in range(tamano_bloque):
                     hora_actual = hora_inicio + i
+                    # Verificar disponibilidad del profesor en cada hora del bloque
                     if not Disponibilidad.es_disponible(profesor.id, dia, HORAS_TEXTO[hora_actual]):
                         profesor_disponible = False
                         break
@@ -163,6 +180,7 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
                 if horas_asignatura_dia >= MAX_HORAS_DIARIAS_POR_ASIGNATURA:
                     continue
             for profesor in profesores:
+                # Verificar disponibilidad del profesor en la hora específica
                 if not Disponibilidad.es_disponible(profesor.id, dia, HORAS_TEXTO[hora]):
                     continue
                 if not profesor_disponible_globalmente(profesor.id, dia, hora):
@@ -197,6 +215,7 @@ def diagnosticar_fallo(asignaturas, horas_requeridas, horas_asignadas, clase_id,
                         condiciones_turno = []
                         for profesor in profesores_disp:
                             conds = []
+                            # Verificar disponibilidad del profesor
                             if not Disponibilidad.es_disponible(profesor.id, dia, HORAS_TEXTO[hora]):
                                 conds.append("No disponible (personal)")
                             if not profesor_disponible_globalmente(profesor.id, dia, hora):
