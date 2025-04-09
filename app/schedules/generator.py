@@ -102,152 +102,144 @@ def generate_schedule(clase_id):
         
         print(f"Clases del mismo nivel: {[c.nombre for c in clases_mismo_nivel]}")
         
-        # Verificar que todas las clases tengan las mismas asignaturas
-        asignaturas_por_clase = {}
-        for otra_clase in clases_mismo_nivel:
-            # Obtener las asignaturas de cada clase a través de sus horarios
-            asignaturas_clase = set(
-                h.asignatura_id for h in Horario.query.filter_by(clase_id=otra_clase.id).all()
-            )
-            asignaturas_por_clase[otra_clase.id] = asignaturas_clase
-            print(f"Asignaturas de clase {otra_clase.nombre}: {asignaturas_clase}")
-        
-        # Si ninguna clase tiene asignaturas asignadas, usar las asignaturas activas como base
-        if all(len(asignaturas) == 0 for asignaturas in asignaturas_por_clase.values()):
-            print("Ninguna clase tiene asignaturas asignadas, usando asignaturas activas como base")
-            # Todas las clases usarán las mismas asignaturas activas
-            asignaturas_base = set(a.id for a in asignaturas)
-            for otra_clase in clases_mismo_nivel:
-                asignaturas_por_clase[otra_clase.id] = asignaturas_base
-        else:
-            # Verificar que todas las clases tengan las mismas asignaturas
-            asignaturas_base = None
-            for otra_clase in clases_mismo_nivel:
-                if len(asignaturas_por_clase[otra_clase.id]) > 0:
-                    if asignaturas_base is None:
-                        asignaturas_base = asignaturas_por_clase[otra_clase.id]
-                    elif asignaturas_por_clase[otra_clase.id] != asignaturas_base:
-                        return {
-                            'success': False,
-                            'message': f'Las asignaturas no coinciden con la clase {otra_clase.nombre}'
-                        }
-            
-            # Si alguna clase no tiene asignaturas, usar las asignaturas base
-            for otra_clase in clases_mismo_nivel:
-                if len(asignaturas_por_clase[otra_clase.id]) == 0:
-                    asignaturas_por_clase[otra_clase.id] = asignaturas_base
-        
-        # Crear una matriz para el horario (dias x horas)
-        horario_matriz = {dia: [None] * len(HORAS) for dia in DIAS}
-        
-        # Seguimiento de horas asignadas por asignatura
-        asignaciones = {asig.id: 0 for asig in asignaturas}
-        
         # Obtener el número de horas por asignatura que deben tener todas las clases
         horas_por_asignatura = {}
         for asignatura in asignaturas:
-            # Verificar que todas las clases tengan el mismo número de horas para esta asignatura
-            horas_en_clases = []
-            for otra_clase in clases_mismo_nivel:
-                horas = Horario.query.filter_by(
-                    clase_id=otra_clase.id,
-                    asignatura_id=asignatura.id
-                ).count()
-                horas_en_clases.append(horas)
+            horas_por_asignatura[asignatura.id] = asignatura.horas_semanales
+        
+        # Estrategias de ordenación diferentes
+        estrategias_ordenacion = [
+            lambda a: (horas_por_asignatura[a.id], a.bloques_continuos),  # Por horas y bloques
+            lambda a: (a.bloques_continuos, horas_por_asignatura[a.id]),  # Por bloques y horas
+            lambda a: (-horas_por_asignatura[a.id], a.bloques_continuos),  # Por horas inverso
+            lambda a: (random.random(), a.bloques_continuos),  # Aleatorio
+        ]
+        
+        # Intentar generar el horario con diferentes estrategias
+        mejor_solucion = None
+        mejor_puntuacion = 0
+        intento = 0
+        max_intentos = 5  # Reducido a 5 intentos
+        soluciones_previas = set()  # Para evitar soluciones repetidas
+        
+        while intento < max_intentos:
+            intento += 1
+            print(f"\nIntento {intento}")
             
-            # Si todas las clases tienen 0 horas, usar las horas semanales
-            if all(h == 0 for h in horas_en_clases):
-                horas_por_asignatura[asignatura.id] = asignatura.horas_semanales
-                print(f"Usando horas semanales para {asignatura.nombre}: {asignatura.horas_semanales}")
-            else:
-                # Si hay clases con horas asignadas, verificar que todas tengan el mismo número
-                horas_no_cero = [h for h in horas_en_clases if h > 0]
-                if len(set(horas_no_cero)) > 1:
-                    return {
-                        'success': False,
-                        'message': f'Las clases no tienen el mismo número de horas para {asignatura.nombre}'
-                    }
-                horas_por_asignatura[asignatura.id] = horas_no_cero[0] if horas_no_cero else asignatura.horas_semanales
-        
-        print(f"Horas por asignatura: {horas_por_asignatura}")
-        
-        # Ordenar asignaturas por prioridad (horas semanales, preferencia por bloques)
-        asignaturas_ordenadas = sorted(
-            asignaturas, 
-            key=lambda a: (horas_por_asignatura[a.id], a.bloques_continuos), 
-            reverse=True
-        )
-        
-        print(f"Asignaturas ordenadas: {[a.nombre for a in asignaturas_ordenadas]}")
-        
-        # Primera pasada: Asignar al menos 1 hora a cada asignatura
-        for asignatura in asignaturas_ordenadas:
-            if asignaciones[asignatura.id] == 0:
-                print(f"Intentando asignar al menos 1 hora para {asignatura.nombre}")
-                profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
-                if not profesores_disponibles:
-                    print(f"No hay profesores disponibles para {asignatura.nombre}")
+            # Crear una matriz para el horario (dias x horas)
+            horario_matriz = {dia: [None] * len(HORAS) for dia in DIAS}
+            
+            # Seguimiento de horas asignadas por asignatura
+            asignaciones = {asig.id: 0 for asig in asignaturas}
+            
+            # Generar un orden aleatorio de días y horas para cada asignatura
+            dias_aleatorios = random.sample(DIAS, len(DIAS))
+            horas_aleatorias = random.sample(HORAS, len(HORAS))
+            
+            # Mezclar aleatoriamente las asignaturas para este intento
+            asignaturas_mezcladas = random.sample(asignaturas, len(asignaturas))
+            
+            # Primera pasada: Asignar al menos 1 hora a cada asignatura
+            for asignatura in asignaturas_mezcladas:
+                if asignaciones[asignatura.id] == 0:
+                    profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
+                    if not profesores_disponibles:
+                        continue
+                    
+                    # Mezclar aleatoriamente los profesores disponibles
+                    profesores_mezclados = random.sample(profesores_disponibles, len(profesores_disponibles))
+                    
+                    # Intentar asignar en diferentes horas del día de forma aleatoria
+                    for dia in dias_aleatorios:
+                        for hora in horas_aleatorias:
+                            # Verificar si hay actividad especial
+                            actividad_especial = ActividadEspecial.query.filter_by(dia=dia, hora=hora).first()
+                            if actividad_especial:
+                                continue
+                                
+                            if horario_matriz[dia][hora-1] is None:
+                                for profesor in profesores_mezclados:
+                                    if Disponibilidad.es_disponible(profesor.id, dia, str(hora)) and \
+                                       profesor_disponible_globalmente(profesor.id, dia, hora):
+                                        horario_matriz[dia][hora-1] = {
+                                            'asignatura_id': asignatura.id,
+                                            'profesor_id': profesor.id
+                                        }
+                                        registrar_asignacion_global(profesor.id, dia, hora, clase_id)
+                                        asignaciones[asignatura.id] += 1
+                                        break
+                                if asignaciones[asignatura.id] > 0:
+                                    break
+                        if asignaciones[asignatura.id] > 0:
+                            break
+            
+            # Segunda pasada: Intentar asignar el resto de horas
+            # Mezclar nuevamente las asignaturas para la segunda pasada
+            asignaturas_mezcladas = random.sample(asignaturas, len(asignaturas))
+            
+            for asignatura in asignaturas_mezcladas:
+                horas_restantes = horas_por_asignatura[asignatura.id] - asignaciones[asignatura.id]
+                if horas_restantes <= 0:
                     continue
                 
-                if not asignar_hora_individual(
-                    clase_id, asignatura, profesores_disponibles, 
-                    horario_matriz, asignaciones
-                ):
-                    print(f"No se pudo asignar ni siquiera 1 hora para {asignatura.nombre}")
-        
-        # Segunda pasada: Intentar asignar el resto de horas
-        for asignatura in asignaturas_ordenadas:
-            print(f"Intentando asignar {asignatura.nombre} ({horas_por_asignatura[asignatura.id]} horas)")
-            # Verificar si ya se asignaron todas las horas para esta asignatura
-            horas_restantes = horas_por_asignatura[asignatura.id] - asignaciones[asignatura.id]
-            if horas_restantes <= 0:
-                print(f"Ya se asignaron todas las horas para {asignatura.nombre}")
-                continue
-            
-            # Obtener profesores para esta asignatura, priorizando los asignados específicamente a esta clase
-            profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
-            
-            if not profesores_disponibles:
-                print(f"No hay profesores disponibles para {asignatura.nombre}")
-                continue
-            
-            print(f"Profesores disponibles para {asignatura.nombre}: {[p.usuario.nombre for p in profesores_disponibles]}")
-            
-            # Si la asignatura prefiere bloques continuos, intentar asignar en bloques de 2
-            if asignatura.bloques_continuos and horas_restantes >= 2:
-                print(f"Intentando asignar bloque de 2 horas para {asignatura.nombre}")
-                for _ in range(horas_restantes // 2):
-                    if not asignar_bloque(
-                        clase_id, asignatura, profesores_disponibles, 
-                        horario_matriz, asignaciones, 2
-                    ):
-                        # Si no se puede asignar el bloque, intentar asignar horas individuales
+                profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
+                if not profesores_disponibles:
+                    continue
+                
+                # Mezclar aleatoriamente los profesores disponibles
+                profesores_mezclados = random.sample(profesores_disponibles, len(profesores_disponibles))
+                
+                # Intentar diferentes estrategias de asignación
+                if asignatura.bloques_continuos and horas_restantes >= 2:
+                    # Intentar bloques primero
+                    for _ in range(horas_restantes // 2):
+                        if asignar_bloque(
+                            clase_id, asignatura, profesores_mezclados, 
+                            horario_matriz, asignaciones, 2
+                        ):
+                            continue
+                        
+                        # Si no se puede asignar el bloque, intentar horas individuales
                         for _ in range(2):
                             if asignaciones[asignatura.id] < horas_por_asignatura[asignatura.id]:
                                 asignar_hora_individual(
-                                    clase_id, asignatura, profesores_disponibles, 
+                                    clase_id, asignatura, profesores_mezclados, 
                                     horario_matriz, asignaciones
                                 )
+                
+                # Asignar las horas restantes individualmente
+                horas_restantes = horas_por_asignatura[asignatura.id] - asignaciones[asignatura.id]
+                for _ in range(horas_restantes):
+                    asignar_hora_individual(
+                        clase_id, asignatura, profesores_mezclados, 
+                        horario_matriz, asignaciones
+                    )
             
-            # Asignar las horas restantes individualmente
-            horas_restantes = horas_por_asignatura[asignatura.id] - asignaciones[asignatura.id]
-            print(f"Horas restantes para {asignatura.nombre}: {horas_restantes}")
-            for _ in range(horas_restantes):
-                if not asignar_hora_individual(
-                    clase_id, asignatura, profesores_disponibles, 
-                    horario_matriz, asignaciones
-                ):
-                    print(f"No se pudo asignar hora individual para {asignatura.nombre}")
+            # Calcular puntuación de la solución actual
+            total_horas_requeridas = sum(horas_por_asignatura.values())
+            total_horas_asignadas = sum(asignaciones.values())
+            puntuacion = total_horas_asignadas / total_horas_requeridas
+            
+            # Generar un hash único para esta solución
+            solucion_hash = hash(str(horario_matriz))
+            
+            # Si esta es la mejor solución hasta ahora y no es una repetición, guardarla
+            if puntuacion > mejor_puntuacion and solucion_hash not in soluciones_previas:
+                mejor_solucion = horario_matriz
+                mejor_puntuacion = puntuacion
+                soluciones_previas.add(solucion_hash)
+                print(f"Nueva mejor solución encontrada: {puntuacion*100:.2f}% de horas asignadas")
+                
+                # Si encontramos una solución perfecta, salir
+                if puntuacion == 1.0:
+                    break
         
-        # Verificar si se asignaron todas las horas requeridas
-        total_horas_requeridas = sum(horas_por_asignatura.values())
-        total_horas_asignadas = sum(asignaciones.values())
-        
-        print(f"Total horas requeridas: {total_horas_requeridas}")
-        print(f"Total horas asignadas: {total_horas_asignadas}")
+        # Usar la mejor solución encontrada
+        if mejor_solucion is None:
+            return {'success': False, 'message': 'No se pudo generar un horario válido'}
         
         # Guardar el horario generado en la base de datos
-        if not save_schedule_to_db(clase_id, horario_matriz):
+        if not save_schedule_to_db(clase_id, mejor_solucion):
             return {
                 'success': False,
                 'message': 'Error al guardar el horario en la base de datos'
@@ -260,6 +252,9 @@ def generate_schedule(clase_id):
                 'success': False,
                 'message': 'El horario se generó pero no se guardó correctamente'
             }
+        
+        total_horas_requeridas = sum(horas_por_asignatura.values())
+        total_horas_asignadas = sum(asignaciones.values())
         
         return {
             'success': True, 
