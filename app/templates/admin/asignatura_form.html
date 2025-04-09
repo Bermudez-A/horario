@@ -56,7 +56,9 @@
                                 <label for="color" class="form-label">{{ form.color.label }}</label>
                                 <div class="input-group">
                                     {{ form.color(class="form-control", type="color") }}
-                                    <span class="input-group-text">{{ form.color.data or "#3498db" }}</span>
+                                    <span class="input-group-text color-preview">
+                                        <i class="fas fa-eye-dropper"></i>
+                                    </span>
                                 </div>
                                 {% for error in form.color.errors %}
                                     <div class="text-danger">{{ error }}</div>
@@ -135,6 +137,19 @@
         const iconOptions = document.querySelectorAll('.icon-option');
         const iconInput = document.getElementById('icono');
         
+        // Actualizar el color de la vista previa cuando cambie el selector de color
+        const colorInput = document.getElementById('color');
+        const colorPreview = document.querySelector('.color-preview');
+        
+        if (colorInput && colorPreview) {
+            // Establecer el color inicial
+            colorPreview.style.backgroundColor = colorInput.value;
+            
+            colorInput.addEventListener('input', function() {
+                colorPreview.style.backgroundColor = this.value;
+            });
+        }
+        
         iconOptions.forEach(option => {
             option.addEventListener('click', function() {
                 const icon = this.getAttribute('data-icon');
@@ -152,4 +167,10 @@
         });
     });
 </script>
+
+<style>
+    .color-preview {
+        width: 40px;
+    }
+</style>
 {% endblock %} 

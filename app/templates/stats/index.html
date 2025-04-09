@@ -111,7 +111,7 @@
                         <i class="fas fa-users"></i>
                     </div>
                     <div class="ms-3">
-                        <h6 class="mb-0 text-muted">Clases</h6>
+                        <h6 class="mb-0 text-muted">Secciones</h6>
                         <h3 class="mb-0 mt-1 fw-bold animate-counter">{{ total_clases }}</h3>
                     </div>
                 </div>
@@ -266,10 +266,10 @@
         <div class="col-lg-4 mb-4">
             <div class="stats-card bg-white shadow-smooth rounded-xl h-100 animate-slide-up overflow-hidden" style="animation-delay: 0.2s;">
                 <div class="card-header-custom bg-gradient-info text-white py-3 px-4">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-week me-2"></i> Comparativa por Clases</h5>
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-week me-2"></i> Comparativa por Secciones</h5>
                 </div>
                 <div class="card-body d-flex flex-column">
-                    <p class="text-muted mb-3">Compara el avance y cumplimiento del programa entre diferentes clases y grupos.</p>
+                    <p class="text-muted mb-3">Compara el avance y cumplimiento del programa entre diferentes secciones y grupos.</p>
                     
                     <div class="flex-grow-1 d-flex align-items-center justify-content-center my-4">
                         <div class="feature-image-wrapper">
@@ -332,12 +332,7 @@
                         </div>
                     </div>
                     <div class="progress mt-3" style="height: 10px;">
-                        <div class="progress-bar bg-success" 
-                             role="progressbar" 
-                             style="width: {{ porcentaje_completado|default('70') }}%" 
-                             aria-valuenow="{{ porcentaje_completado|default('70') }}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ porcentaje_completado|default('70') }}%;" aria-valuenow="{{ porcentaje_completado|default('70') }}" aria-valuemin="0" aria-valuemax="100">
                         </div>
                     </div>
                 </div>
@@ -484,11 +479,7 @@
                 <div class="card-header-custom bg-gradient-primary text-white py-3 px-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2"></i> Disponibilidad Semanal</h5>
-                        <div>
-                            <button class="btn btn-sm btn-light" id="exportScheduleBtn">
-                                <i class="fas fa-file-export me-1"></i> Exportar
-                            </button>
-                        </div>
+                        <!-- Export button removed per user request -->
                     </div>
                 </div>
                 <div class="card-body">

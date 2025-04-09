@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
 
-{% block title %}Administración de Clases - Generador de Horarios{% endblock %}
+{% block title %}Administración de Secciones - Generador de Horarios{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
-    <h1 class="mt-4 mb-4"><i class="fas fa-chalkboard me-2"></i>Administración de Clases</h1>
+    <h1 class="mt-4 mb-4"><i class="fas fa-chalkboard me-2"></i>Administración de Secciones</h1>
     
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <div>
                 <i class="fas fa-table me-1"></i>
-                Lista de Clases
+                Lista de Secciones
             </div>
             <a href="{{ url_for('admin.add_clase') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>Nueva Clase
+                <i class="fas fa-plus me-1"></i>Nueva Sección
             </a>
         </div>
         <div class="card-body">
@@ -35,10 +35,10 @@
                         <tr>
                             <td>{{ clase.id }}</td>
                             <td>
-                                <span class="badge" style="background-color: {{ clase.color }}">
-                                    <i class="fas fa-circle me-1"></i>
-                                </span>
-                                {{ clase.nombre }}
+                                <div class="d-flex align-items-center">
+                                    <span class="color-badge me-2" style="background-color: {{ clase.color }}; width: 20px; height: 20px; border-radius: 4px; display: inline-block; border: 1px solid rgba(0,0,0,0.1);"></span>
+                                    <span>{{ clase.nombre }}</span>
+                                </div>
                             </td>
                             <td>{{ clase.nivel }}</td>
                             <td>{{ clase.curso }}</td>
@@ -67,9 +67,9 @@
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    ¿Estás seguro de que deseas eliminar la clase <strong>{{ clase.nombre }}</strong>?
+                                                    ¿Estás seguro de que deseas eliminar la sección <strong>{{ clase.nombre }}</strong>?
                                                     <div class="alert alert-warning mt-3">
-                                                        Esta acción eliminará también todos los horarios asociados a esta clase.
+                                                        Esta acción eliminará también todos los horarios asociados a esta sección.
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -88,7 +88,7 @@
             </div>
             {% else %}
             <div class="alert alert-info">
-                No hay clases registradas. <a href="{{ url_for('admin.add_clase') }}">Crear una nueva clase</a>.
+                No hay secciones registradas. <a href="{{ url_for('admin.add_clase') }}">Crear una nueva sección</a>.
             </div>
             {% endif %}
         </div>
@@ -108,4 +108,10 @@
         });
     });
 </script>
-{% endblock %} 
+{% endblock %}
+
+<style>
+    .color-badge {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+</style> 

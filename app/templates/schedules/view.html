@@ -14,9 +14,6 @@
             <a href="{{ url_for('schedules.edit_schedule', clase_id=clase.id) }}" class="btn btn-primary">
                 <i class="fas fa-edit me-1"></i> Editar
             </a>
-            <a href="{{ url_for('schedules.generate', clase_id=clase.id) }}" class="btn btn-success">
-                <i class="fas fa-magic me-1"></i> Generar
-            </a>
             {% endif %}
             <button class="btn btn-outline-primary" id="btn-exportar">
                 <i class="fas fa-file-excel me-1"></i> CSV

@@ -63,15 +63,15 @@
     </div>
     
     <div class="row mt-4">
-        <div class="col-lg-8">
+        <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <i class="fas fa-table me-1"></i>
                         Horarios Recientes
                     </div>
-                    <a href="{{ url_for('schedules.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i>Nuevo Horario
+                    <a href="{{ url_for('schedules.generate_all') }}" class="btn btn-primary">
+                        <i class="fas fa-magic me-1"></i>Generar Horarios
                     </a>
                 </div>
                 <div class="card-body">
@@ -117,34 +117,9 @@
                     </div>
                     {% else %}
                     <div class="alert alert-info">
-                        No hay horarios creados. <a href="{{ url_for('schedules.create') }}">Crear un nuevo horario</a>.
+                        No hay horarios creados. <a href="{{ url_for('schedules.generate_all') }}">Generar horarios automáticamente</a>.
                     </div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-tasks me-1"></i>
-                    Acciones Rápidas
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('schedules.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Horario
-                        </a>
-                        <a href="{{ url_for('schedules.generate_all') }}" class="btn btn-success">
-                            <i class="fas fa-magic me-2"></i>Generar Horarios Automáticos
-                        </a>
-                        <a href="{{ url_for('schedules.index') }}" class="btn btn-info">
-                            <i class="fas fa-file-export me-2"></i>Exportar Horarios
-                        </a>
-                        <a href="{{ url_for('schedules.index') }}" class="btn btn-warning">
-                            <i class="fas fa-file-import me-2"></i>Importar Datos
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>
