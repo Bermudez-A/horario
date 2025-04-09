@@ -180,7 +180,22 @@ def generate_schedule(clase_id):
         
         print(f"Asignaturas ordenadas: {[a.nombre for a in asignaturas_ordenadas]}")
         
-        # Para cada asignatura, intentar colocarla en el horario
+        # Primera pasada: Asignar al menos 1 hora a cada asignatura
+        for asignatura in asignaturas_ordenadas:
+            if asignaciones[asignatura.id] == 0:
+                print(f"Intentando asignar al menos 1 hora para {asignatura.nombre}")
+                profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
+                if not profesores_disponibles:
+                    print(f"No hay profesores disponibles para {asignatura.nombre}")
+                    continue
+                
+                if not asignar_hora_individual(
+                    clase_id, asignatura, profesores_disponibles, 
+                    horario_matriz, asignaciones
+                ):
+                    print(f"No se pudo asignar ni siquiera 1 hora para {asignatura.nombre}")
+        
+        # Segunda pasada: Intentar asignar el resto de horas
         for asignatura in asignaturas_ordenadas:
             print(f"Intentando asignar {asignatura.nombre} ({horas_por_asignatura[asignatura.id]} horas)")
             # Verificar si ya se asignaron todas las horas para esta asignatura
@@ -193,10 +208,8 @@ def generate_schedule(clase_id):
             profesores_disponibles = get_profesores_by_asignatura(asignatura.id, clase_id)
             
             if not profesores_disponibles:
-                return {
-                    'success': False, 
-                    'message': f'No hay profesores asignados a la asignatura {asignatura.nombre}'
-                }
+                print(f"No hay profesores disponibles para {asignatura.nombre}")
+                continue
             
             print(f"Profesores disponibles para {asignatura.nombre}: {[p.usuario.nombre for p in profesores_disponibles]}")
             
@@ -233,12 +246,6 @@ def generate_schedule(clase_id):
         print(f"Total horas requeridas: {total_horas_requeridas}")
         print(f"Total horas asignadas: {total_horas_asignadas}")
         
-        if total_horas_asignadas < total_horas_requeridas:
-            return {
-                'success': False, 
-                'message': f'No se pudieron asignar todas las horas requeridas. Asignadas: {total_horas_asignadas}/{total_horas_requeridas}'
-            }
-        
         # Guardar el horario generado en la base de datos
         if not save_schedule_to_db(clase_id, horario_matriz):
             return {
@@ -256,7 +263,7 @@ def generate_schedule(clase_id):
         
         return {
             'success': True, 
-            'message': f'Horario generado correctamente. Se guardaron {horario_guardado} asignaciones.'
+            'message': f'Horario generado correctamente. Se guardaron {horario_guardado} asignaciones. Asignadas: {total_horas_asignadas}/{total_horas_requeridas}'
         }
     
     except Exception as e:
