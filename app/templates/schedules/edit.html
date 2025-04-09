@@ -219,7 +219,7 @@
                     
                     <div id="asignaturas-container">
                         {% for asignatura in asignaturas %}
-                        <div class="asignatura-card" draggable="true" ondragstart="dragAsignatura(event)" data-id="{{ asignatura.id }}">
+                        <div class="asignatura-card" draggable="true" data-id="{{ asignatura.id }}">
                             <div class="asignatura-card-header">
                                 <div class="asignatura-card-color" style="background-color: {{ asignatura.color }}"></div>
                                 {{ asignatura.nombre }}
@@ -310,21 +310,17 @@
                                                     </div>
                                                 </td>
                                             {% else %}
-                                                <td class="celda-horario {{ 'celda-con-clase' if hora_data else 'celda-vacia' }}" 
-                                data-dia="{{ dia }}" 
+                                                <td class="celda-horario {% if hora_data %}celda-con-clase{% else %}celda-vacia{% endif %} {% if actividad_comun %}celda-actividad-comun{% endif %}"
+                                data-dia="{{ dia }}"
                                 data-hora="{{ hora }}"
-                                                    data-asignatura-id="{{ hora_data.asignatura_id if hora_data else '' }}"
-                                                    data-profesor-id="{{ hora_data.profesor_id if hora_data else '' }}"
-                                                    data-clase-id="{{ clase.id }}"
-                                                    ondrop="drop(event)"
-                                                    ondragover="allowDrop(event)"
-                                                    ondragleave="leaveDrop(event)">
+                                data-asignatura-id="{{ hora_data.asignatura_id if hora_data else '' }}"
+                                data-profesor-id="{{ hora_data.profesor_id if hora_data else '' }}"
+                                data-clase-id="{{ clase.id }}">
                                                     {% if hora_data %}
                                                         <div class="asignatura-bloque" 
                                                              data-color="{{ hora_data.color }}"
                                                              style="background-color: {{ hora_data.color }}"
                                                              draggable="true"
-                                                             ondragstart="drag(event)"
                                                              data-asignatura-id="{{ hora_data.asignatura_id }}"
                                                              data-profesor-id="{{ hora_data.profesor_id }}"
                                                              title="{{ hora_data.asignatura }} - {{ hora_data.profesor }}">
@@ -479,12 +475,12 @@
             <div class="modal-header bg-warning">
                 <h5 class="modal-title"><i class="fas fa-object-group me-2"></i>Unir Clases</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
+            </div>
             <div class="modal-body">
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
                     <span id="unir-clases-mensaje">El profesor ya está asignado a otra clase en este horario.</span>
-                            </div>
+                </div>
                 
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -502,9 +498,9 @@
                             <div class="card-body p-2 small">
                                 <div><strong>Clase:</strong> <span id="unir-clases-existente"></span></div>
                                 <div><strong>Asignatura:</strong> <span id="unir-clases-asignatura-existente"></span></div>
+                            </div>
                         </div>
                     </div>
-                </div>
                 </div>
                 
                 <p>¿Deseas unir estas clases para que el profesor imparta la misma asignatura a ambos grupos simultáneamente?</p>
@@ -887,6 +883,11 @@
             const asignaturaId = origenCelda.dataset.asignaturaId;
             const profesorId = origenCelda.dataset.profesorId;
             
+            if (!asignaturaId || !profesorId) {
+                console.error("[Mover] Datos incompletos en celda origen:", { asignaturaId, profesorId });
+                return mostrarAlerta('Error: Datos incompletos en la celda de origen.', 'danger');
+            }
+            
             if (destinoCelda.classList.contains('celda-con-clase')) return mostrarAlerta('No se puede mover, el destino está ocupado.', 'warning');
 
             // Verificar conflictos en destino ANTES de mover
@@ -907,6 +908,38 @@
                             
                             // Obtener info de la clase conflictiva (si está disponible)
                             const claseConflicto = conflictoData.conflicting_class || {};
+                            console.log('[Mover] Datos de clase conflictiva:', claseConflicto);
+                            
+                            // Extraer información de la clase conflictiva del mensaje si está disponible
+                            const mensaje = conflictoData.message || '';
+                            let claseConflictoNombre = 'Otra clase';
+                            let asignaturaConflictoNombre = asignaturasData[asignaturaId]?.nombre || 'Misma asignatura';
+                            
+                            // Intentar extraer el nombre de la clase del mensaje
+                            if (mensaje.includes('Sección')) {
+                                claseConflictoNombre = mensaje.split('Sección')[1].trim();
+                            } else if (mensaje.includes('clase')) {
+                                const match = mensaje.match(/clase\s+([^,]+)/);
+                                if (match) claseConflictoNombre = match[1].trim();
+                            }
+                            
+                            // Intentar extraer el nombre de la asignatura del mensaje
+                            if (mensaje.includes('asignatura')) {
+                                const match = mensaje.match(/asignatura\s+([^,]+)/);
+                                if (match) asignaturaConflictoNombre = match[1].trim();
+                            }
+                            
+                            // Asegurarnos de que tenemos todos los datos necesarios
+                            if (!currentClaseId || !profesorId || !asignaturaId || !destino_dia || !destino_hora) {
+                                console.error("[Mover] Faltan datos obligatorios para unir clases:", {
+                                    currentClaseId,
+                                    profesorId,
+                                    asignaturaId,
+                                    destino_dia,
+                                    destino_hora
+                                });
+                                return mostrarAlerta('Error: Faltan datos necesarios para unir las clases.', 'danger');
+                            }
                             
                             window.unionClasesData = {
                                 dia: destino_dia,
@@ -918,10 +951,28 @@
                                 profesor_id: profesorId,
                                 profesor_nombre: profesoresData[profesorId]?.nombre || 'No disponible',
                                 clase_existente_id: claseConflicto.clase_id || 0,
-                                clase_existente_nombre: claseConflicto.clase_nombre || 'Otra clase',
+                                clase_existente_nombre: claseConflictoNombre,
                                 asignatura_existente_id: claseConflicto.asignatura_id || asignaturaId,
-                                asignatura_existente_nombre: claseConflicto.asignatura_nombre || 'Misma asignatura'
+                                asignatura_existente_nombre: asignaturaConflictoNombre
                             };
+                            
+                            // Verificar que todos los datos requeridos están presentes
+                            const datosRequeridos = {
+                                clase_actual_id: window.unionClasesData.clase_actual_id,
+                                profesor_id: window.unionClasesData.profesor_id,
+                                asignatura_actual_id: window.unionClasesData.asignatura_actual_id,
+                                dia: window.unionClasesData.dia,
+                                hora: window.unionClasesData.hora
+                            };
+                            
+                            const datosFaltantes = Object.entries(datosRequeridos)
+                                .filter(([key, value]) => !value)
+                                .map(([key]) => key);
+                                
+                            if (datosFaltantes.length > 0) {
+                                console.error("[Mover] Datos faltantes para unir clases:", datosFaltantes);
+                                return mostrarAlerta(`Error: Faltan los siguientes datos: ${datosFaltantes.join(', ')}`, "danger");
+                            }
                             
                             // Guardar datos de origen para cuando se confirme la unión
                             window.origenMovimiento = {
@@ -931,11 +982,12 @@
                             
                             // Mostrar modal de unir clases
                             mostrarModalUnirClases();
+                            return Promise.reject(new Error("Conflicto detectado")); // Detener la ejecución
                         } else {
                             // Otro tipo de conflicto, mostrar mensaje de error normal
                             mostrarAlerta(`Conflicto al mover: ${conflictoData.message}`, 'danger');
+                            return Promise.reject(new Error("Conflicto detectado")); // Detener la ejecución
                         }
-                        throw new Error("Conflicto detectado"); // Detener
                     }
                     // Si no hay conflicto, proceder a llamar a la API de mover
                     console.log("[Mover] No hay conflicto en destino, llamando a API /schedules/move_class...");
@@ -1451,24 +1503,67 @@
         function mostrarModalUnirClases() {
             if (!window.unionClasesData) {
                 console.error("[Unir Clases] No hay datos para mostrar el modal");
+                mostrarAlerta("Error: No hay datos para mostrar el modal de unir clases", "danger");
                 return;
             }
             
             const data = window.unionClasesData;
             
-            // Actualizar datos en el modal
-            document.getElementById('unir-clases-actual').textContent = data.clase_actual_nombre;
-            document.getElementById('unir-clases-asignatura-actual').textContent = data.asignatura_actual_nombre;
-            document.getElementById('unir-clases-existente').textContent = data.clase_existente_nombre;
-            document.getElementById('unir-clases-asignatura-existente').textContent = data.asignatura_existente_nombre;
+            // Verificar que tenemos todos los datos necesarios
+            const datosRequeridos = {
+                clase_actual_id: data.clase_actual_id,
+                profesor_id: data.profesor_id,
+                asignatura_actual_id: data.asignatura_actual_id,
+                dia: data.dia,
+                hora: data.hora
+            };
             
-            // Personalizar mensaje
-            document.getElementById('unir-clases-mensaje').textContent = 
-                `El profesor ${data.profesor_nombre} ya está asignado a la clase ${data.clase_existente_nombre} en este horario (${capitalize(data.dia)}, ${data.hora}° hora).`;
+            const datosFaltantes = Object.entries(datosRequeridos)
+                .filter(([key, value]) => !value)
+                .map(([key]) => key);
+                
+            if (datosFaltantes.length > 0) {
+                console.error("[Unir Clases] Datos faltantes para mostrar modal:", datosFaltantes);
+                mostrarAlerta(`Error: Faltan los siguientes datos: ${datosFaltantes.join(', ')}`, "danger");
+                return;
+            }
+            
+            // Obtener el modal y verificar que existe
+            const modalElement = document.getElementById('unirClasesModal');
+            if (!modalElement) {
+                console.error("[Unir Clases] No se encontró el elemento del modal");
+                mostrarAlerta("Error: No se pudo encontrar el modal de unir clases", "danger");
+                return;
+            }
+            
+            // Actualizar datos en el modal con verificaciones de null
+            const elements = {
+                'unir-clases-actual': data.clase_actual_nombre || 'Clase actual',
+                'unir-clases-asignatura-actual': data.asignatura_actual_nombre || 'Asignatura actual',
+                'unir-clases-existente': data.clase_existente_nombre || 'Otra clase',
+                'unir-clases-asignatura-existente': data.asignatura_existente_nombre || 'Misma asignatura',
+                'unir-clases-mensaje': `El profesor ${data.profesor_nombre || 'el profesor'} ya está asignado a la clase ${data.clase_existente_nombre || 'otra clase'} en este horario (${capitalize(data.dia)}, ${data.hora}° hora).`
+            };
+            
+            // Actualizar cada elemento solo si existe
+            for (const [id, content] of Object.entries(elements)) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = content;
+                } else {
+                    console.warn(`[Unir Clases] Elemento con ID ${id} no encontrado en el DOM`);
+                }
+            }
             
             // Configurar botón de confirmar
             const btnConfirmarUnir = document.getElementById('btn-confirmar-unir');
             const spinnerUnir = document.getElementById('spinnerUnir');
+            
+            if (!btnConfirmarUnir || !spinnerUnir) {
+                console.error("[Unir Clases] Elementos del botón de confirmar no encontrados");
+                mostrarAlerta("Error: No se pudo encontrar el botón de confirmar", "danger");
+                return;
+            }
             
             // Eliminar listener previo si existe
             btnConfirmarUnir.onclick = null;
@@ -1477,7 +1572,7 @@
             btnConfirmarUnir.addEventListener('click', confirmarUnirClases);
             
             // Mostrar modal
-            const unirClasesModal = new bootstrap.Modal(document.getElementById('unirClasesModal'));
+            const unirClasesModal = new bootstrap.Modal(modalElement);
             unirClasesModal.show();
         }
         
@@ -1485,39 +1580,75 @@
         function confirmarUnirClases() {
             if (!window.unionClasesData) {
                 console.error("[Unir Clases] No hay datos para unir clases");
+                mostrarAlerta("Error: No hay datos para unir las clases", "danger");
                 return;
             }
             
             const data = window.unionClasesData;
+            console.log("[Unir Clases] Datos disponibles:", data);
+            
+            // Verificar datos mínimos requeridos
+            const datosRequeridos = {
+                clase_actual_id: data.clase_actual_id,
+                profesor_id: data.profesor_id,
+                asignatura_actual_id: data.asignatura_actual_id,
+                dia: data.dia,
+                hora: data.hora
+            };
+            
+            const datosFaltantes = Object.entries(datosRequeridos)
+                .filter(([key, value]) => !value)
+                .map(([key]) => key);
+                
+            if (datosFaltantes.length > 0) {
+                console.error("[Unir Clases] Datos faltantes:", datosFaltantes);
+                mostrarAlerta(`Error: Faltan los siguientes datos: ${datosFaltantes.join(', ')}`, "danger");
+                return;
+            }
+            
             const btnConfirmarUnir = document.getElementById('btn-confirmar-unir');
             const spinnerUnir = document.getElementById('spinnerUnir');
+            
+            if (!btnConfirmarUnir || !spinnerUnir) {
+                console.error("[Unir Clases] Elementos del botón de confirmar no encontrados");
+                mostrarAlerta("Error: No se pudo encontrar el botón de confirmar", "danger");
+                return;
+            }
             
             // Deshabilitar botón y mostrar spinner
             btnConfirmarUnir.disabled = true;
             spinnerUnir.classList.remove('d-none');
             
+            // Preparar datos para la API
+            const apiData = {
+                clase_actual_id: data.clase_actual_id,
+                profesor_id: data.profesor_id,
+                asignatura_actual_id: data.asignatura_actual_id,
+                dia: data.dia,
+                hora: data.hora,
+                clase_existente_id: data.clase_existente_id || 0,
+                asignatura_existente_id: data.asignatura_existente_id || data.asignatura_actual_id
+            };
+            
+            console.log("[Unir Clases] Enviando datos a API:", apiData);
+            
             // Llamar a la API para unir clases
             fetch('/schedules/unir_clases', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({
-                    clase_actual_id: data.clase_actual_id,
-                    clase_existente_id: data.clase_existente_id,
-                    profesor_id: data.profesor_id,
-                    asignatura_actual_id: data.asignatura_actual_id,
-                    asignatura_existente_id: data.asignatura_existente_id,
-                    dia: data.dia,
-                    hora: data.hora
-                })
+                body: JSON.stringify(apiData)
             })
             .then(response => {
-                if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
+                if (!response.ok) { 
+                    throw new Error(`Error del servidor: ${response.status}`); 
+                }
                 return response.json();
             })
             .then(respData => {
                 if (respData.success) {
                     // Cerrar modal
-                    bootstrap.Modal.getInstance(document.getElementById('unirClasesModal')).hide();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('unirClasesModal'));
+                    if (modal) modal.hide();
                     
                     // Verificar si esta unión viene de un movimiento de clase
                     if (window.origenMovimiento) {
@@ -1547,8 +1678,8 @@
             })
             .finally(() => {
                 // Restaurar botón
-                btnConfirmarUnir.disabled = false;
-                spinnerUnir.classList.add('d-none');
+                if (btnConfirmarUnir) btnConfirmarUnir.disabled = false;
+                if (spinnerUnir) spinnerUnir.classList.add('d-none');
             });
         }
 
@@ -1575,8 +1706,16 @@
         // Mostrar alertas generales
         function mostrarAlerta(mensaje, tipo) {
             console.log(`[Alerta General ${tipo}]: ${mensaje}`);
-            const alertPlaceholder = document.querySelector('.container-fluid'); // O un div específico para alertas
-            if (!alertPlaceholder) return;
+            
+            // Intentar encontrar un contenedor adecuado para la alerta
+            let alertPlaceholder = document.querySelector('.container-fluid');
+            if (!alertPlaceholder) {
+                alertPlaceholder = document.querySelector('body');
+                if (!alertPlaceholder) {
+                    console.error("[Alerta] No se pudo encontrar un contenedor para la alerta");
+                    return;
+                }
+            }
 
             const wrapper = document.createElement('div');
             wrapper.innerHTML = [
@@ -1586,16 +1725,28 @@
                 '</div>'
             ].join('');
 
-            alertPlaceholder.insertBefore(wrapper.firstChild, alertPlaceholder.firstChild);
+            // Insertar la alerta de manera segura
+            try {
+                alertPlaceholder.insertBefore(wrapper.firstChild, alertPlaceholder.firstChild);
+            } catch (error) {
+                console.error("[Alerta] Error al insertar la alerta:", error);
+                return;
+            }
             
             // Auto-eliminar después de 5 segundos
             const alertElement = wrapper.firstChild;
-            setTimeout(() => {
-                 if(alertElement.parentNode) { 
-                     alertElement.classList.remove('show');
-                     alertElement.addEventListener('transitionend', () => alertElement.remove());
-                 }
-            }, 5000);
+            if (alertElement) {
+                setTimeout(() => {
+                    if (alertElement.parentNode) {
+                        alertElement.classList.remove('show');
+                        alertElement.addEventListener('transitionend', () => {
+                            if (alertElement.parentNode) {
+                                alertElement.remove();
+                            }
+                        });
+                    }
+                }, 5000);
+            }
         }
         
         function capitalize(string) {
@@ -1609,6 +1760,64 @@
 
         // --- Inicialización --- 
         console.log('[Init] Editor de horarios listo.');
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const targetCell = event.target.closest('.hora-cell');
+            if (!targetCell) return;
+
+            const dia = targetCell.dataset.dia;
+            const hora = targetCell.dataset.hora;
+            const asignaturaId = event.dataTransfer.getData('asignaturaId');
+            const profesorId = event.dataTransfer.getData('profesorId');
+            const unidoConClaseId = event.dataTransfer.getData('unidoConClaseId'); // Nuevo dato
+
+            // Verificar si ya existe una asignatura en esta celda
+            const existingBlock = targetCell.querySelector('.asignatura-bloque');
+            if (existingBlock) {
+                // Si existe, significa que estamos uniendo clases
+                const existingAsignaturaId = existingBlock.dataset.asignaturaId;
+                if (existingAsignaturaId === asignaturaId) {
+                    // Solo permitir unir si es la misma asignatura
+                    const data = {
+                        clase_id: currentClaseId,
+                        dia: dia,
+                        hora: hora,
+                        asignatura_id: asignaturaId,
+                        profesor_id: profesorId,
+                        unido_con_clase_id: existingBlock.dataset.claseId // Usar la clase existente
+                    };
+
+                    fetch('/admin/horarios/guardar_bloque', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Actualizar la interfaz
+                            existingBlock.dataset.unidoConClaseId = currentClaseId;
+                            existingBlock.classList.add('unido');
+                            mostrarAlerta('Clases unidas correctamente', 'success');
+                        } else {
+                            mostrarAlerta(data.message || 'Error al unir clases', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        mostrarAlerta('Error al unir clases', 'danger');
+                    });
+                } else {
+                    mostrarAlerta('Solo se pueden unir clases con la misma asignatura', 'warning');
+                }
+            } else {
+                // Código existente para asignar nueva asignatura
+                // ... existing code ...
+            }
+        }
 
     });
 </script>

@@ -308,11 +308,16 @@ def edit_profesor(id):
         profesor.bio = form.bio.data
         profesor.max_horas_diarias = form.max_horas_diarias.data
         
-        # Actualizar la relación con asignaturas
-        # Primero, eliminar todas las relaciones actuales
+        # Primero, eliminar todas las relaciones con clases
+        asignaturas_profesor = AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).all()
+        for ap in asignaturas_profesor:
+            # Eliminar primero las relaciones con clases
+            AsignaturaProfesorClase.query.filter_by(asignatura_profesor_id=ap.id).delete()
+        
+        # Luego, eliminar las relaciones con asignaturas
         AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).delete()
         
-        # Luego, crear la nueva relación
+        # Finalmente, crear la nueva relación
         asignatura_profesor = AsignaturaProfesor(
             asignatura_id=form.asignatura_id.data,
             profesor_id=profesor.id
@@ -784,6 +789,7 @@ def guardar_bloque_horario():
     hora = data.get('hora')
     asignatura_id = data.get('asignatura_id')
     profesor_id = data.get('profesor_id')
+    unido_con_clase_id = data.get('unido_con_clase_id')  # Nuevo campo para unión de clases
     ignorar_conflictos = data.get('ignorar_conflictos', False)
     
     if not all([clase_id, dia, hora, asignatura_id, profesor_id]):
@@ -840,13 +846,15 @@ def guardar_bloque_horario():
     if horario_existente:
         horario_existente.asignatura_id = asignatura_id
         horario_existente.profesor_id = profesor_id
+        horario_existente.unido_con_clase_id = unido_con_clase_id  # Actualizar unión de clases
     else:
         horario = Horario(
             clase_id=clase_id,
             dia=dia,
             hora=hora,
             asignatura_id=asignatura_id,
-            profesor_id=profesor_id
+            profesor_id=profesor_id,
+            unido_con_clase_id=unido_con_clase_id  # Incluir unión de clases
         )
         db.session.add(horario)
     
