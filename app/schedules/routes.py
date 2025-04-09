@@ -699,3 +699,65 @@ def move_class():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
+
+@schedules.route('/unir_clases', methods=['POST'])
+@login_required
+def unir_clases():
+    """Unir dos clases para que el mismo profesor imparta la misma asignatura a ambos grupos"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'message': 'No se recibieron datos'})
+        
+        # Obtener datos necesarios
+        clase_actual_id = data.get('clase_actual_id')
+        clase_existente_id = data.get('clase_existente_id')
+        profesor_id = data.get('profesor_id')
+        asignatura_actual_id = data.get('asignatura_actual_id')
+        asignatura_existente_id = data.get('asignatura_existente_id')
+        dia = data.get('dia')
+        hora = data.get('hora')
+        
+        # Validar datos obligatorios
+        if not all([clase_actual_id, clase_existente_id, profesor_id, asignatura_actual_id, dia, hora]):
+            return jsonify({'success': False, 'message': 'Faltan datos obligatorios'})
+        
+        # Verificar que las clases existan
+        clase_actual = Clase.query.get(clase_actual_id)
+        clase_existente = Clase.query.get(clase_existente_id)
+        if not clase_actual or not clase_existente:
+            return jsonify({'success': False, 'message': 'Una o ambas clases no existen'})
+        
+        # Verificar que el profesor exista
+        profesor = Profesor.query.get(profesor_id)
+        if not profesor:
+            return jsonify({'success': False, 'message': 'El profesor no existe'})
+        
+        # Verificar las asignaturas
+        asignatura_actual = Asignatura.query.get(asignatura_actual_id)
+        if not asignatura_actual:
+            return jsonify({'success': False, 'message': 'La asignatura actual no existe'})
+        
+        # Crear la nueva asignación de horario
+        horario = Horario(
+            clase_id=clase_actual_id,
+            dia=dia,
+            hora=hora,
+            asignatura_id=asignatura_actual_id,
+            profesor_id=profesor_id
+        )
+        
+        db.session.add(horario)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Clases unidas correctamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[Unir Clases] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
