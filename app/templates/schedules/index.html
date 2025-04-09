@@ -7,7 +7,7 @@
     <h1 class="mt-4 mb-4"><i class="fas fa-calendar-alt me-2"></i>Administración de Horarios</h1>
     
     <div class="row">
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-4 col-md-6">
             <div class="card bg-primary text-white mb-4">
                 <div class="card-body">
                     <h4 class="mb-0"><i class="fas fa-calendar-week me-2"></i>Horarios Actuales</h4>
@@ -25,7 +25,7 @@
             </div>
         </div>
         
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-4 col-md-6">
             <div class="card bg-success text-white mb-4">
                 <div class="card-body">
                     <h4 class="mb-0"><i class="fas fa-chalkboard me-2"></i>Clases</h4>
@@ -43,7 +43,7 @@
             </div>
         </div>
         
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-4 col-md-6">
             <div class="card bg-warning text-white mb-4">
                 <div class="card-body">
                     <h4 class="mb-0"><i class="fas fa-book me-2"></i>Asignaturas</h4>
@@ -56,24 +56,6 @@
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
                     <a class="small text-white stretched-link" href="{{ url_for('admin.asignaturas') }}">Administrar asignaturas</a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-danger text-white mb-4">
-                <div class="card-body">
-                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Conflictos</h4>
-                    <div class="d-flex align-items-center mt-2">
-                        <h2 class="mb-0">{{ conflictos_total }}</h2>
-                        <div class="ms-auto">
-                            <i class="fas fa-exclamation-circle fa-3x"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="{{ url_for('schedules.index') }}">Ver conflictos</a>
                     <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                 </div>
             </div>
@@ -145,19 +127,6 @@
         <div class="col-lg-4">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-chart-bar me-1"></i>
-                    Carga Semanal
-                </div>
-                <div class="card-body">
-                    <canvas id="cargaSemanalChart" width="100%" height="200"></canvas>
-                </div>
-                <div class="card-footer small text-muted">
-                    Distribución de horas por día de la semana
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header">
                     <i class="fas fa-tasks me-1"></i>
                     Acciones Rápidas
                 </div>
@@ -184,51 +153,4 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Gráfico de carga semanal
-        const ctxBar = document.getElementById('cargaSemanalChart').getContext('2d');
-        new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
-                datasets: [{
-                    label: 'Horas asignadas',
-                    data: {{ carga_semanal|safe }},
-                    backgroundColor: [
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(153, 102, 255, 0.6)',
-                        'rgba(255, 159, 64, 0.6)',
-                        'rgba(255, 99, 132, 0.6)'
-                    ],
-                    borderColor: [
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)',
-                        'rgba(255, 99, 132, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
-                    }
-                }
-            }
-        });
-    });
-</script>
-{% endblock %} 
+{% endblock %}
