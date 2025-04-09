@@ -6,6 +6,61 @@
 <div class="container-fluid px-4">
     <h1 class="mt-4 mb-4"><i class="fas fa-book me-2"></i>Administración de Asignaturas</h1>
     
+    <!-- Resumen de Horas -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-chart-pie me-1"></i>
+            Resumen de Horas
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h5 class="card-title">Horas Totales Disponibles</h5>
+                            <p class="card-text display-6">{{ total_horas_disponibles }} horas</p>
+                            <small class="text-muted">(5 días × 7 horas) - Horas de actividades especiales</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h5 class="card-title">Horas Requeridas</h5>
+                            <p class="card-text display-6">{{ total_horas_requeridas }} horas</p>
+                            <small class="text-muted">Suma de horas semanales de todas las asignaturas</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card {% if diferencia_horas > 0 %}bg-success{% elif diferencia_horas < 0 %}bg-danger{% else %}bg-warning{% endif %} text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Balance de Horas</h5>
+                            <p class="card-text display-6">
+                                {% if diferencia_horas > 0 %}
+                                    +{{ diferencia_horas }} horas libres
+                                {% elif diferencia_horas < 0 %}
+                                    {{ diferencia_horas }} horas de más
+                                {% else %}
+                                    Perfecto balance
+                                {% endif %}
+                            </p>
+                            <small>
+                                {% if diferencia_horas > 0 %}
+                                    Hay horas disponibles sin asignar
+                                {% elif diferencia_horas < 0 %}
+                                    Se requieren más horas de las disponibles
+                                {% else %}
+                                    Las horas disponibles coinciden con las requeridas
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <div>

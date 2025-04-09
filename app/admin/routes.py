@@ -11,6 +11,7 @@ from app.models.asignatura import Asignatura, AsignaturaProfesor, AsignaturaProf
 from app.models.clase import Clase
 from app.admin.utils import admin_required, save_picture
 from app.models.disponibilidad_comun import DisponibilidadComun
+from app.models.actividad_especial import ActividadEspecial
 
 # Dashboard
 @admin.route('/')
@@ -341,7 +342,24 @@ def edit_profesor(id):
 def asignaturas():
     page = request.args.get('page', 1, type=int)
     asignaturas = Asignatura.query.paginate(page=page, per_page=10)
-    return render_template('admin/asignaturas.html', title='Gestión de Asignaturas', asignaturas=asignaturas)
+    
+    # Cálculo de horas disponibles
+    total_horas_semana = 5 * 7  # 5 días × 7 horas
+    horas_actividades_especiales = ActividadEspecial.query.count()
+    total_horas_disponibles = total_horas_semana - horas_actividades_especiales
+    
+    # Cálculo de horas requeridas
+    total_horas_requeridas = sum(asignatura.horas_semanales for asignatura in Asignatura.query.filter_by(activa=True).all())
+    
+    # Cálculo de la diferencia
+    diferencia_horas = total_horas_disponibles - total_horas_requeridas
+    
+    return render_template('admin/asignaturas.html', 
+                         title='Gestión de Asignaturas', 
+                         asignaturas=asignaturas,
+                         total_horas_disponibles=total_horas_disponibles,
+                         total_horas_requeridas=total_horas_requeridas,
+                         diferencia_horas=diferencia_horas)
 
 @admin.route('/asignaturas/add', methods=['GET', 'POST'])
 @login_required
