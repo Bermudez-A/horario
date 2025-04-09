@@ -523,6 +523,77 @@
 
 {% block scripts %}
 <script>
+    // Funciones de Drag & Drop
+    function drag(event) {
+        console.log('[D&D] Iniciando arrastre de bloque existente');
+        const celda = event.currentTarget;
+        const data = {
+            type: 'existing_block',
+            asignaturaId: celda.dataset.asignaturaId,
+            profesorId: celda.dataset.profesorId,
+            origen: {
+                dia: celda.dataset.dia,
+                hora: celda.dataset.hora
+            }
+        };
+        event.dataTransfer.setData('text/plain', JSON.stringify(data));
+        console.log('[D&D] Datos establecidos para bloque existente:', data);
+    }
+
+    function dragAsignatura(event) {
+        console.log('[D&D] Iniciando arrastre de nueva asignatura');
+        const asignatura = event.currentTarget;
+        const data = {
+            type: 'new_block',
+            asignaturaId: asignatura.dataset.id,
+            color: asignatura.dataset.color,
+            icono: asignatura.dataset.icono
+        };
+        event.dataTransfer.setData('text/plain', JSON.stringify(data));
+        console.log('[D&D] Datos establecidos para nueva asignatura:', data);
+    }
+
+    function allowDrop(event) {
+        event.preventDefault();
+        const celda = event.currentTarget;
+        if (!celda.classList.contains('celda-con-clase')) {
+            celda.classList.add('drop-target');
+        }
+    }
+
+    function leaveDrop(event) {
+        event.preventDefault();
+        const celda = event.currentTarget;
+        celda.classList.remove('drop-target');
+    }
+
+    function drop(event) {
+        event.preventDefault();
+        const celda = event.currentTarget;
+        celda.classList.remove('drop-target');
+        
+        console.log('[D&D] Drop detectado');
+        const data = JSON.parse(event.dataTransfer.getData('text/plain'));
+        console.log('[D&D] Datos transferidos:', data);
+        
+        const tipo = data.type;
+        console.log('[D&D] Tipo=' + tipo + ', Celda Ocupada=' + celda.classList.contains('celda-con-clase'));
+        
+        if (tipo === 'existing_block') {
+            console.log('[D&D] Acción = MOVER');
+            // Verificar si la función moverClase existe antes de llamarla
+            if (typeof moverClase === 'function') {
+                moverClase(data.origen.dia, data.origen.hora, celda.dataset.dia, celda.dataset.hora);
+            } else {
+                console.error('[D&D] Error: La función moverClase no está definida');
+                mostrarAlerta('Error interno: Función de movimiento no disponible', 'danger');
+            }
+        } else if (tipo === 'new_block') {
+            console.log('[D&D] Acción = NUEVO');
+            openModalForNewAsignatura(data.asignaturaId, celda.dataset.dia, celda.dataset.hora);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Inicializando editor de horarios v2');
         
@@ -877,327 +948,31 @@
             });
         }
         
+        // Función para mover una clase
         function moverClase(origen_dia, origen_hora, destino_dia, destino_hora) {
             console.log(`[Mover] Moviendo clase de ${origen_dia}-${origen_hora} a ${destino_dia}-${destino_hora}`);
+            
             const origenCelda = document.querySelector(`.celda-horario[data-dia="${origen_dia}"][data-hora="${origen_hora}"]`);
             const destinoCelda = document.querySelector(`.celda-horario[data-dia="${destino_dia}"][data-hora="${destino_hora}"]`);
             
-            if (!origenCelda || !destinoCelda) return mostrarAlerta('Error interno: Celdas no encontradas.', 'danger');
+            if (!origenCelda || !destinoCelda) {
+                console.error('[Mover] Error: Celdas no encontradas');
+                mostrarAlerta('Error interno: No se encontraron las celdas especificadas', 'danger');
+                return;
+            }
             
             const asignaturaId = origenCelda.dataset.asignaturaId;
             const profesorId = origenCelda.dataset.profesorId;
             
-            if (destinoCelda.classList.contains('celda-con-clase')) return mostrarAlerta('No se puede mover, el destino está ocupado.', 'warning');
-
-            // Verificar conflictos en destino ANTES de mover
-            checkConflictsAPI(profesorId, destino_dia, destino_hora, currentClaseId)
-                .then(conflictoData => {
-                    if (conflictoData.conflict) {
-                        // Comprobar si el mensaje de error contiene alguna indicación de que el profesor está asignado en otra clase
-                        const mensajeError = conflictoData.message || '';
-                        const esConflictoProfesor = 
-                            mensajeError.includes('ya tiene clase') || 
-                            mensajeError.includes('ya está asignado') ||
-                            mensajeError.includes('ya asignado');
-                            
-                        // Si es conflicto de profesor en otra clase o si tenemos datos de la clase conflictiva
-                        if (esConflictoProfesor || (conflictoData.conflict_type === 'profesor_asignado' && conflictoData.conflicting_class)) {
-                            // Datos para el modal de unir clases
-                            console.log('[Mover] Detectado conflicto de profesor ya asignado. Mostrando modal unir clases.');
-                            
-                            // Obtener info de la clase conflictiva (si está disponible)
-                            const claseConflicto = conflictoData.conflicting_class || {};
-                            
-                            window.unionClasesData = {
-                                dia: destino_dia,
-                                hora: destino_hora,
-                                asignatura_actual_id: asignaturaId,
-                                asignatura_actual_nombre: asignaturasData[asignaturaId]?.nombre || 'No disponible',
-                                clase_actual_id: currentClaseId,
-                                clase_actual_nombre: '{{ clase.nombre }}',
-                                profesor_id: profesorId,
-                                profesor_nombre: profesoresData[profesorId]?.nombre || 'No disponible',
-                                clase_existente_id: claseConflicto.clase_id || 0,
-                                clase_existente_nombre: claseConflicto.clase_nombre || 'Otra clase',
-                                asignatura_existente_id: claseConflicto.asignatura_id || asignaturaId,
-                                asignatura_existente_nombre: claseConflicto.asignatura_nombre || 'Misma asignatura'
-                            };
-                            
-                            // Guardar datos de origen para cuando se confirme la unión
-                            window.origenMovimiento = {
-                                dia: origen_dia,
-                                hora: origen_hora
-                            };
-                            
-                            // Mostrar modal de unir clases
-                            mostrarModalUnirClases();
-                        } else {
-                            // Otro tipo de conflicto, mostrar mensaje de error normal
-                            mostrarAlerta(`Conflicto al mover: ${conflictoData.message}`, 'danger');
-                        }
-                        throw new Error("Conflicto detectado"); // Detener
-                    }
-                    // Si no hay conflicto, proceder a llamar a la API de mover
-                    console.log("[Mover] No hay conflicto en destino, llamando a API /schedules/move_class...");
-                    return fetch('/schedules/move_class', {
-                method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                        body: JSON.stringify({ 
-                            clase_id: currentClaseId, 
-                            origen_dia, origen_hora, 
-                            destino_dia, destino_hora 
-                        })
-                    });
-                })
-                .then(response => {
-                     if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
-                     return response.json();
-                 })
-            .then(data => {
-                    console.log("[Mover] Respuesta de API /schedules/move_class:", data);
-                if (data.success) {
-                        actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora);
-                        mostrarAlerta('Clase movida con éxito', 'success');
-                } else {
-                        mostrarAlerta(`Error al mover: ${data.message || 'Error desconocido'}`, 'danger');
-                }
-            })
-            .catch(error => {
-                    if (error.message !== "Conflicto detectado") { // Evitar doble alerta
-                         console.error('[Mover] Error:', error);
-                         mostrarAlerta(`Error al mover la clase: ${error.message}`, 'danger');
-                    }
-                });
-        }
-        
-        function actualizarUIAlMover(origen_dia, origen_hora, destino_dia, destino_hora) {
-             console.log("[UI Mover] Actualizando interfaz...");
-            const origenCelda = document.querySelector(`.celda-horario[data-dia="${origen_dia}"][data-hora="${origen_hora}"]`);
-            const destinoCelda = document.querySelector(`.celda-horario[data-dia="${destino_dia}"][data-hora="${destino_hora}"]`);
-            if (!origenCelda || !destinoCelda) return;
-
-            const bloque = origenCelda.querySelector('.asignatura-bloque');
-            if (bloque) {
-                 // Mover el bloque al destino
-                 destinoCelda.innerHTML = ''; // Limpiar destino por si acaso
-                 destinoCelda.appendChild(bloque.cloneNode(true)); // Clonar para mantener listeners?
-                 destinoCelda.classList.remove('celda-vacia');
-                 destinoCelda.classList.add('celda-con-clase');
-                 destinoCelda.dataset.asignaturaId = origenCelda.dataset.asignaturaId;
-                 destinoCelda.dataset.profesorId = origenCelda.dataset.profesorId;
-                 // Re-añadir listener de drag al nuevo bloque clonado
-                 destinoCelda.querySelector('.asignatura-bloque')?.addEventListener('dragstart', drag);
-            } else {
-                 console.warn("[UI Mover] No se encontró bloque en origen para mover.");
-             }
-
-            // Limpiar celda origen
-            origenCelda.innerHTML = '';
-            origenCelda.classList.remove('celda-con-clase');
-            origenCelda.classList.add('celda-vacia');
-            origenCelda.removeAttribute('data-asignatura-id');
-            origenCelda.removeAttribute('data-profesor-id');
-             console.log("[UI Mover] Interfaz actualizada.");
-        }
-        
-        function eliminarClaseEnServidor(dia, hora) {
-            console.log(`[API Eliminar] Eliminando: dia=${dia}, hora=${hora}`);
-            return fetch('/schedules/delete_by_position', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify({ clase_id: currentClaseId, dia, hora })
-            }).then(response => response.json());
-        }
-        
-        function eliminarAsignacion() {
-            if (!currentDia || !currentHora) return;
-            console.log(`[Eliminar] Solicitando eliminar ${currentDia} ${currentHora}° hora`);
-            if (confirm(`¿Estás seguro de eliminar la asignación del ${capitalize(currentDia)} a la ${currentHora}° hora?`)) {
-                eliminarClaseEnServidor(currentDia, currentHora)
-            .then(data => {
-                        console.log("[Eliminar] Respuesta del servidor:", data);
-                if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
-                            actualizarCelda(currentDia, currentHora, null, null); // Llamar a actualizar para limpiar la celda
-                            mostrarAlerta('Asignación eliminada con éxito', 'success');
-                } else {
-                            mostrarAlerta(`Error al eliminar: ${data.message || 'Error desconocido'}`, 'danger');
-                }
-            })
-            .catch(error => {
-                        console.error('[Eliminar] Error:', error);
-                        mostrarAlerta(`Error al eliminar la asignación: ${error.message}`, 'danger');
-                    });
-            }
-        }
-        
-        function guardarAsignacion() {
-            console.log("[Guardar] Iniciando guardado desde modal...");
-            if (!selectedAsignaturaId || !selectedProfesorId) {
-                mostrarAlerta('Debes seleccionar asignatura y profesor', 'warning');
+            if (destinoCelda.classList.contains('celda-con-clase')) {
+                mostrarAlerta('No se puede mover, el destino está ocupado.', 'warning');
                 return;
             }
             
-            const btnGuardar = document.getElementById('btn-guardar');
-            const spinner = document.getElementById('spinnerGuardar');
-            btnGuardar.disabled = true;
-            spinner.classList.remove('d-none');
-            document.getElementById('modal-error-container').innerHTML = ''; // Limpiar errores previos del modal
-
-            // Proceder directamente con el guardado (la verificación ya se hizo antes)
-            const ajustar = document.getElementById('ajustar-otras-clases')?.checked || false;
+            // Verificar conflictos antes de mover
+            console.log(`[API Check Conflicts] Verificando: Prof=${profesorId}, Dia=${destino_dia}, Hora=${destino_hora}, ClaseActual=${currentClaseId}`);
             
-            actualizarClaseEnServidor(selectedAsignaturaId, selectedProfesorId, currentDia, currentHora, ajustar)
-            .then(data => {
-                    console.log("[Guardar] Respuesta de API /schedules/update:", data);
-                if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('asignarModal')).hide();
-                        actualizarCelda(currentDia, currentHora, selectedAsignaturaId, selectedProfesorId);
-                        
-                        if (data.adjusted_cells && data.adjusted_cells.length > 0) {
-                            data.adjusted_cells.forEach(cell => {
-                                actualizarCelda(cell.dia, cell.hora, cell.asignatura_id, cell.profesor_id);
-                            });
-                            mostrarAlerta('Se han ajustado otras celdas con la misma asignatura', 'info');
-                        }
-                        mostrarAlerta('Asignación guardada con éxito', 'success');
-                } else {
-                        mostrarAlertaEnModal(`Error al guardar: ${data.message || 'Error desconocido'}`, 'danger');
-                        btnGuardar.disabled = false;
-                }
-            })
-            .catch(error => {
-                    console.error('[Guardar] Error:', error);
-                    mostrarAlertaEnModal(`Error al guardar la asignación: ${error.message}`, 'danger');
-                    btnGuardar.disabled = false;
-                })
-                .finally(() => {
-                    spinner.classList.add('d-none');
-                });
-        }
-        
-        function confirmarLimpiarTodo() {
-            console.log('[Limpiar Todo] Confirmando...');
-            if (confirm('¿Estás seguro de limpiar todo el horario para esta clase? Esta acción no se puede deshacer.')) {
-                console.log('[Limpiar Todo] Confirmado, llamando a API...');
-                fetch(`/schedules/clear_all/${currentClaseId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, // Añadir CSRF si es necesario
-                    body: JSON.stringify({})
-                })
-                .then(response => {
-                     if (!response.ok) { throw new Error(`Error del servidor: ${response.status}`); }
-                     return response.json();
-                 })
-                .then(data => {
-                    console.log("[Limpiar Todo] Respuesta del servidor:", data);
-                    if (data.success) {
-                        // Limpiar UI
-                        document.querySelectorAll('.celda-con-clase').forEach(celda => {
-                            actualizarCelda(celda.dataset.dia, celda.dataset.hora, null, null);
-                        });
-                        mostrarAlerta('Horario limpiado con éxito', 'success');
-                    } else {
-                        mostrarAlerta(`Error al limpiar: ${data.message || 'Error desconocido'}`, 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('[Limpiar Todo] Error:', error);
-                    mostrarAlerta(`Error al limpiar el horario: ${error.message}`, 'danger');
-                });
-            }
-        }
-        
-        function confirmarGenerarAutomatico() {
-            console.log('[Generar Auto] Confirmando...');
-            if (confirm('¿Generar horario automáticamente? Esto intentará completar los huecos y podría sobrescribir asignaciones existentes si hay conflictos irresolubles.')) {
-                // Idealmente, esto llamaría a una API que devuelve el horario generado
-                // Por ahora, redirigimos a la ruta que procesa el POST
-                console.log('[Generar Auto] Redirigiendo para generación POST...');
-                 // Mostrar un spinner o mensaje de carga aquí sería bueno
-                 mostrarAlerta("Iniciando generación automática... por favor espere.", "info");
-                 // Usar un formulario oculto para enviar POST o redirigir si la ruta GET maneja POST
-                 // Si la ruta /generate/<id> maneja POST:
-                 const form = document.createElement('form');
-                 form.method = 'POST';
-                 form.action = `/schedules/generate/${currentClaseId}`;
-                 // Añadir CSRF token si es necesario
-                 const csrfInput = document.createElement('input');
-                 csrfInput.type = 'hidden';
-                 csrfInput.name = 'csrf_token'; // Ajustar si el nombre es diferente
-                 csrfInput.value = getCsrfToken(); 
-                 form.appendChild(csrfInput);
-                 document.body.appendChild(form);
-                 form.submit();
-                 
-                 // Si prefieres redirigir al GET y que ese maneje el POST:
-                 // window.location.href = `/schedules/generate/${currentClaseId}`;
-            }
-        }
-        
-        function actualizarCelda(dia, hora, asignaturaId, profesorId) {
-             console.log(`[UI Actualizar Celda] Actualizando ${dia} ${hora}° hora. Asig=${asignaturaId}, Prof=${profesorId}`);
-            const celda = document.querySelector(`.celda-horario[data-dia="${dia}"][data-hora="${hora}"]`);
-            if (!celda) {
-                console.error(`[UI Actualizar Celda] No se encontró celda para ${dia} ${hora}`);
-                return;
-            }
-            
-            // Limpiar contenido anterior
-            celda.innerHTML = ''; 
-
-            if (asignaturaId && profesorId) {
-                // Si hay datos, crear el bloque
-            celda.classList.remove('celda-vacia');
-            celda.classList.add('celda-con-clase');
-                celda.dataset.asignaturaId = asignaturaId;
-                celda.dataset.profesorId = profesorId;
-                
-                try {
-                    const asignatura = asignaturasData[asignaturaId];
-                    const profesor = profesoresData[profesorId];
-                    
-                    if (!asignatura || !profesor) throw new Error("Datos de asignatura o profesor no encontrados");
-
-                    const bloqueHTML = `
-                        <div class="asignatura-bloque" 
-                             data-color="${asignatura.color}"
-                             style="background-color: ${asignatura.color}"
-                             draggable="true"
-                             ondragstart="drag(event)"
-                             data-asignatura-id="${asignaturaId}"
-                             data-profesor-id="${profesorId}"
-                             title="${asignatura.nombre} - ${profesor.nombre}">
-                    <div class="asignatura-nombre">
-                        ${asignatura.icono ? `<i class="fas ${asignatura.icono} me-1"></i>` : ''}
-                        ${asignatura.nombre}
-                    </div>
-                    <div class="profesor-nombre">
-                        ${profesor.nombre}
-                    </div>
-                </div>
-            `;
-                    celda.innerHTML = bloqueHTML;
-                    // Re-añadir listener de drag al nuevo bloque
-                    celda.querySelector('.asignatura-bloque')?.addEventListener('dragstart', drag);
-                    
-                } catch (error) {
-                    console.error(`[UI Actualizar Celda] Error creando bloque: ${error.message}`);
-                    celda.innerHTML = '<span class="text-danger small">Error</span>'; // Mostrar error en celda
-                }
-            } else {
-                // Si no hay datos, limpiar la celda
-            celda.classList.remove('celda-con-clase');
-            celda.classList.add('celda-vacia');
-                celda.removeAttribute('data-asignatura-id');
-                celda.removeAttribute('data-profesor-id');
-            }
-        }
-        
-        // Llama a la API /schedules/update
-        function actualizarClaseEnServidor(asignaturaId, profesorId, dia, hora, ajustarOtrasCeldas) {
-             console.log(`[API Update] Guardando: Asig=${asignaturaId}, Prof=${profesorId}, Dia=${dia}, Hora=${hora}, Ajustar=${ajustarOtrasCeldas}`);
-            return fetch('/schedules/update', {
+            fetch('/schedules/check_conflicts', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1456,19 +1231,33 @@
             
             const data = window.unionClasesData;
             
-            // Actualizar datos en el modal
-            document.getElementById('unir-clases-actual').textContent = data.clase_actual_nombre;
-            document.getElementById('unir-clases-asignatura-actual').textContent = data.asignatura_actual_nombre;
-            document.getElementById('unir-clases-existente').textContent = data.clase_existente_nombre;
-            document.getElementById('unir-clases-asignatura-existente').textContent = data.asignatura_existente_nombre;
+            // Actualizar datos en el modal con verificaciones de null
+            const elements = {
+                'unir-clases-actual': data.clase_actual_nombre,
+                'unir-clases-asignatura-actual': data.asignatura_actual_nombre,
+                'unir-clases-existente': data.clase_existente_nombre,
+                'unir-clases-asignatura-existente': data.asignatura_existente_nombre,
+                'unir-clases-mensaje': `El profesor ${data.profesor_nombre} ya está asignado a la clase ${data.clase_existente_nombre} en este horario (${capitalize(data.dia)}, ${data.hora}° hora).`
+            };
             
-            // Personalizar mensaje
-            document.getElementById('unir-clases-mensaje').textContent = 
-                `El profesor ${data.profesor_nombre} ya está asignado a la clase ${data.clase_existente_nombre} en este horario (${capitalize(data.dia)}, ${data.hora}° hora).`;
+            // Actualizar cada elemento solo si existe
+            for (const [id, content] of Object.entries(elements)) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = content;
+                } else {
+                    console.warn(`[Unir Clases] Elemento con ID ${id} no encontrado en el DOM`);
+                }
+            }
             
             // Configurar botón de confirmar
             const btnConfirmarUnir = document.getElementById('btn-confirmar-unir');
             const spinnerUnir = document.getElementById('spinnerUnir');
+            
+            if (!btnConfirmarUnir || !spinnerUnir) {
+                console.error("[Unir Clases] Elementos del botón de confirmar no encontrados");
+                return;
+            }
             
             // Eliminar listener previo si existe
             btnConfirmarUnir.onclick = null;
