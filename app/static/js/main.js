@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar gráficos si existen contenedores
     initializeCharts();
+
+    /**
+     * Inicializa la funcionalidad del sidebar si existe
+     */
+    setupSidebar();
 });
 
 /**
@@ -314,4 +319,58 @@ function getCSRFToken() {
     }
     
     return '';
-} 
+}
+
+/**
+ * Configura la funcionalidad del sidebar para administradores
+ */
+function setupSidebar() {
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    const sidebar = document.getElementById('sidebar');
+    const contentWrapper = document.getElementById('content-wrapper');
+    const sidebarCollapse = document.getElementById('sidebarCollapse');
+    
+    // Si no hay sidebar, no hacemos nada
+    if (!sidebar) return;
+    
+    // Establecer estado inicial desde localStorage si existe
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+        contentWrapper.classList.add('expanded');
+    }
+    
+    // Botón de hamburguesa en móviles
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+    }
+    
+    // Botón de cierre en móviles
+    if (sidebarCollapseBtn) {
+        sidebarCollapseBtn.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+        });
+    }
+    
+    // Botón de colapso en desktop
+    if (sidebarCollapse) {
+        sidebarCollapse.addEventListener('click', function() {
+            sidebar.classList.toggle('collapsed');
+            contentWrapper.classList.toggle('expanded');
+            // Guardar estado en localStorage
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+        });
+    }
+    
+    // Cerrar sidebar al hacer clic en un enlace (en dispositivos móviles)
+    const sidebarLinks = document.querySelectorAll('#sidebar .nav-link');
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth < 768 && sidebar) {
+                sidebar.classList.remove('active');
+            }
+        });
+    });
+}
