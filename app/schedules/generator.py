@@ -1,16 +1,27 @@
 """
-Algoritmo Mejorado para Generación de Horarios Multiclase con Reintentos y Control de Horas de Profesor
+Algoritmo de Generación de Horarios Multiclase con Diagnóstico Detallado
 
-Este módulo genera los horarios para todas las clases de un mismo nivel y curso, 
+Este módulo genera el horario para cada una de las clases de un mismo nivel y curso,
 respetando las restricciones de:
-  • Asignación específica de profesores por clase (si se configuró).
-  • Disponibilidad (personal y global) y actividades especiales.
-  • Restricción de horas diarias para cada asignatura y, opcionalmente, el máximo que 
-    puede impartir un profesor (controlado con respect_profesor_max).
+  • Asignación específica de profesores por clase (si se configura).
+  • Disponibilidad (individual y global) y actividades especiales.
+  • Límite de horas diarias por asignatura y, opcionalmente, el máximo de horas que
+    puede impartir un profesor (controlado con RESPECT_PROFESOR_MAX).
 
-Se realizan múltiples iteraciones (max_iteraciones) en cada clase y, si es necesario, 
-se reintenta la generación (hasta max_retries) para lograr asignar todas las horas.
+Si no se logra asignar todas las horas requeridas, se informa de forma detallada (clave
+'diagnostico') indicando, para cada asignatura, en qué turnos libres ningún profesor cumple
+las condiciones para impartir la clase.
 """
+
+### VARIABLES DE CONFIGURACIÓN (editar aquí)
+DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
+HORAS = list(range(1, 8))                # Horas de 1 a 7
+MAX_HORAS_DIARIAS_POR_ASIGNATURA = 2       # Máximo de horas de una asignatura por día
+MAX_ITERACIONES = 100                     # Iteraciones internas en la generación normal de horario
+MAX_RETRIES = 5                           # Reintentos por clase si falla la generación
+RESPECT_PROFESOR_MAX = False              # Si se debe respetar el límite de horas diarias de un profesor
+
+### FIN DE VARIABLES DE CONFIGURACIÓN
 
 from app import db
 from app.models.clase import Clase
@@ -22,20 +33,14 @@ from app.models.disponibilidad_comun import DisponibilidadComun
 from app.models.actividad_especial import ActividadEspecial
 import random
 
-# Constantes de configuración
-DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes']
-HORAS = list(range(1, 8))  # Horas 1 a 7
-MAX_HORAS_DIARIAS_POR_ASIGNATURA = 2  # Horas máximas de una asignatura en un mismo día
+# Mapeo de horas a texto (para validaciones, usando las HORAS definidas)
+HORAS_TEXTO = {h: str(h) for h in HORAS}
 
-# Mapeo de horas a texto (para validaciones)
-HORAS_TEXTO = {1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7"}
-
-# Registro global de asignaciones:
-# Formato: {(profesor_id, dia, hora): clase_id}
+# Registro global de asignaciones (formato: {(profesor_id, dia, hora): clase_id})
 asignaciones_globales = {}
 
 def reset_asignaciones_globales():
-    """Reinicia el registro global con las asignaciones ya guardadas en la base de datos."""
+    """Reinicia el registro global usando los horarios ya guardados en BD."""
     global asignaciones_globales
     asignaciones_globales = {}
     horarios_existentes = Horario.query.all()
@@ -47,24 +52,25 @@ def reset_asignaciones_globales():
             print(f"Error al cargar asignación existente: {str(e)}")
 
 def remove_class_assignments(clase_id):
-    """Elimina las asignaciones globales pertenecientes a la clase indicada."""
+    """Elimina del registro global las asignaciones que pertenecen a una clase."""
     global asignaciones_globales
     keys_to_remove = [key for key, value in asignaciones_globales.items() if value == clase_id]
     for key in keys_to_remove:
         del asignaciones_globales[key]
 
 def profesor_disponible_globalmente(profesor_id, dia, hora):
-    """Verifica que el profesor no esté asignado en otro turno (misma hora y día)."""
+    """Retorna True si el profesor no tiene asignado otro turno en el mismo día y hora."""
     return (profesor_id, dia, hora) not in asignaciones_globales
 
 def registrar_asignacion_global(profesor_id, dia, hora, clase_id):
-    """Registra la asignación de un profesor en el registro global."""
+    """Registra la asignación global de un profesor para el turno (dia, hora) de la clase."""
     asignaciones_globales[(profesor_id, dia, hora)] = clase_id
 
 def get_profesores_by_asignatura(asignatura_id, clase_id=None):
     """
-    Devuelve la lista de profesores asociados a una asignatura. Si se especifica clase_id, se 
-    consulta primero si existe una asignación específica (AsignaturaProfesorClase) para esa clase.
+    Devuelve la lista de profesores asociados a la asignatura.
+    Si se especifica clase_id, primero se consulta si existe asignación específica en
+    AsignaturaProfesorClase para esa clase, retornando ese profesor si existe.
     """
     if clase_id is not None:
         try:
@@ -78,19 +84,18 @@ def get_profesores_by_asignatura(asignatura_id, clase_id=None):
     return profesores
 
 def hay_actividad_especial(dia, hora):
-    """Determina si hay una actividad especial programada en el turno indicado."""
+    """Retorna True si en el turno (dia, hora) hay una actividad especial programada."""
     return ActividadEspecial.query.filter_by(dia=dia, hora=hora).first() is not None
 
-def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignaciones, tamano_bloque=2, force=False, respect_profesor_max=True):
+def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignaciones, tamano_bloque=2, force=False, respect_profesor_max=RESPECT_PROFESOR_MAX):
     """
-    Intenta asignar un bloque continuo (por defecto 2 horas) para la asignatura, respetando la 
-    disponibilidad, actividades especiales y el límite de horas de la asignatura (salvo en modo forzado).
-    
-    El parámetro respect_profesor_max indica si se valida que el profesor no supere su máximo diario.
+    Intenta asignar un bloque continuo de 'tamano_bloque' horas para la asignatura.
+    Si 'force' es True se omite la restricción del límite de horas diarias por asignatura.
+    'respect_profesor_max' determina si se verifica que el profesor no exceda su máximo diario.
     """
     for dia in DIAS:
         for hora_inicio in range(1, len(HORAS) - tamano_bloque + 2):
-            # Verificar que todo el bloque esté libre y sin actividades especiales
+            # Verifica que el bloque completo esté libre y sin actividad especial
             bloque_disponible = True
             for i in range(tamano_bloque):
                 hora_actual = hora_inicio + i
@@ -100,7 +105,7 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
             if not bloque_disponible:
                 continue
 
-            # Si hay asignación en disponibilidad común, se descarta el bloque
+            # Descartar el bloque si hay asignación en disponibilidad común
             hay_bloque_comun = False
             for i in range(tamano_bloque):
                 hora_actual = hora_inicio + i
@@ -110,7 +115,7 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
             if hay_bloque_comun:
                 continue
 
-            # Validar límite diario para la asignatura (a menos que se use modo forzado)
+            # Verificar límite diario de la asignatura (salvo modo forzado)
             if not force:
                 horas_asignatura_dia = sum(
                     1 for h in range(len(HORAS))
@@ -119,7 +124,7 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
                 if horas_asignatura_dia + tamano_bloque > MAX_HORAS_DIARIAS_POR_ASIGNATURA:
                     continue
 
-            # Buscar profesor disponible para todo el bloque
+            # Buscar un profesor que cumpla las condiciones durante el bloque
             for profesor in profesores:
                 profesor_disponible = True
                 for i in range(tamano_bloque):
@@ -140,21 +145,16 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
                 if profesor_disponible:
                     for i in range(tamano_bloque):
                         hora_actual = hora_inicio + i
-                        horario_matriz[dia][hora_actual - 1] = {
-                            'asignatura_id': asignatura.id,
-                            'profesor_id': profesor.id
-                        }
+                        horario_matriz[dia][hora_actual - 1] = {'asignatura_id': asignatura.id, 'profesor_id': profesor.id}
                         registrar_asignacion_global(profesor.id, dia, hora_actual, clase_id)
                     asignaciones[asignatura.id] += tamano_bloque
                     return True
     return False
 
-def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, asignaciones, force=False, respect_profesor_max=True):
+def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, asignaciones, force=False, respect_profesor_max=RESPECT_PROFESOR_MAX):
     """
-    Intenta asignar una hora individual para la asignatura, comprobando que la celda esté libre, 
-    sin actividad especial y cumpliendo las restricciones (salvo en modo forzado).
-    
-    El parámetro respect_profesor_max controla la verificación del máximo diario del profesor.
+    Intenta asignar una hora individual para la asignatura comprobando que la celda esté libre,
+    sin actividad especial y cumpliendo las restricciones (salvo modo forzado).
     """
     for dia in DIAS:
         for hora in HORAS:
@@ -174,26 +174,57 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
                     continue
                 if not profesor_disponible_globalmente(profesor.id, dia, hora):
                     continue
-                horas_profesor = sum(
-                    1 for h in HORAS
-                    if horario_matriz[dia][h-1] is not None and
-                    horario_matriz[dia][h-1]['profesor_id'] == profesor.id
-                )
+                horas_profesor = sum(1 for h in HORAS if horario_matriz[dia][h-1] is not None and horario_matriz[dia][h-1]['profesor_id'] == profesor.id)
                 if respect_profesor_max and (horas_profesor >= profesor.max_horas_diarias):
                     continue
-                horario_matriz[dia][hora-1] = {
-                    'asignatura_id': asignatura.id,
-                    'profesor_id': profesor.id
-                }
+                horario_matriz[dia][hora-1] = {'asignatura_id': asignatura.id, 'profesor_id': profesor.id}
                 registrar_asignacion_global(profesor.id, dia, hora, clase_id)
                 asignaciones[asignatura.id] += 1
                 return True
     return False
 
+def diagnosticar_fallo(asignaturas, horas_requeridas, horas_asignadas, clase_id, horario_matriz):
+    """
+    Recorre las asignaturas con horas pendientes y, para cada celda libre (que no es actividad especial),
+    analiza las condiciones de cada profesor disponible (disponibilidad individual, asignación global y
+    si se excede el máximo de horas) para construir un diagnóstico detallado.
+    """
+    diagnostico = ""
+    for asignatura in asignaturas:
+        faltan = horas_requeridas[asignatura.id] - horas_asignadas[asignatura.id]
+        if faltan > 0:
+            diagnostico += f"Asignatura '{asignatura.nombre}' (ID {asignatura.id}): faltan {faltan} horas.\n"
+            diagnostico += "  Turnos disponibles:\n"
+            for dia in DIAS:
+                for idx, celda in enumerate(horario_matriz[dia]):
+                    hora = idx + 1
+                    if celda is None and not hay_actividad_especial(dia, hora):
+                        profesores_disp = get_profesores_by_asignatura(asignatura.id, clase_id)
+                        condiciones_turno = []
+                        for profesor in profesores_disp:
+                            conds = []
+                            if not Disponibilidad.es_disponible(profesor.id, dia, HORAS_TEXTO[hora]):
+                                conds.append("No disponible (horario personal)")
+                            if not profesor_disponible_globalmente(profesor.id, dia, hora):
+                                conds.append("Ya asignado en otro turno")
+                            horas_prof = sum(1 for h in HORAS if horario_matriz[dia][h-1] is not None and horario_matriz[dia][h-1]['profesor_id'] == profesor.id)
+                            if RESPECT_PROFESOR_MAX and horas_prof >= profesor.max_horas_diarias:
+                                conds.append("Alcanza máximo de horas")
+                            if conds:
+                                condiciones_turno.append(f"Profesor {profesor.id}: " + ", ".join(conds))
+                            else:
+                                condiciones_turno.append(f"Profesor {profesor.id}: DISPONIBLE")
+                        if condiciones_turno:
+                            diagnostico += f"    {dia} hora {hora}: " + "; ".join(condiciones_turno) + "\n"
+                        else:
+                            diagnostico += f"    {dia} hora {hora}: Ningún profesor disponible.\n"
+            diagnostico += "\n"
+    return diagnostico
+
 def save_schedule_to_db(clase_id, horario_matriz):
     """
-    Guarda en la base de datos la matriz generada, gestionando también las actividades especiales.
-    Se eliminan previamente los horarios existentes para la clase.
+    Guarda en la base de datos la matriz de horario generada, gestionando también las actividades especiales.
+    Antes se eliminan los registros existentes para la clase.
     """
     try:
         print(f"Iniciando guardado de horario para clase {clase_id}")
@@ -272,17 +303,18 @@ def save_schedule_to_db(clase_id, horario_matriz):
         print(f"Error al guardar el horario: {str(e)}")
         return False
 
-def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_assignment=False, respect_profesor_max=True):
+def generate_schedule(clase_id, reset_global=True, max_iteraciones=MAX_ITERACIONES, force_assignment=False, respect_profesor_max=RESPECT_PROFESOR_MAX):
     """
-    Genera el horario para una clase específica intentando asignar todas las horas semanales requeridas.
+    Genera el horario para una clase específica, intentando asignar todas las horas semanales requeridas.
     
     Parámetros:
       - reset_global: reinicia las asignaciones globales (True para la primera clase del grupo).
       - max_iteraciones: número máximo de iteraciones en la fase normal.
       - force_assignment: activa la fase forzada para asignar horas pendientes.
-      - respect_profesor_max: si True, se respeta el límite diario de horas que puede impartir un profesor.
+      - respect_profesor_max: si True, se respeta el límite de horas diarias del profesor.
     
-    Retorna un diccionario con 'success' y 'message'.
+    Retorna un diccionario con 'success' y 'message'. Si falla, incluye en 'diagnostico'
+    información detallada de los turnos en los que no se pudo asignar la asignatura.
     """
     try:
         clase = Clase.query.get(clase_id)
@@ -294,14 +326,14 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
         if not asignaturas:
             return {'success': False, 'message': 'No hay asignaturas disponibles'}
 
-        # Diccionarios para horas requeridas y asignadas
+        # Inicializa diccionarios de horas requeridas y asignadas (por cada asignatura)
         horas_requeridas = {a.id: a.horas_semanales for a in asignaturas}
         horas_asignadas = {a.id: 0 for a in asignaturas}
 
         if reset_global:
             reset_asignaciones_globales()
 
-        # Inicializar la matriz (un turno por cada hora de cada día)
+        # Crear la matriz de horario: una lista de celdas por cada día
         horario_matriz = {dia: [None] * len(HORAS) for dia in DIAS}
 
         iteracion = 0
@@ -309,7 +341,7 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
         while iteracion < max_iteraciones:
             iteracion += 1
             progreso = False
-            # Ordenar asignaturas según las horas restantes (de mayor a menor)
+            # Ordena las asignaturas de mayor a menor horas pendientes
             asignaturas_ordenadas = sorted(asignaturas, key=lambda a: horas_requeridas[a.id] - horas_asignadas[a.id], reverse=True)
             for asignatura in asignaturas_ordenadas:
                 restantes = horas_requeridas[asignatura.id] - horas_asignadas[asignatura.id]
@@ -319,15 +351,15 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
                 if not profesores_disponibles:
                     continue
 
-                # Intentar asignar en bloque si se requieren 2 o más horas
+                # Intenta asignar en bloque si se requieren 2 o más horas
                 if restantes >= 2:
                     dias_aleatorios = random.sample(DIAS, len(DIAS))
                     for dia in dias_aleatorios:
-                        horas_en_dia = sum(1 for celda in horario_matriz[dia]
-                                           if celda is not None and celda['asignatura_id'] == asignatura.id)
+                        horas_en_dia = sum(1 for celda in horario_matriz[dia] if celda is not None and celda['asignatura_id'] == asignatura.id)
                         if horas_en_dia + 2 > MAX_HORAS_DIARIAS_POR_ASIGNATURA:
                             continue
-                        if asignar_bloque(clase_id, asignatura, profesores_disponibles, horario_matriz, horas_asignadas, tamano_bloque=2, force=False, respect_profesor_max=respect_profesor_max):
+                        if asignar_bloque(clase_id, asignatura, profesores_disponibles, horario_matriz, horas_asignadas,
+                                          tamano_bloque=2, force=False, respect_profesor_max=respect_profesor_max):
                             progreso = True
                             break
                 # Asignación individual
@@ -335,15 +367,15 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
                 if restantes > 0:
                     dias_aleatorios = random.sample(DIAS, len(DIAS))
                     for dia in dias_aleatorios:
-                        horas_en_dia = sum(1 for celda in horario_matriz[dia]
-                                           if celda is not None and celda['asignatura_id'] == asignatura.id)
+                        horas_en_dia = sum(1 for celda in horario_matriz[dia] if celda is not None and celda['asignatura_id'] == asignatura.id)
                         if horas_en_dia >= MAX_HORAS_DIARIAS_POR_ASIGNATURA:
                             continue
                         horas_aleatorias = random.sample(HORAS, len(HORAS))
                         for hora in horas_aleatorias:
                             if horario_matriz[dia][hora-1] is not None or hay_actividad_especial(dia, hora):
                                 continue
-                            if asignar_hora_individual(clase_id, asignatura, profesores_disponibles, horario_matriz, horas_asignadas, force=False, respect_profesor_max=respect_profesor_max):
+                            if asignar_hora_individual(clase_id, asignatura, profesores_disponibles, horario_matriz, horas_asignadas,
+                                                       force=False, respect_profesor_max=respect_profesor_max):
                                 progreso = True
                                 break
                         if horas_requeridas[asignatura.id] - horas_asignadas[asignatura.id] <= 0:
@@ -356,7 +388,7 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
                 print(f"No hubo progreso en 10 iteraciones consecutivas (iteración {iteracion}).")
                 break
 
-        # Verificar si se completaron todas las horas requeridas
+        # Si la fase normal no asignó todas las horas, se procede a la fase forzada (si se activa)
         if not all(horas_asignadas[a.id] >= horas_requeridas[a.id] for a in asignaturas):
             print("Fase normal: No se asignaron todas las horas requeridas.")
             for a in asignaturas:
@@ -382,15 +414,10 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
                                             continue
                                         if not profesor_disponible_globalmente(profesor.id, dia, hora):
                                             continue
-                                        horas_profesor = sum(1 for h in HORAS
-                                                              if horario_matriz[dia][h-1] is not None and
-                                                              horario_matriz[dia][h-1]['profesor_id'] == profesor.id)
+                                        horas_profesor = sum(1 for h in HORAS if horario_matriz[dia][h-1] is not None and horario_matriz[dia][h-1]['profesor_id'] == profesor.id)
                                         if respect_profesor_max and (horas_profesor >= profesor.max_horas_diarias):
                                             continue
-                                        horario_matriz[dia][hora-1] = {
-                                            'asignatura_id': asignatura.id,
-                                            'profesor_id': profesor.id
-                                        }
+                                        horario_matriz[dia][hora-1] = {'asignatura_id': asignatura.id, 'profesor_id': profesor.id}
                                         registrar_asignacion_global(profesor.id, dia, hora, clase_id)
                                         horas_asignadas[asignatura.id] += 1
                                         asignado = True
@@ -403,8 +430,10 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
                             print(f"No se pudo forzar la asignación para la asignatura {asignatura.nombre} (faltan {restantes} horas).")
                             break
                         restantes = horas_requeridas[asignatura.id] - horas_asignadas[asignatura.id]
+            # Si aún quedan horas sin asignar, se genera un diagnóstico detallado
             if not all(horas_asignadas[a.id] >= horas_requeridas[a.id] for a in asignaturas):
-                return {'success': False, 'message': 'No se pudo asignar todas las horas requeridas para todas las asignaturas.'}
+                diag = diagnosticar_fallo(asignaturas, horas_requeridas, horas_asignadas, clase_id, horario_matriz)
+                return {'success': False, 'message': 'No se pudo asignar todas las horas requeridas para todas las asignaturas.', 'diagnostico': diag}
 
         if not save_schedule_to_db(clase_id, horario_matriz):
             print("Error al guardar el horario en la base de datos.")
@@ -418,17 +447,11 @@ def generate_schedule(clase_id, reset_global=True, max_iteraciones=100, force_as
         print(f"Error en generate_schedule para la clase {clase.nombre if clase else ''}: {str(e)}")
         return {'success': False, 'message': f'Error al generar el horario: {str(e)}'}
 
-def generate_schedules_for_group(nivel, curso, force_assignment=False, max_iteraciones=100, respect_profesor_max=True, max_retries=5):
+def generate_schedules_for_group(nivel, curso, force_assignment=False, max_iteraciones=MAX_ITERACIONES, respect_profesor_max=RESPECT_PROFESOR_MAX, max_retries=MAX_RETRIES):
     """
     Genera los horarios para todas las clases activas de un mismo nivel y curso.
-    Se realiza un único reset global y, para cada clase, si la generación falla, se 
-    realizan reintentos (hasta max_retries) eliminando las asignaciones de esa clase.
-    
-    Parámetros:
-      - force_assignment: activa la fase forzada en generate_schedule.
-      - max_iteraciones: número máximo de iteraciones a intentar en cada clase.
-      - respect_profesor_max: si True, se respeta el límite de horas diarias del profesor.
-      - max_retries: número máximo de reintentos en caso de fallo para cada clase.
+    Se realiza un reset global y, para cada clase, si la generación falla se reintenta (hasta max_retries)
+    eliminando las asignaciones previas de esa clase.
     """
     resultados = {}
     clases = Clase.query.filter_by(nivel=nivel, curso=curso, activa=True).all()
@@ -448,7 +471,8 @@ def generate_schedules_for_group(nivel, curso, force_assignment=False, max_itera
                 success = True
             else:
                 print(f" -- Fallo en intento {attempt + 1} para la clase {clase.nombre}: {result['message']}")
-                # Eliminar asignaciones de esta clase para reintentar
+                if 'diagnostico' in result:
+                    print(" -- Diagnóstico:\n" + result['diagnostico'])
                 remove_class_assignments(clase.id)
                 attempt += 1
         if not success:
