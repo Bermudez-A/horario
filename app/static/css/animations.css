@@ -27,6 +27,33 @@
     100% { background-position: 1000px 0; }
 }
 
+/* Animaciones específicas para Dashboard */
+@keyframes progressBarFill {
+    from { width: 0%; }
+    to { width: var(--target-width); }
+}
+
+@keyframes countNumber {
+    from { content: "0"; }
+    to { content: attr(data-target); }
+}
+
+@keyframes fadeInRotate {
+    from { 
+        opacity: 0; 
+        transform: rotate(-5deg) translateY(20px);
+    }
+    to { 
+        opacity: 1; 
+        transform: rotate(0deg) translateY(0);
+    }
+}
+
+@keyframes expandChart {
+    0% { transform: scaleY(0); opacity: 0; }
+    100% { transform: scaleY(1); opacity: 1; }
+}
+
 /* Clases para aplicar animaciones */
 .animate-fade-in {
     animation: fadeIn 0.5s ease forwards;
@@ -58,6 +85,35 @@
 .animate-stagger > *:nth-child(6) { animation-delay: 0.6s; }
 .animate-stagger > *:nth-child(7) { animation-delay: 0.7s; }
 .animate-stagger > *:nth-child(8) { animation-delay: 0.8s; }
+
+/* Animación para la barra de progreso del dashboard */
+.animate-progress-bar {
+    animation: progressBarFill 1.5s ease-out forwards;
+}
+
+/* Animación para los contadores numéricos */
+.animate-counter {
+    display: inline-block;
+    position: relative;
+    animation: fadeIn 0.5s forwards;
+    opacity: 0;
+}
+
+/* Animación para las tarjetas de dashboard */
+.stats-card.animate-slide-up {
+    transform-origin: center bottom;
+}
+
+/* Animación para elementos destacados */
+.animate-featured {
+    animation: fadeInRotate 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Animación para gráficos */
+.animate-chart {
+    animation: expandChart 1s ease-out forwards;
+    transform-origin: bottom;
+}
 
 /* Efectos de hover para tarjetas */
 .hover-lift {
@@ -318,4 +374,51 @@
 
 .animate-count-up {
     animation: countUp 0.5s ease-out forwards;
+}
+
+/* Animación para alertas y notificaciones */
+@keyframes slideInRight {
+    from { transform: translateX(50px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.alert-animate {
+    animation: slideInRight 0.5s forwards;
+}
+
+/* Animación para la lista de actividades */
+.activity-list li {
+    transition: background-color 0.3s ease;
+}
+
+.activity-list li:hover {
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+/* Animación para el indicador de carga */
+@keyframes bounceInDown {
+    0%, 60%, 75%, 90%, 100% {
+        transition-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    }
+    0% {
+        opacity: 0;
+        transform: translate3d(0, -3000px, 0);
+    }
+    60% {
+        opacity: 1;
+        transform: translate3d(0, 25px, 0);
+    }
+    75% {
+        transform: translate3d(0, -10px, 0);
+    }
+    90% {
+        transform: translate3d(0, 5px, 0);
+    }
+    100% {
+        transform: none;
+    }
+}
+
+.bounce-in-down {
+    animation: bounceInDown 1s forwards;
 } 

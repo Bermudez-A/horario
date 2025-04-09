@@ -10,6 +10,7 @@ from app.models.user import User
 from app.stats.charts import generate_carga_chart_data, generate_comparacion_chart_data
 from sqlalchemy import func
 import json
+import random
 
 @stats_bp.route('/')
 @login_required
@@ -27,9 +28,28 @@ def index():
     # Calcular porcentaje de avance global (simulado)
     porcentaje_avance = 65  # En un sistema real se calcularía desde la base de datos
     
+    # Calcular porcentajes de finalización por asignatura
+    asignaturas_progreso = []
+    for asignatura in asignaturas:
+        # En un sistema real, estos valores se calcularían desde la base de datos
+        # basándose en clases impartidas, horas registradas, etc.
+        horas_totales = asignatura.horas_semanales or 0
+        # Simulación - aquí deberías implementar la lógica real para calcular las horas cursadas
+        horas_cursadas = int(horas_totales * (random.randint(30, 90) / 100))  # Simulación: entre 30% y 90%
+        porcentaje = int((horas_cursadas / horas_totales) * 100) if horas_totales > 0 else 0
+        
+        asignaturas_progreso.append({
+            'nombre': asignatura.nombre,
+            'id': asignatura.id,
+            'horas_totales': horas_totales,
+            'horas_cursadas': horas_cursadas,
+            'porcentaje': porcentaje
+        })
+    
     return render_template('stats/index.html', 
                           title='Estadísticas',
                           asignaturas=asignaturas,
+                          asignaturas_progreso=asignaturas_progreso,
                           total_asignaturas=total_asignaturas,
                           total_profesores=total_profesores,
                           total_clases=total_clases,

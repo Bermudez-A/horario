@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Generar avatares para profesores
     generateAvatars();
+    
+    // Animaciones específicas para el dashboard estadístico
+    if (currentPath.includes('/stats')) {
+        initDashboardAnimations();
+    }
 });
 
 /**
@@ -264,4 +269,177 @@ function launchConfetti(container) {
             }, 1000);
         }, Math.random() * 500);
     }
+}
+
+/**
+ * Inicializa animaciones específicas para el dashboard estadístico
+ */
+function initDashboardAnimations() {
+    // Activar animaciones para barras de progreso
+    animateProgressBars();
+    
+    // Activar contadores numéricos
+    animateCounters();
+    
+    // Animar alertas
+    animateAlerts();
+    
+    // Inicializar gráficos con animación
+    initDashboardCharts();
+}
+
+/**
+ * Anima las barras de progreso en el dashboard
+ */
+function animateProgressBars() {
+    const progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(bar => {
+        const targetWidth = bar.getAttribute('data-progress') || '100';
+        
+        // Usar CSS Custom Properties para la animación
+        bar.style.setProperty('--target-width', targetWidth + '%');
+        
+        // Agregar clase para iniciar la animación con un ligero retraso
+        setTimeout(() => {
+            bar.classList.add('animate-progress-bar');
+        }, 300);
+    });
+}
+
+/**
+ * Anima los contadores numéricos incrementando gradualmente
+ */
+function animateCounters() {
+    const counters = document.querySelectorAll('.animate-counter');
+    
+    counters.forEach(counter => {
+        const target = parseInt(counter.textContent, 10);
+        const duration = 1500; // Duración de la animación en ms
+        const frameRate = 30; // Frames por segundo
+        const frameDuration = 1000 / frameRate;
+        const totalFrames = duration / frameDuration;
+        
+        // Guardar el valor original para que podamos restaurarlo si es necesario
+        counter.setAttribute('data-target', counter.textContent);
+        
+        // Empezar desde 0
+        counter.textContent = '0';
+        counter.style.opacity = '1';
+        
+        let currentFrame = 0;
+        
+        // Crear intervalo para incrementar el contador
+        const interval = setInterval(() => {
+            currentFrame++;
+            
+            // Cálculo suavizado del progreso usando easeOutQuad
+            const progress = 1 - Math.pow(1 - currentFrame / totalFrames, 2);
+            const currentCount = Math.round(progress * target);
+            
+            counter.textContent = currentCount;
+            
+            if (currentFrame === totalFrames) {
+                clearInterval(interval);
+                counter.textContent = target;
+            }
+        }, frameDuration);
+    });
+}
+
+/**
+ * Anima las alertas en el dashboard
+ */
+function animateAlerts() {
+    const alertsContainer = document.getElementById('alertsContainer');
+    if (!alertsContainer) return;
+    
+    const alerts = alertsContainer.querySelectorAll('.alert');
+    
+    alerts.forEach((alert, index) => {
+        alert.style.opacity = '0';
+        alert.style.transform = 'translateX(50px)';
+        
+        setTimeout(() => {
+            alert.classList.add('alert-animate');
+        }, 300 + (index * 150));
+    });
+}
+
+/**
+ * Inicializa los gráficos del dashboard con animaciones
+ */
+function initDashboardCharts() {
+    // Comprobar si Chart.js está disponible
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js no está disponible');
+        return;
+    }
+    
+    // Gráfico de evolución temporal
+    const evolucionCtx = document.getElementById('evolucionChart');
+    if (evolucionCtx) {
+        // Datos de ejemplo para el gráfico
+        const data = {
+            labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+            datasets: [{
+                label: 'Progreso Académico',
+                data: [30, 45, 60, 70, 85, 95],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+        
+        // Opciones de animación
+        const config = {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        };
+        
+        // Crear el gráfico con una breve pausa para permitir que la página cargue
+        setTimeout(() => {
+            new Chart(evolucionCtx, config);
+            
+            // Añadir clase de animación al contenedor
+            evolucionCtx.closest('.chart-container').classList.add('animate-chart');
+        }, 500);
+    }
+}
+
+/**
+ * Lanza un confeti para celebrar un logro o estadística destacada
+ */
+function celebrateAchievement(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    // Primero destacar el elemento
+    element.classList.add('animate-pulse');
+    
+    // Luego lanzar confeti centrado en ese elemento
+    launchConfetti(element);
+    
+    // Quitar la clase después de la animación
+    setTimeout(() => {
+        element.classList.remove('animate-pulse');
+    }, 3000);
 } 

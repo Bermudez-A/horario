@@ -126,6 +126,8 @@ footer a:hover {
     height: 100%;
     border-radius: 1rem;
     overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .stats-card .card-header {
@@ -138,6 +140,191 @@ footer a:hover {
     position: relative;
     height: 300px;
     width: 100%;
+}
+
+/* Estilos mejorados para el Dashboard Estadístico */
+.stats-banner {
+    background: linear-gradient(to right, #2c3e50, #3498db);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('/static/img/pattern-dot.png');
+    opacity: 0.1;
+}
+
+.banner-content {
+    position: relative;
+    z-index: 2;
+}
+
+.stats-summary-card {
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.stats-icon-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.trend-indicator {
+    font-size: 0.8rem;
+}
+
+.card-header-custom {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.card-header-icon {
+    position: absolute;
+    top: -15px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.asignaturas-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.asignaturas-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.asignaturas-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(52, 152, 219, 0.2);
+    border-radius: 3px;
+}
+
+.asignaturas-scroll::-webkit-scrollbar-track {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.equal-height-cards {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.equal-height-cards > [class*='col-'] {
+    display: flex;
+    flex-direction: column;
+}
+
+.filters-bar {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.btn-gradient-success {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+    border: none;
+    color: white;
+}
+
+.btn-gradient-info {
+    background: linear-gradient(45deg, #2980b9, #3498db);
+    border: none;
+    color: white;
+}
+
+.btn-gradient-success:hover,
+.btn-gradient-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    color: white;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(45deg, #2980b9, #3498db);
+}
+
+.comparison-header {
+    background: linear-gradient(45deg, #8e44ad, #9b59b6);
+}
+
+.activity-list .activity-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.feature-image-wrapper {
+    margin: 0 auto;
+    text-align: center;
+}
+
+.section-title {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.section-title span {
+    position: relative;
+    display: inline-block;
+}
+
+.hover-lift-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Mejora del estilo responsive */
+@media (max-width: 768px) {
+    .stats-summary-card {
+        margin-bottom: 1rem;
+    }
+    
+    .banner-actions {
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .banner-actions .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-icon-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+    
+    .filters-bar .row {
+        margin-bottom: 0.5rem;
+    }
 }
 
 /* Estilos para formularios */
@@ -634,13 +821,6 @@ body.admin-layout {
     padding: 1.5rem;
 }
 
-.chart-container {
-    position: relative;
-    height: 300px;
-    width: 100%;
-    margin-bottom: 1.5rem;
-}
-
 .stats-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -862,4 +1042,64 @@ body.admin-layout {
     .chart-container {
         height: 250px !important;
     }
+}
+
+/* Estilos para el reporte de horas completadas */
+.annual-stats {
+    font-size: 0.95rem;
+}
+
+.stat-row {
+    transition: background-color 0.2s;
+}
+
+.stat-row:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.subject-rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background-color: rgba(0, 0, 0, 0.1);
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.trimester-list .list-group-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-left: none;
+    border-right: none;
+}
+
+.trimester-list .list-group-item:hover {
+    transform: translateX(3px);
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Gradientes para los headers */
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #4e73df 0%, #224abe 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(45deg, #1cc88a 0%, #13855c 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(45deg, #36b9cc 0%, #258391 100%);
+}
+
+.btn-gradient-success {
+    background: linear-gradient(45deg, #1cc88a 0%, #13855c 100%);
+    color: white;
+    border: none;
+}
+
+.btn-gradient-info {
+    background: linear-gradient(45deg, #36b9cc 0%, #258391 100%);
+    color: white;
+    border: none;
 }

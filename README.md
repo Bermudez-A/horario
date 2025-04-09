@@ -1,127 +1,104 @@
-# Generador de Horarios
+# Sistema de Gestión de Horarios Escolares
 
-Aplicación web para la generación automática de horarios escolares. Diseñada para centros educativos que necesitan planificar eficientemente horarios de clases, profesores y aulas.
+Aplicación web desarrollada en Flask para la creación y gestión de horarios escolares, con funcionalidades avanzadas de visualización estadística y análisis de carga docente.
 
-## Características Principales
+## Características principales
 
-- **Generación automática de horarios**: Algoritmo voraz que respeta restricciones de disponibilidad y preferencias.
-- **Visualización intuitiva**: Interfaz visual para ver y editar horarios con código de colores.
-- **Gestión de disponibilidad**: Los profesores pueden registrar sus horas disponibles e indisponibles.
-- **Estadísticas detalladas**: Análisis de carga lectiva por asignaturas, profesores y clases.
-- **Múltiples roles**: Administradores, profesores y alumnos con diferentes niveles de acceso.
-- **Diseño modular**: Arquitectura escalable basada en blueprints de Flask.
+- Gestión de profesores, asignaturas y clases
+- Generación y asignación de horarios
+- Visualización de estadísticas y métricas
+- Análisis de carga docente
+- Exportación de datos a PDF y Excel
 
-## Tecnologías
+## Instalación y configuración
 
-- **Backend**: Python con Flask
-- **Base de datos**: PostgreSQL
-- **ORM**: SQLAlchemy
-- **Frontend**: HTML, CSS, JavaScript, Bootstrap 5
-- **Gráficos**: Chart.js
-- **Iconos**: Font Awesome
+### Requisitos previos
 
-## Requisitos
+- Python 3.9 o superior
+- pip (gestor de paquetes de Python)
 
-- Python 3.8+
-- PostgreSQL 12+
-- Dependencias listadas en `requirements.txt`
+### Instalación
 
-## Instalación
-
-1. Clonar el repositorio:
+1. Clona este repositorio:
    ```
-   git clone https://github.com/tu-usuario/generador-horarios.git
-   cd generador-horarios
+   git clone <url-del-repositorio>
+   cd horario
    ```
 
-2. Crear y activar un entorno virtual:
+2. Crea un entorno virtual:
    ```
+   # En Windows
    python -m venv venv
-   source venv/bin/activate  # En Windows: venv\Scripts\activate
+   venv\Scripts\activate
+
+   # En macOS/Linux
+   python3 -m venv venv
+   source venv/bin/activate
    ```
 
-3. Instalar dependencias:
+3. Instala las dependencias:
    ```
    pip install -r requirements.txt
    ```
 
-4. Configurar variables de entorno:
-   - Crear un archivo `.env` basado en el ejemplo
-   - Configurar la conexión a PostgreSQL y la clave secreta
+4. Configura las variables de entorno:
+   - Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+     ```
+     FLASK_APP=app.py
+     FLASK_ENV=development
+     SECRET_KEY=tu_clave_secreta_aqui
+     ```
 
-5. Inicializar la base de datos:
-   ```
-   flask db init
-   flask db migrate -m "Initial migration"
-   flask db upgrade
-   ```
+### Ejecución de la aplicación
 
-6. Crear usuario administrador inicial:
+1. Activa el entorno virtual (si no está activado):
    ```
-   flask shell
-   >>> from app import db
-   >>> from app.models.user import User
-   >>> user = User(username="admin", email="admin@example.com", nombre="Admin", apellido="Usuario", rol="admin")
-   >>> user.set_password("admin123")
-   >>> db.session.add(user)
-   >>> db.session.commit()
-   >>> exit()
+   # En Windows
+   venv\Scripts\activate
+
+   # En macOS/Linux
+   source venv/bin/activate
    ```
 
-7. Ejecutar la aplicación:
+2. Inicia la aplicación:
    ```
-   flask run
+   python app.py
    ```
 
-## Estructura del Proyecto
+3. Accede a la aplicación en tu navegador web:
+   ```
+   http://localhost:5000
+   ```
+
+## Estructura del proyecto
 
 ```
-generador_horarios/
+horario/
 │
-├── app/                         # Lógica principal
-│   ├── __init__.py              # Inicializa Flask y blueprints
-│   ├── config.py                # Configuración
-│   │
-│   ├── auth/                    # Módulo de autenticación
-│   ├── admin/                   # Panel de administración
-│   ├── schedules/               # Módulo de horarios
-│   │   └── generator.py         # Algoritmo de generación
-│   ├── stats/                   # Módulo de estadísticas
-│   │
-│   ├── models/                  # Modelos de BD
-│   ├── templates/               # Plantillas HTML
-│   └── static/                  # Archivos estáticos
+├── app/                # Paquete principal de la aplicación
+│   ├── admin/          # Módulo para administración
+│   ├── auth/           # Módulo para autenticación
+│   ├── models/         # Modelos de la base de datos
+│   ├── stats/          # Módulo para estadísticas
+│   ├── static/         # Archivos estáticos (CSS, JS, imágenes)
+│   └── templates/      # Plantillas HTML
 │
-├── migrations/                  # Migraciones de BD
-├── venv/                        # Entorno virtual
-├── .env                         # Variables de entorno
-├── requirements.txt             # Dependencias
-├── run.py                       # Punto de entrada
-└── README.md                    # Esta documentación
+├── migrations/         # Migraciones de la base de datos
+├── venv/               # Entorno virtual (ignorado en git)
+├── .env                # Variables de entorno (ignorado en git)
+├── .gitignore          # Archivos y directorios ignorados por git
+├── app.py              # Punto de entrada de la aplicación
+└── requirements.txt    # Dependencias del proyecto
 ```
-
-## Algoritmo de Generación
-
-El sistema utiliza un algoritmo voraz (greedy) para la generación de horarios que:
-
-1. Prioriza asignaturas con mayor número de horas semanales
-2. Respeta la disponibilidad de profesores
-3. Intenta mantener bloques continuos para asignaturas que lo requieren
-4. Balancea la carga diaria de cada profesor
-5. Asegura que cada asignatura sea impartida por el mismo profesor en una clase
-
-## Capturas de Pantalla
-
-*(Aquí irían capturas de pantalla de la aplicación cuando estén disponibles)*
 
 ## Contribución
 
-1. Hacer fork del repositorio
-2. Crear una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`)
-3. Hacer commit de tus cambios (`git commit -am 'Añadir nueva funcionalidad'`)
-4. Hacer push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Crear un Pull Request
+1. Haz un fork del repositorio
+2. Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`)
+3. Haz commit de tus cambios (`git commit -am 'Añadir nueva funcionalidad'`)
+4. Haz push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crea un nuevo Pull Request
 
 ## Licencia
 
-Este proyecto está licenciado bajo [MIT License](LICENSE). 
+Este proyecto está licenciado bajo la Licencia MIT - ver el archivo LICENSE para más detalles. 

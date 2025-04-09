@@ -4,22 +4,51 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Banner principal mejorado -->
-    <div class="stats-banner bg-gradient-primary text-white p-4 mb-4 rounded-xl shadow-lg animate-fade-in">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <h1 class="display-5 mb-2 fw-bold">
-                    <i class="fas fa-chart-line me-2"></i>Dashboard Estadístico
-                </h1>
-                <p class="lead mb-0 opacity-90">Visualiza y analiza los datos clave del centro educativo en tiempo real</p>
-            </div>
-            <div class="col-lg-5 text-end d-none d-lg-block">
-                <div class="banner-graphic">
-                    <div class="banner-graphic-circle bg-white bg-opacity-10"></div>
-                    <div class="banner-graphic-circle bg-white bg-opacity-20" style="animation-delay: 0.5s"></div>
-                    <i class="fas fa-analytics banner-icon text-white"></i>
+    <!-- Banner principal mejorado con estilo más moderno -->
+    <div class="stats-banner rounded-xl animate-fade-in mb-4">
+        <div class="banner-content p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <h1 class="display-5 mb-2 fw-bold text-white">
+                        <i class="fas fa-chart-line me-2"></i>Dashboard Estadístico
+                    </h1>
+                    <p class="lead mb-0 text-white opacity-90">Visualiza y analiza los datos clave del centro educativo en tiempo real</p>
+                </div>
+                <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
+                    <div class="banner-actions">
+                        <button class="btn btn-light me-2" id="exportPDFBtn">
+                            <i class="fas fa-file-pdf me-2"></i> Exportar a PDF
+                        </button>
+                        <button class="btn btn-light me-2" id="exportExcelBtn">
+                            <i class="fas fa-file-excel me-2"></i> Exportar a Excel
+                        </button>
+                        <button class="btn btn-light" id="refreshDataBtn">
+                            <i class="fas fa-sync-alt me-2"></i> Actualizar datos
+                        </button>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Alertas y notificaciones -->
+    <div id="alertsContainer" class="mb-4">
+        <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center rounded-xl shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 fs-5"></i>
+            <div>
+                <strong>Atención:</strong> La distribución de horas para el profesor Martínez supera el máximo recomendado.
+                <a href="{{ url_for('stats.carga_profesores') }}" class="alert-link">Ver detalles</a>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <div class="alert alert-info alert-dismissible fade show d-flex align-items-center rounded-xl shadow-sm mt-2" role="alert">
+            <i class="fas fa-info-circle me-2 fs-5"></i>
+            <div>
+                <strong>Sugerencia:</strong> Reorganice la carga de PROGRAMACIÓN para balancear mejor las horas.
+                <a href="#" class="alert-link">Ver recomendaciones</a>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     </div>
 
@@ -41,6 +70,12 @@
                         <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
                     </div>
                 </div>
+                <!-- Indicador de tendencia -->
+                <div class="trend-indicator mt-2 text-end">
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i> +2 desde el último periodo
+                    </small>
+                </div>
             </div>
         </div>
         
@@ -60,6 +95,12 @@
                         <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
                     </div>
                 </div>
+                <!-- Indicador de tendencia -->
+                <div class="trend-indicator mt-2 text-end">
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i> +1 desde el último periodo
+                    </small>
+                </div>
             </div>
         </div>
         
@@ -78,6 +119,12 @@
                     <div class="progress" style="height: 6px;">
                         <div class="progress-bar bg-info" role="progressbar" style="width: 100%"></div>
                     </div>
+                </div>
+                <!-- Indicador de tendencia -->
+                <div class="trend-indicator mt-2 text-end">
+                    <small class="text-muted">
+                        <i class="fas fa-equals me-1"></i> Sin cambios
+                    </small>
                 </div>
             </div>
         </div>
@@ -108,6 +155,47 @@
                         </div>
                     </div>
                 </div>
+                <!-- Indicador de tendencia -->
+                <div class="trend-indicator mt-2 text-end">
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i> +5% desde la semana anterior
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de datos -->
+    <div class="filters-bar bg-light p-3 rounded-xl shadow-sm mb-4 animate-fade-in">
+        <div class="row align-items-center">
+            <div class="col-lg-1">
+                <label class="mb-0 fw-bold">Filtros:</label>
+            </div>
+            <div class="col-lg-3 col-md-4 mb-2 mb-md-0">
+                <select class="form-select form-select-sm" id="departamentoFilter">
+                    <option value="todos">Todos los departamentos</option>
+                    <option value="informatica">Informática</option>
+                    <option value="matematicas">Matemáticas</option>
+                    <option value="ciencias">Ciencias</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-4 mb-2 mb-md-0">
+                <select class="form-select form-select-sm" id="periodoFilter">
+                    <option value="actual">Periodo actual</option>
+                    <option value="anterior">Periodo anterior</option>
+                    <option value="anual">Visión anual</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-4">
+                <select class="form-select form-select-sm" id="visualizacionFilter">
+                    <option value="detallado">Visualización detallada</option>
+                    <option value="resumido">Visualización resumida</option>
+                </select>
+            </div>
+            <div class="col-lg-2 text-end">
+                <button class="btn btn-sm btn-primary" id="applyFiltersBtn">
+                    <i class="fas fa-filter me-1"></i> Aplicar
+                </button>
             </div>
         </div>
     </div>
@@ -120,11 +208,8 @@
     <div class="row equal-height-cards">
         <div class="col-lg-4 mb-4">
             <div class="stats-card bg-white shadow-smooth rounded-xl h-100 animate-slide-up overflow-hidden">
-                <div class="card-header-custom bg-gradient-primary text-white py-3 px-4 position-relative">
-                    <div class="card-header-icon">
-                        <i class="fas fa-chart-pie fa-lg"></i>
-                    </div>
-                    <h5 class="mb-0 fw-bold">Progreso de Asignaturas</h5>
+                <div class="card-header-custom bg-gradient-primary text-white py-3 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-pie me-2"></i> Progreso de Asignaturas</h5>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="text-muted mb-3">Visualiza el progreso detallado de cada asignatura, incluyendo horas impartidas, restantes y porcentaje cursado.</p>
@@ -151,11 +236,8 @@
         
         <div class="col-lg-4 mb-4">
             <div class="stats-card bg-white shadow-smooth rounded-xl h-100 animate-slide-up overflow-hidden" style="animation-delay: 0.1s;">
-                <div class="card-header-custom bg-gradient-success text-white py-3 px-4 position-relative">
-                    <div class="card-header-icon">
-                        <i class="fas fa-user-graduate fa-lg"></i>
-                    </div>
-                    <h5 class="mb-0 fw-bold">Carga de Profesores</h5>
+                <div class="card-header-custom bg-gradient-success text-white py-3 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-user-graduate me-2"></i> Carga de Profesores</h5>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="text-muted mb-3">Analiza la distribución de horas y asignaturas entre el profesorado.</p>
@@ -183,11 +265,8 @@
         
         <div class="col-lg-4 mb-4">
             <div class="stats-card bg-white shadow-smooth rounded-xl h-100 animate-slide-up overflow-hidden" style="animation-delay: 0.2s;">
-                <div class="card-header-custom bg-gradient-info text-white py-3 px-4 position-relative">
-                    <div class="card-header-icon">
-                        <i class="fas fa-calendar-week fa-lg"></i>
-                    </div>
-                    <h5 class="mb-0 fw-bold">Comparativa por Clases</h5>
+                <div class="card-header-custom bg-gradient-info text-white py-3 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-week me-2"></i> Comparativa por Clases</h5>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="text-muted mb-3">Compara el avance y cumplimiento del programa entre diferentes clases y grupos.</p>
@@ -213,117 +292,1003 @@
             </div>
         </div>
     </div>
+
+   
+    <!-- Reporte de Horas Completadas -->
+    <div class="row mt-4 mb-2">
+        <div class="col-12">
+            <h2 class="mb-3 animate-fade-in fw-bold section-title">
+                <span class="border-bottom border-2 border-primary pb-1">Reporte de Horas Completadas</span>
+            </h2>
+        </div>
+    </div>
+    <div class="row">
+        <!-- Resumen anual de horas -->
+        <div class="col-lg-6 mb-4">
+            <div class="stats-card bg-white shadow-smooth rounded-xl animate-slide-up h-100">
+                <div class="card-header-custom bg-gradient-primary text-white py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2"></i> Resumen Anual</h5>
+                        <span class="badge bg-light text-dark">{{ current_year }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="annual-stats p-3">
+                        <div class="stat-row d-flex justify-content-between align-items-center p-2 border-bottom">
+                            <div class="stat-label fw-bold">Horas Totales Planificadas:</div>
+                            <div class="stat-value fs-5 text-primary">{{ total_horas_planificadas|default('1200') }}</div>
+                        </div>
+                        <div class="stat-row d-flex justify-content-between align-items-center p-2 border-bottom">
+                            <div class="stat-label fw-bold">Horas Completadas:</div>
+                            <div class="stat-value fs-5 text-success">{{ total_horas_completadas|default('840') }}</div>
+                        </div>
+                        <div class="stat-row d-flex justify-content-between align-items-center p-2 border-bottom">
+                            <div class="stat-label fw-bold">Horas Pendientes:</div>
+                            <div class="stat-value fs-5 text-warning">{{ total_horas_pendientes|default('360') }}</div>
+                        </div>
+                        <div class="stat-row d-flex justify-content-between align-items-center p-2 mt-2">
+                            <div class="stat-label fw-bold">Porcentaje Completado:</div>
+                            <div class="stat-value fs-5 text-primary">{{ porcentaje_completado|default('70') }}%</div>
+                        </div>
+                    </div>
+                    <div class="progress mt-3" style="height: 10px;">
+                        <div class="progress-bar bg-success" 
+                             role="progressbar" 
+                             style="width: {{ porcentaje_completado|default('70') }}%" 
+                             aria-valuenow="{{ porcentaje_completado|default('70') }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top 5 asignaturas -->
+        <div class="col-lg-6 mb-4">
+            <div class="stats-card bg-white shadow-smooth rounded-xl animate-slide-up h-100" style="animation-delay: 0.2s;">
+                <div class="card-header-custom bg-gradient-info text-white py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-star me-2"></i> Top Asignaturas</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="topAsignaturasDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="topAsignaturasDropdown">
+                                <li><a class="dropdown-item" href="#">Por horas totales</a></li>
+                                <li><a class="dropdown-item" href="#">Por porcentaje completado</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Asignatura</th>
+                                    <th class="text-center">Horas</th>
+                                    <th class="text-center">% Completado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="subject-rank rounded-circle me-2">1</span>
+                                            <span>Programación</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">150</td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 85%"></div>
+                                            </div>
+                                            <span>85%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="subject-rank rounded-circle me-2">2</span>
+                                            <span>Bases de Datos</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">120</td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 80%"></div>
+                                            </div>
+                                            <span>80%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="subject-rank rounded-circle me-2">3</span>
+                                            <span>Sistemas</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">110</td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                <div class="progress-bar bg-info" role="progressbar" style="width: 75%"></div>
+                                            </div>
+                                            <span>75%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="subject-rank rounded-circle me-2">4</span>
+                                            <span>Redes</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">100</td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                <div class="progress-bar bg-warning" role="progressbar" style="width: 65%"></div>
+                                            </div>
+                                            <span>65%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="subject-rank rounded-circle me-2">5</span>
+                                            <span>FOL</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">80</td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                <div class="progress-bar bg-warning" role="progressbar" style="width: 60%"></div>
+                                            </div>
+                                            <span>60%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-center py-2">
+                    <a href="#" class="text-decoration-none">Ver todas las asignaturas</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nuevas secciones para el dashboard rediseñado -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h2 class="mb-3 animate-fade-in fw-bold section-title">
+                <span class="border-bottom border-2 border-primary pb-1">Disponibilidad de Profesores</span>
+            </h2>
+        </div>
+    </div>
+
+    <!-- Tabla de disponibilidad semanal de profesores -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="stats-card bg-white shadow-smooth rounded-xl animate-slide-up overflow-hidden">
+                <div class="card-header-custom bg-gradient-primary text-white py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2"></i> Disponibilidad Semanal</h5>
+                        <div>
+                            <button class="btn btn-sm btn-light" id="exportScheduleBtn">
+                                <i class="fas fa-file-export me-1"></i> Exportar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover availability-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Profesor</th>
+                                    <th class="text-center">Lunes</th>
+                                    <th class="text-center">Martes</th>
+                                    <th class="text-center">Miércoles</th>
+                                    <th class="text-center">Jueves</th>
+                                    <th class="text-center">Viernes</th>
+                                    <th class="text-center">Horas Asignadas</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="fw-medium">García, María</span></td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell partial" data-bs-toggle="tooltip" title="Parcial: 10:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell unavailable" data-bs-toggle="tooltip" title="No disponible"></div>
+                                    </td>
+                                    <td class="text-center fw-bold">18h</td>
+                                    <td class="text-center"><span class="badge bg-success">Completo</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="fw-medium">Martínez, Juan</span></td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell unavailable" data-bs-toggle="tooltip" title="No disponible"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell unavailable" data-bs-toggle="tooltip" title="No disponible"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center fw-bold">15h</td>
+                                    <td class="text-center"><span class="badge bg-warning">Parcial</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="fw-medium">López, Carlos</span></td>
+                                    <td class="text-center">
+                                        <div class="availability-cell partial" data-bs-toggle="tooltip" title="Parcial: 10:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell partial" data-bs-toggle="tooltip" title="Parcial: 10:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center fw-bold">20h</td>
+                                    <td class="text-center"><span class="badge bg-success">Completo</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="fw-medium">Sánchez, Ana</span></td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="availability-cell available" data-bs-toggle="tooltip" title="Disponible: 8:00 - 14:00"></div>
+                                    </td>
+                                    <td class="text-center fw-bold">22h</td>
+                                    <td class="text-center"><span class="badge bg-danger">Sobrecarga</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-3">
+                        <a href="#" class="btn btn-primary btn-sm">
+                            <i class="fas fa-users me-1"></i> Ver todos los profesores
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avance Curricular y Horas Restantes -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h2 class="mb-3 animate-fade-in fw-bold section-title">
+                <span class="border-bottom border-2 border-primary pb-1">Avance Curricular y Horas Restantes</span>
+            </h2>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Gráfico de avance curricular -->
+        <div class="col-lg-7 mb-4">
+            <div class="stats-card bg-white shadow-smooth rounded-xl animate-slide-up overflow-hidden h-100">
+                <div class="card-header-custom bg-gradient-primary text-white py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-chart-bar me-2"></i> Avance Curricular por Asignatura</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="avanceCurricularDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i> Filtrar
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="avanceCurricularDropdown">
+                                <li><a class="dropdown-item" href="#">Todas las asignaturas</a></li>
+                                <li><a class="dropdown-item" href="#">Por departamento</a></li>
+                                <li><a class="dropdown-item" href="#">Por nivel educativo</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="avanceCurricularChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contadores de horas restantes -->
+        <div class="col-lg-5 mb-4">
+            <div class="stats-card bg-white shadow-smooth rounded-xl animate-slide-up overflow-hidden h-100">
+                <div class="card-header-custom bg-gradient-info text-white py-3 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-hourglass-half me-2"></i> Horas Restantes por Asignatura</h5>
+                </div>
+                <div class="card-body">
+                    <div class="horas-restantes-container">
+                        <div class="horas-restantes-item mb-3 p-3 rounded-lg bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Programación</h6>
+                                <small class="text-muted">Total: 150h</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-3" style="width: 100px; height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 15%" aria-valuenow="15" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="hours-counter fw-bold fs-5" data-count="22">22h</span>
+                            </div>
+                        </div>
+                        
+                        <div class="horas-restantes-item mb-3 p-3 rounded-lg bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Bases de Datos</h6>
+                                <small class="text-muted">Total: 120h</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-3" style="width: 100px; height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 20%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="hours-counter fw-bold fs-5" data-count="24">24h</span>
+                            </div>
+                        </div>
+                        
+                        <div class="horas-restantes-item mb-3 p-3 rounded-lg bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Sistemas</h6>
+                                <small class="text-muted">Total: 110h</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-3" style="width: 100px; height: 8px;">
+                                    <div class="progress-bar bg-warning" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="hours-counter fw-bold fs-5" data-count="28">28h</span>
+                            </div>
+                        </div>
+                        
+                        <div class="horas-restantes-item mb-3 p-3 rounded-lg bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Redes</h6>
+                                <small class="text-muted">Total: 100h</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-3" style="width: 100px; height: 8px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" style="width: 35%" aria-valuenow="35" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="hours-counter fw-bold fs-5" data-count="35">35h</span>
+                            </div>
+                        </div>
+                        
+                        <div class="horas-restantes-item mb-3 p-3 rounded-lg bg-light d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">FOL</h6>
+                                <small class="text-muted">Total: 80h</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="progress me-3" style="width: 100px; height: 8px;">
+                                    <div class="progress-bar bg-info" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <span class="hours-counter fw-bold fs-5" data-count="32">32h</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-clock me-1"></i> Ver todas las asignaturas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Spinner de carga para acciones -->
+<div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="spinner-container">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <div class="spinner-text text-light mt-2" id="loadingText">Procesando...</div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<!-- Incluir librerías necesarias para exportación -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<!-- Chart.js para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Establecer el ancho de la barra de progreso
-    var progressBar = document.getElementById('porcentajeAvanceBar');
-    if (progressBar) {
-        setTimeout(function() {
-            progressBar.style.width = progressBar.getAttribute('data-progress') + '%';
-        }, 300); // Retrasamos ligeramente para una animación suave
+    // Inicializar elementos visuales y comportamientos
+    initCharts();
+    initInteractions();
+    setupExportButtons();
+    setupHoursCounter();
+    setupDarkModeToggle();
+    
+    // Función para inicializar gráficos
+    function initCharts() {
+        // Inicializar gráfico de avance curricular
+        const avanceCurricularCtx = document.getElementById('avanceCurricularChart').getContext('2d');
+        const avanceCurricularChart = new Chart(avanceCurricularCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Programación', 'Bases de Datos', 'Sistemas', 'Redes', 'FOL'],
+                datasets: [
+                    {
+                        label: 'Horas Completadas',
+                        data: [128, 96, 82, 65, 48],
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Horas Totales',
+                        data: [150, 120, 110, 100, 80],
+                        backgroundColor: 'rgba(201, 203, 207, 0.2)',
+                        borderColor: 'rgba(201, 203, 207, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.raw || 0;
+                                return `${label}: ${value}h`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Horas'
+                        }
+                    }
+                }
+            }
+        });
     }
     
-    // Añadir transición suave a todos los elementos con hover
-    const hoverElements = document.querySelectorAll('.hover-lift, .hover-lift-sm');
-    hoverElements.forEach(element => {
-        element.style.transition = 'all 0.3s ease';
-    });
-    
-    // Animar contadores
-    const counters = document.querySelectorAll('.animate-counter');
-    counters.forEach(counter => {
-        const target = parseInt(counter.innerText, 10);
-        let count = 0;
-        const duration = 1500; // ms
-        const frameDuration = 1000 / 60; // 60fps
-        const totalFrames = Math.round(duration / frameDuration);
-        const increment = target / totalFrames;
+    // Inicializar contador de horas
+    function setupHoursCounter() {
+        const counters = document.querySelectorAll('.hours-counter');
         
-        const interval = setInterval(() => {
-            count += increment;
-            if (count >= target) {
-                counter.innerText = target;
-                clearInterval(interval);
-            } else {
-                counter.innerText = Math.floor(count);
-            }
-        }, frameDuration);
-    });
+        counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-count'));
+            const duration = 2000; // ms
+            const frameDuration = 1000/60; // 60fps
+            const totalFrames = Math.round(duration / frameDuration);
+            const initialText = counter.innerText;
+            
+            // Animación al hacer scroll hasta el elemento
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        let frame = 0;
+                        let currentCount = 0;
+                        
+                        const animate = () => {
+                            frame++;
+                            const progress = frame / totalFrames;
+                            currentCount = Math.round(progress * target);
+                            counter.innerText = `${currentCount}h`;
+                            
+                            if (frame < totalFrames) {
+                                requestAnimationFrame(animate);
+                            } else {
+                                counter.innerText = `${target}h`;
+                            }
+                        };
+                        
+                        requestAnimationFrame(animate);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            observer.observe(counter);
+        });
+    }
     
-    // Hacer que las métricas sean interactivas
-    const metricCards = document.querySelectorAll('.stats-summary-card');
-    metricCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
+    // Configurar interacciones
+    function initInteractions() {
+        // Agregar efecto hover a elementos
+        const hoverElements = document.querySelectorAll('.hover-lift, .hover-lift-sm');
+        hoverElements.forEach(element => {
+            element.style.transition = 'all 0.3s ease';
         });
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
+        
+        // Inicializar tooltips de Bootstrap
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
         });
-    });
+        
+        // Inicializar animación de barra de avance
+        const avanceBar = document.getElementById('porcentajeAvanceBar');
+        if (avanceBar) {
+            const progress = avanceBar.getAttribute('data-progress');
+            setTimeout(() => {
+                avanceBar.style.width = progress + '%';
+            }, 300);
+        }
+    }
+    
+    // Configurar modo oscuro/claro
+    function setupDarkModeToggle() {
+        // Crear botón de cambio de tema
+        const themeToggle = document.createElement('button');
+        themeToggle.className = 'theme-toggle-btn';
+        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        themeToggle.setAttribute('title', 'Cambiar tema');
+        document.body.appendChild(themeToggle);
+        
+        // Estado del tema
+        let darkMode = localStorage.getItem('darkMode') === 'true';
+        
+        // Aplicar tema según estado
+        if (darkMode) {
+            document.body.classList.add('dark-mode');
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+        
+        // Manejar cambio de tema
+        themeToggle.addEventListener('click', () => {
+            darkMode = !darkMode;
+            localStorage.setItem('darkMode', darkMode);
+            
+            if (darkMode) {
+                document.body.classList.add('dark-mode');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            } else {
+                document.body.classList.remove('dark-mode');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            }
+        });
+    }
+    
+    // Configurar botones de exportación y actualización
+    function setupExportButtons() {
+        // Exportar a PDF
+        document.getElementById('exportPDFBtn').addEventListener('click', function() {
+            showLoading('Generando PDF...');
+            setTimeout(function() {
+                exportToPDF();
+                hideLoading();
+                showToast('PDF generado correctamente', 'success');
+            }, 1500);
+        });
+
+        // Exportar a Excel
+        document.getElementById('exportExcelBtn').addEventListener('click', function() {
+            showLoading('Generando Excel...');
+            setTimeout(function() {
+                exportToExcel();
+                hideLoading();
+                showToast('Excel generado correctamente', 'success');
+            }, 1500);
+        });
+
+        // Actualizar datos
+        document.getElementById('refreshDataBtn').addEventListener('click', function() {
+            showLoading('Actualizando datos...');
+            setTimeout(function() {
+                refreshData();
+                hideLoading();
+                showToast('Datos actualizados correctamente', 'success');
+            }, 1200);
+        });
+        
+        // Exportar horario
+        const exportScheduleBtn = document.getElementById('exportScheduleBtn');
+        if (exportScheduleBtn) {
+            exportScheduleBtn.addEventListener('click', function() {
+                showLoading('Exportando horario...');
+                setTimeout(function() {
+                    hideLoading();
+                    showToast('Horario exportado correctamente', 'success');
+                }, 1200);
+            });
+        }
+    }
+    
+    // Función para exportar a PDF
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape');
+        
+        // Título
+        doc.setFontSize(18);
+        doc.text('Dashboard Estadístico - Generador de Horarios', 14, 22);
+        
+        // Fecha de generación
+        doc.setFontSize(10);
+        doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 30);
+        
+        // Capturas de imágenes de gráficos
+        html2canvas(document.querySelector('#avanceCurricularChart')).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 14, 40, 180, 100);
+            
+            // Tabla de actividades
+            doc.text('Actividades Recientes', 14, 150);
+            
+            const tableData = [
+                ['Actividad', 'Detalle', 'Tiempo'],
+                ['Actualización horario', 'Informática 2º - López, María', 'Hace 2h'],
+                ['Ajuste de carga', 'REDES - Martínez, Antonio', 'Hace 5h'],
+                ['Nuevo profesor', 'PROGRAMACIÓN - Sánchez, Pedro', 'Hace 12h'],
+                ['Cambio aula', 'SISTEMAS - Clase 3B', 'Hace 18h']
+            ];
+            
+            doc.autoTable({
+                startY: 155,
+                head: [tableData[0]],
+                body: tableData.slice(1),
+                theme: 'grid',
+                styles: { fontSize: 10 }
+            });
+            
+            // Guardar el PDF
+            doc.save('dashboard-estadistico.pdf');
+        });
+    }
+    
+    // Función para exportar a Excel
+    function exportToExcel() {
+        // Crear workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Datos de evolución temporal
+        const evolucionData = [
+            ['Mes', 'Horas Completadas', 'Horas Planificadas'],
+            ['Septiembre', 20, 25],
+            ['Octubre', 35, 40],
+            ['Noviembre', 55, 60],
+            ['Diciembre', 70, 80],
+            ['Enero', 80, 100],
+            ['Febrero', 90, 110],
+            ['Marzo', 95, 120]
+        ];
+        
+        // Datos de actividades
+        const actividadesData = [
+            ['Actividad', 'Detalle', 'Tiempo'],
+            ['Actualización horario', 'Informática 2º - López, María', 'Hace 2h'],
+            ['Ajuste de carga', 'REDES - Martínez, Antonio', 'Hace 5h'],
+            ['Nuevo profesor', 'PROGRAMACIÓN - Sánchez, Pedro', 'Hace 12h'],
+            ['Cambio aula', 'SISTEMAS - Clase 3B', 'Hace 18h']
+        ];
+        
+        // Crear hojas de cálculo
+        const wsEvolucion = XLSX.utils.aoa_to_sheet(evolucionData);
+        const wsActividades = XLSX.utils.aoa_to_sheet(actividadesData);
+        
+        // Añadir hojas al workbook
+        XLSX.utils.book_append_sheet(wb, wsEvolucion, "Evolución Temporal");
+        XLSX.utils.book_append_sheet(wb, wsActividades, "Actividades Recientes");
+        
+        // Guardar archivo
+        XLSX.writeFile(wb, 'dashboard-estadistico.xlsx');
+    }
+    
+    // Función para refrescar datos
+    function refreshData() {
+        // Mostrar una animación en las tarjetas de métricas
+        const metricCards = document.querySelectorAll('.stats-summary-card');
+        metricCards.forEach(card => {
+            card.classList.add('card-refreshing');
+            setTimeout(() => {
+                card.classList.remove('card-refreshing');
+            }, 700);
+        });
+        
+        // Actualizar datos de horas y porcentajes
+        showToast('Datos actualizados', 'success');
+    }
+    
+    // Funciones de UI para mostrar/ocultar spinner de carga
+    function showLoading(message = 'Procesando...') {
+        const overlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        
+        loadingText.textContent = message;
+        overlay.style.display = 'flex';
+    }
+    
+    function hideLoading() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.display = 'none';
+    }
+    
+    // Función para mostrar mensajes toast
+    function showToast(message, type = 'info') {
+        // Crear elemento toast
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('id', toastId);
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        // Contenido del toast
+        let icon = 'info-circle';
+        if (type === 'success') icon = 'check-circle';
+        if (type === 'warning') icon = 'exclamation-triangle';
+        if (type === 'danger') icon = 'times-circle';
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${icon} me-2"></i> ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Agregar al contenedor de toasts
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // Inicializar y mostrar el toast
+        const bsToast = new bootstrap.Toast(toast, {
+            animation: true,
+            autohide: true,
+            delay: 3000
+        });
+        
+        bsToast.show();
+        
+        // Eliminar del DOM después de ocultar
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
 });
 </script>
 
 <style>
 /* Estilos adicionales para el dashboard */
 .stats-banner {
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-}
-
-.bg-gradient-primary {
     background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    position: relative;
+    overflow: hidden;
 }
 
-.bg-gradient-success {
-    background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
+.banner-content {
+    position: relative;
+    z-index: 2;
 }
 
-.bg-gradient-info {
-    background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);
+.comparison-header {
+    background-color: #6c757d;
+    background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 
+.activity-list .list-group-item {
+    transition: background-color 0.2s;
+    border-left: none;
+    border-right: none;
+}
+
+.activity-list .list-group-item:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.activity-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Overlay de carga */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-container {
+    text-align: center;
+}
+
+/* Animación de refresco */
+.card-refreshing {
+    animation: card-refresh 0.7s ease;
+}
+
+@keyframes card-refresh {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Estilos para las celdas de disponibilidad */
+.availability-table th, .availability-table td {
+    vertical-align: middle;
+}
+
+.availability-cell {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    margin: 0 auto;
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.availability-cell:hover {
+    transform: scale(1.2);
+}
+
+.availability-cell.available {
+    background-color: rgba(40, 167, 69, 0.2);
+    border: 2px solid #28a745;
+}
+
+.availability-cell.partial {
+    background-color: rgba(255, 193, 7, 0.2);
+    border: 2px solid #ffc107;
+}
+
+.availability-cell.unavailable {
+    background-color: rgba(220, 53, 69, 0.2);
+    border: 2px solid #dc3545;
+}
+
+/* Animación para contadores */
+.hours-counter {
+    transition: all 0.3s ease;
+    display: inline-block;
+    min-width: 60px;
+    text-align: right;
+}
+
+/* Estilos para el selector de tema */
+.theme-toggle-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #212529;
+    color: #fff;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Modo oscuro */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+body.dark-mode .stats-card,
+body.dark-mode .stats-summary-card {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0;
+}
+
+body.dark-mode .table-light {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .bg-light {
+    background-color: #2d2d2d !important;
+}
+
+body.dark-mode .text-muted {
+    color: #adb5bd !important;
+}
+
+body.dark-mode .filters-bar {
+    background-color: #1e1e1e !important;
+}
+
+body.dark-mode .badge.bg-light {
+    background-color: #2d2d2d !important;
+    color: #e0e0e0 !important;
+}
+
+body.dark-mode .list-group-item {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+body.dark-mode .theme-toggle-btn {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+/* Resto de estilos existentes */
 .opacity-90 {
     opacity: 0.9;
-}
-
-.banner-graphic {
-    position: relative;
-    height: 150px;
-    width: 150px;
-    margin-left: auto;
-}
-
-.banner-graphic-circle {
-    position: absolute;
-    border-radius: 50%;
-    animation: pulse 3s infinite;
-}
-
-.banner-graphic-circle:nth-child(1) {
-    height: 120px;
-    width: 120px;
-    top: 10px;
-    right: 10px;
-}
-
-.banner-graphic-circle:nth-child(2) {
-    height: 90px;
-    width: 90px;
-    top: 25px;
-    right: 25px;
-}
-
-.banner-icon {
-    position: absolute;
-    font-size: 3rem;
-    top: 50%;
-    right: 27%;
-    transform: translateY(-50%);
 }
 
 .stats-icon-circle {
@@ -356,29 +1321,10 @@ document.addEventListener('DOMContentLoaded', function() {
     justify-content: center;
 }
 
-.asignaturas-scroll {
-    max-height: 200px;
-    min-height: 200px;
-    overflow-y: auto;
-    padding-right: 5px;
-}
-
-.asignaturas-scroll::-webkit-scrollbar {
-    width: 5px;
-}
-
-.asignaturas-scroll::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 5px;
-}
-
-.asignaturas-scroll::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 5px;
-}
-
-.asignaturas-scroll::-webkit-scrollbar-thumb:hover {
-    background: #ccc;
+.section-title {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1.5rem;
 }
 
 .hover-lift-sm:hover {
@@ -386,64 +1332,60 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-.feature-image-wrapper {
-    width: 120px;
-    height: 120px;
-    margin: 0 auto;
+.banner-actions {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
-.btn-gradient-success {
-    background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
-    border: none;
-    color: white;
+@media (max-width: 768px) {
+    .banner-actions {
+        margin-top: 1rem;
+        justify-content: flex-start;
+    }
+    
+    .banner-actions .btn {
+        margin-bottom: 0.5rem;
+    }
 }
 
-.btn-gradient-info {
-    background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);
-    border: none;
-    color: white;
+/* Animaciones de entrada para elementos */
+.animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
 }
 
-.section-title {
-    position: relative;
-    display: inline-block;
-    margin-bottom: 1.5rem;
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
+.animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
         opacity: 1;
     }
-    50% {
-        transform: scale(1.1);
-        opacity: 0.7;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
 }
 
-.animate-stagger > div:nth-child(1) { animation-delay: 0.1s; }
-.animate-stagger > div:nth-child(2) { animation-delay: 0.2s; }
-.animate-stagger > div:nth-child(3) { animation-delay: 0.3s; }
-.animate-stagger > div:nth-child(4) { animation-delay: 0.4s; }
-
-.equal-height-cards .stats-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+.animate-stagger > * {
+    opacity: 0;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
-.equal-height-cards .card-body {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem;
-}
+.animate-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+.animate-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+.animate-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+.animate-stagger > *:nth-child(4) { animation-delay: 0.4s; }
 </style>
 {% endblock %} 
