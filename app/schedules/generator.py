@@ -76,26 +76,65 @@ def get_profesores_by_asignatura(asignatura_id, clase_id=None):
     return profesores
 
 def generate_schedule(clase_id):
-    """
-    Genera un horario automático para una clase específica
-    utilizando un algoritmo voraz.
-    
-    Args:
-        clase_id: ID de la clase para la que se generará el horario
-        
-    Returns:
-        dict: Resultado de la operación con claves 'success' y 'message'
-    """
+    """Genera un horario automático para una clase específica"""
     try:
         # Verificar que la clase existe
         clase = Clase.query.get(clase_id)
         if not clase:
             return {'success': False, 'message': 'La clase no existe'}
         
+        print(f"Generando horario para clase {clase.nombre}")
+        
         # Obtener todas las asignaturas activas
         asignaturas = Asignatura.query.filter_by(activa=True).all()
         if not asignaturas:
             return {'success': False, 'message': 'No hay asignaturas disponibles'}
+        
+        print(f"Asignaturas disponibles: {[a.nombre for a in asignaturas]}")
+        
+        # Obtener todas las clases activas del mismo nivel y curso
+        clases_mismo_nivel = Clase.query.filter_by(
+            nivel=clase.nivel,
+            curso=clase.curso,
+            activa=True
+        ).all()
+        
+        print(f"Clases del mismo nivel: {[c.nombre for c in clases_mismo_nivel]}")
+        
+        # Verificar que todas las clases tengan las mismas asignaturas
+        asignaturas_por_clase = {}
+        for otra_clase in clases_mismo_nivel:
+            # Obtener las asignaturas de cada clase a través de sus horarios
+            asignaturas_clase = set(
+                h.asignatura_id for h in Horario.query.filter_by(clase_id=otra_clase.id).all()
+            )
+            asignaturas_por_clase[otra_clase.id] = asignaturas_clase
+            print(f"Asignaturas de clase {otra_clase.nombre}: {asignaturas_clase}")
+        
+        # Si ninguna clase tiene asignaturas asignadas, usar las asignaturas activas como base
+        if all(len(asignaturas) == 0 for asignaturas in asignaturas_por_clase.values()):
+            print("Ninguna clase tiene asignaturas asignadas, usando asignaturas activas como base")
+            # Todas las clases usarán las mismas asignaturas activas
+            asignaturas_base = set(a.id for a in asignaturas)
+            for otra_clase in clases_mismo_nivel:
+                asignaturas_por_clase[otra_clase.id] = asignaturas_base
+        else:
+            # Verificar que todas las clases tengan las mismas asignaturas
+            asignaturas_base = None
+            for otra_clase in clases_mismo_nivel:
+                if len(asignaturas_por_clase[otra_clase.id]) > 0:
+                    if asignaturas_base is None:
+                        asignaturas_base = asignaturas_por_clase[otra_clase.id]
+                    elif asignaturas_por_clase[otra_clase.id] != asignaturas_base:
+                        return {
+                            'success': False,
+                            'message': f'Las asignaturas no coinciden con la clase {otra_clase.nombre}'
+                        }
+            
+            # Si alguna clase no tiene asignaturas, usar las asignaturas base
+            for otra_clase in clases_mismo_nivel:
+                if len(asignaturas_por_clase[otra_clase.id]) == 0:
+                    asignaturas_por_clase[otra_clase.id] = asignaturas_base
         
         # Crear una matriz para el horario (dias x horas)
         horario_matriz = {dia: [None] * len(HORAS) for dia in DIAS}
@@ -103,18 +142,50 @@ def generate_schedule(clase_id):
         # Seguimiento de horas asignadas por asignatura
         asignaciones = {asig.id: 0 for asig in asignaturas}
         
+        # Obtener el número de horas por asignatura que deben tener todas las clases
+        horas_por_asignatura = {}
+        for asignatura in asignaturas:
+            # Verificar que todas las clases tengan el mismo número de horas para esta asignatura
+            horas_en_clases = []
+            for otra_clase in clases_mismo_nivel:
+                horas = Horario.query.filter_by(
+                    clase_id=otra_clase.id,
+                    asignatura_id=asignatura.id
+                ).count()
+                horas_en_clases.append(horas)
+            
+            # Si todas las clases tienen 0 horas, usar las horas semanales
+            if all(h == 0 for h in horas_en_clases):
+                horas_por_asignatura[asignatura.id] = asignatura.horas_semanales
+                print(f"Usando horas semanales para {asignatura.nombre}: {asignatura.horas_semanales}")
+            else:
+                # Si hay clases con horas asignadas, verificar que todas tengan el mismo número
+                horas_no_cero = [h for h in horas_en_clases if h > 0]
+                if len(set(horas_no_cero)) > 1:
+                    return {
+                        'success': False,
+                        'message': f'Las clases no tienen el mismo número de horas para {asignatura.nombre}'
+                    }
+                horas_por_asignatura[asignatura.id] = horas_no_cero[0] if horas_no_cero else asignatura.horas_semanales
+        
+        print(f"Horas por asignatura: {horas_por_asignatura}")
+        
         # Ordenar asignaturas por prioridad (horas semanales, preferencia por bloques)
         asignaturas_ordenadas = sorted(
             asignaturas, 
-            key=lambda a: (a.horas_semanales, a.bloques_continuos), 
+            key=lambda a: (horas_por_asignatura[a.id], a.bloques_continuos), 
             reverse=True
         )
         
+        print(f"Asignaturas ordenadas: {[a.nombre for a in asignaturas_ordenadas]}")
+        
         # Para cada asignatura, intentar colocarla en el horario
         for asignatura in asignaturas_ordenadas:
+            print(f"Intentando asignar {asignatura.nombre} ({horas_por_asignatura[asignatura.id]} horas)")
             # Verificar si ya se asignaron todas las horas para esta asignatura
-            horas_restantes = asignatura.horas_semanales - asignaciones[asignatura.id]
+            horas_restantes = horas_por_asignatura[asignatura.id] - asignaciones[asignatura.id]
             if horas_restantes <= 0:
+                print(f"Ya se asignaron todas las horas para {asignatura.nombre}")
                 continue
             
             # Obtener profesores para esta asignatura, priorizando los asignados específicamente a esta clase
@@ -126,8 +197,11 @@ def generate_schedule(clase_id):
                     'message': f'No hay profesores asignados a la asignatura {asignatura.nombre}'
                 }
             
+            print(f"Profesores disponibles para {asignatura.nombre}: {[p.usuario.nombre for p in profesores_disponibles]}")
+            
             # Si la asignatura prefiere bloques continuos, intentar asignar en bloques de 2
             if asignatura.bloques_continuos and horas_restantes >= 2:
+                print(f"Intentando asignar bloque de 2 horas para {asignatura.nombre}")
                 for _ in range(horas_restantes // 2):
                     if not asignar_bloque(
                         clase_id, asignatura, profesores_disponibles, 
@@ -135,23 +209,28 @@ def generate_schedule(clase_id):
                     ):
                         # Si no se puede asignar el bloque, intentar asignar horas individuales
                         for _ in range(2):
-                            if asignaciones[asignatura.id] < asignatura.horas_semanales:
+                            if asignaciones[asignatura.id] < horas_por_asignatura[asignatura.id]:
                                 asignar_hora_individual(
                                     clase_id, asignatura, profesores_disponibles, 
                                     horario_matriz, asignaciones
                                 )
             
             # Asignar las horas restantes individualmente
-            horas_restantes = asignatura.horas_semanales - asignaciones[asignatura.id]
+            horas_restantes = horas_por_asignatura[asignatura.id] - asignaciones[asignatura.id]
+            print(f"Horas restantes para {asignatura.nombre}: {horas_restantes}")
             for _ in range(horas_restantes):
-                asignar_hora_individual(
+                if not asignar_hora_individual(
                     clase_id, asignatura, profesores_disponibles, 
                     horario_matriz, asignaciones
-                )
+                ):
+                    print(f"No se pudo asignar hora individual para {asignatura.nombre}")
         
         # Verificar si se asignaron todas las horas requeridas
-        total_horas_requeridas = sum(asig.horas_semanales for asig in asignaturas)
+        total_horas_requeridas = sum(horas_por_asignatura.values())
         total_horas_asignadas = sum(asignaciones.values())
+        
+        print(f"Total horas requeridas: {total_horas_requeridas}")
+        print(f"Total horas asignadas: {total_horas_asignadas}")
         
         if total_horas_asignadas < total_horas_requeridas:
             return {
@@ -160,12 +239,28 @@ def generate_schedule(clase_id):
             }
         
         # Guardar el horario generado en la base de datos
-        save_schedule_to_db(clase_id, horario_matriz)
+        if not save_schedule_to_db(clase_id, horario_matriz):
+            return {
+                'success': False,
+                'message': 'Error al guardar el horario en la base de datos'
+            }
         
-        return {'success': True, 'message': 'Horario generado correctamente'}
+        # Verificar que el horario se guardó correctamente
+        horario_guardado = Horario.query.filter_by(clase_id=clase_id).count()
+        if horario_guardado == 0:
+            return {
+                'success': False,
+                'message': 'El horario se generó pero no se guardó correctamente'
+            }
+        
+        return {
+            'success': True, 
+            'message': f'Horario generado correctamente. Se guardaron {horario_guardado} asignaciones.'
+        }
     
     except Exception as e:
         db.session.rollback()
+        print(f"Error en generate_schedule: {str(e)}")
         return {'success': False, 'message': f'Error al generar el horario: {str(e)}'}
 
 def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignaciones, tamano_bloque=2):
@@ -310,21 +405,80 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
 
 def save_schedule_to_db(clase_id, horario_matriz):
     """Guarda el horario generado en la base de datos"""
-    # Primero eliminar cualquier horario existente para esta clase
-    Horario.query.filter_by(clase_id=clase_id).delete()
-    
-    # Crear los nuevos registros de horario
-    for dia in DIAS:
-        for hora in HORAS:
-            celda = horario_matriz[dia][hora - 1]
-            if celda is not None:
-                horario = Horario(
-                    clase_id=clase_id,
-                    dia=dia,
-                    hora=HORAS_TEXTO[hora],
-                    asignatura_id=celda['asignatura_id'],
-                    profesor_id=celda['profesor_id']
-                )
-                db.session.add(horario)
-    
-    db.session.commit() 
+    try:
+        print(f"Iniciando guardado de horario para clase {clase_id}")
+        print(f"Matriz de horario recibida: {horario_matriz}")
+        
+        # Validar la estructura de la matriz
+        if not isinstance(horario_matriz, dict):
+            raise Exception("La matriz de horario debe ser un diccionario")
+        
+        for dia in DIAS:
+            if dia not in horario_matriz:
+                raise Exception(f"Falta el día {dia} en la matriz de horario")
+            if not isinstance(horario_matriz[dia], list):
+                raise Exception(f"El día {dia} debe ser una lista")
+            if len(horario_matriz[dia]) != len(HORAS):
+                raise Exception(f"El día {dia} debe tener {len(HORAS)} horas")
+        
+        # Primero eliminar cualquier horario existente para esta clase
+        print(f"Eliminando horarios existentes para clase {clase_id}")
+        Horario.query.filter_by(clase_id=clase_id).delete()
+        db.session.commit()
+        
+        # Crear los nuevos registros de horario
+        registros_creados = 0
+        for dia in DIAS:
+            for hora in HORAS:
+                celda = horario_matriz[dia][hora - 1]  # Las horas son 1-indexadas
+                if celda is not None:
+                    print(f"Creando registro para {dia} hora {hora}: {celda}")
+                    try:
+                        # Validar la estructura de la celda
+                        if not isinstance(celda, dict):
+                            raise Exception(f"La celda debe ser un diccionario, se recibió: {type(celda)}")
+                        if 'asignatura_id' not in celda:
+                            raise Exception("Falta asignatura_id en la celda")
+                        if 'profesor_id' not in celda:
+                            raise Exception("Falta profesor_id en la celda")
+                        
+                        # Convertir IDs a enteros
+                        asignatura_id = int(celda['asignatura_id'])
+                        profesor_id = int(celda['profesor_id'])
+                        
+                        # Verificar que los IDs existen
+                        if not Asignatura.query.get(asignatura_id):
+                            raise Exception(f"Asignatura con ID {asignatura_id} no existe")
+                        if not Profesor.query.get(profesor_id):
+                            raise Exception(f"Profesor con ID {profesor_id} no existe")
+                        
+                        horario = Horario(
+                            clase_id=clase_id,
+                            dia=dia,
+                            hora=str(hora),  # Asegurarse de que la hora sea string
+                            asignatura_id=asignatura_id,
+                            profesor_id=profesor_id
+                        )
+                        db.session.add(horario)
+                        registros_creados += 1
+                    except Exception as e:
+                        print(f"Error al crear registro para {dia} hora {hora}: {str(e)}")
+                        raise
+        
+        # Hacer commit de los cambios
+        print(f"Intentando commit de {registros_creados} registros")
+        db.session.commit()
+        print(f"Horario guardado correctamente para la clase {clase_id}. Registros creados: {registros_creados}")
+        
+        # Verificar que los registros se guardaron
+        registros_guardados = Horario.query.filter_by(clase_id=clase_id).count()
+        print(f"Registros verificados en BD: {registros_guardados}")
+        
+        if registros_guardados != registros_creados:
+            raise Exception(f"Discrepancia en número de registros. Creados: {registros_creados}, Guardados: {registros_guardados}")
+        
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al guardar el horario: {str(e)}")
+        return False 
