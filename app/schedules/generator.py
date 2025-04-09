@@ -13,6 +13,7 @@ from app.models.profesor import Profesor
 from app.models.asignatura import Asignatura, AsignaturaProfesor, AsignaturaProfesorClase
 from app.models.disponibilidad import Disponibilidad
 from app.models.disponibilidad_comun import DisponibilidadComun
+from app.models.actividad_especial import ActividadEspecial
 import random
 
 # Constantes
@@ -263,6 +264,10 @@ def generate_schedule(clase_id):
         print(f"Error en generate_schedule: {str(e)}")
         return {'success': False, 'message': f'Error al generar el horario: {str(e)}'}
 
+def hay_actividad_especial(dia, hora):
+    """Verifica si hay una actividad especial programada para el día y hora especificados"""
+    return ActividadEspecial.query.filter_by(dia=dia, hora=hora).first() is not None
+
 def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignaciones, tamano_bloque=2):
     """Intenta asignar un bloque continuo de horas para una asignatura"""
     for dia in DIAS:
@@ -270,7 +275,9 @@ def asignar_bloque(clase_id, asignatura, profesores, horario_matriz, asignacione
             # Verificar si el bloque está disponible
             bloque_disponible = True
             for i in range(tamano_bloque):
-                if horario_matriz[dia][hora_inicio + i - 1] is not None:
+                hora_actual = hora_inicio + i
+                # Verificar si hay actividad especial en alguna hora del bloque
+                if hay_actividad_especial(dia, hora_actual) or horario_matriz[dia][hora_actual - 1] is not None:
                     bloque_disponible = False
                     break
             
@@ -349,8 +356,8 @@ def asignar_hora_individual(clase_id, asignatura, profesores, horario_matriz, as
     """Intenta asignar una hora individual para una asignatura"""
     for dia in DIAS:
         for hora in HORAS:
-            # Verificar si el espacio está disponible
-            if horario_matriz[dia][hora - 1] is not None:
+            # Verificar si el espacio está disponible y no hay actividad especial
+            if horario_matriz[dia][hora - 1] is not None or hay_actividad_especial(dia, hora):
                 continue
             
             # Verificar que no hay bloques comunes en este horario
@@ -431,7 +438,31 @@ def save_schedule_to_db(clase_id, horario_matriz):
         for dia in DIAS:
             for hora in HORAS:
                 celda = horario_matriz[dia][hora - 1]  # Las horas son 1-indexadas
-                if celda is not None:
+                
+                # Verificar si hay actividad especial para este día y hora
+                actividad_especial = ActividadEspecial.query.filter_by(dia=dia, hora=hora).first()
+                
+                if actividad_especial:
+                    # Si hay actividad especial, crear un registro especial
+                    print(f"Creando registro de actividad especial para {dia} hora {hora}: {actividad_especial.nombre}")
+                    try:
+                        horario = Horario(
+                            clase_id=clase_id,
+                            dia=dia,
+                            hora=str(hora),
+                            asignatura_id=None,  # No hay asignatura para actividades especiales
+                            profesor_id=None,    # No hay profesor para actividades especiales
+                            es_actividad_especial=True,
+                            nombre_actividad_especial=actividad_especial.nombre,
+                            color_actividad_especial=actividad_especial.color
+                        )
+                        db.session.add(horario)
+                        registros_creados += 1
+                    except Exception as e:
+                        print(f"Error al crear registro de actividad especial para {dia} hora {hora}: {str(e)}")
+                        raise
+                elif celda is not None:
+                    # Si no hay actividad especial y hay una asignatura asignada
                     print(f"Creando registro para {dia} hora {hora}: {celda}")
                     try:
                         # Validar la estructura de la celda
@@ -455,9 +486,10 @@ def save_schedule_to_db(clase_id, horario_matriz):
                         horario = Horario(
                             clase_id=clase_id,
                             dia=dia,
-                            hora=str(hora),  # Asegurarse de que la hora sea string
+                            hora=str(hora),
                             asignatura_id=asignatura_id,
-                            profesor_id=profesor_id
+                            profesor_id=profesor_id,
+                            es_actividad_especial=False
                         )
                         db.session.add(horario)
                         registros_creados += 1

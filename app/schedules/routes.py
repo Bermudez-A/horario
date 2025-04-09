@@ -721,18 +721,73 @@ def move_class():
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
 
-<<<<<<< HEAD
 @schedules.route('/save_special_activities', methods=['POST'])
 @login_required
 def save_special_activities():
     """Guardar actividades especiales"""
-=======
+    try:
+        data = request.get_json()
+        
+        # Primero, eliminar todas las actividades especiales existentes
+        ActividadEspecial.query.delete()
+        
+        # Crear las nuevas actividades
+        for dia, sesiones in data.items():
+            for sesion, actividades in sesiones.items():
+                # Convertir la sesión a número de hora (1-7)
+                sesiones_map = {
+                    'Primera': 1, 'Segunda': 2, 'Tercera': 3, 'Cuarta': 4,
+                    'Quinta': 5, 'Sexta': 6, 'Séptima': 7
+                }
+                hora = sesiones_map.get(sesion)
+                
+                if not hora:
+                    continue
+                
+                for actividad_nombre in actividades:
+                    # Si es un examen, extraer el nombre de la asignatura
+                    if ' - ' in actividad_nombre:
+                        nombre, asignatura = actividad_nombre.split(' - ', 1)
+                    else:
+                        nombre = actividad_nombre
+                        asignatura = None
+                    
+                    # Determinar el color basado en el tipo de actividad
+                    colores = {
+                        'Deporte': '#4caf50',
+                        'Inglés': '#2196f3',
+                        'Barón de Warsage': '#ff9800',
+                        'Tutoría': '#9c27b0',
+                        'Disposición BON': '#e91e63',
+                        'Examen': '#f44336'
+                    }
+                    
+                    actividad = ActividadEspecial(
+                        nombre=nombre,
+                        descripcion=asignatura if asignatura else '',
+                        dia=dia,
+                        hora=hora,
+                        color=colores.get(nombre, '#3498db')
+                    )
+                    db.session.add(actividad)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Actividades especiales guardadas correctamente'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al guardar actividades especiales: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @schedules.route('/unir_clases', methods=['POST'])
 @login_required
 def unir_clases():
-    """Unir dos clases para que el mismo profesor imparta la misma asignatura a ambos grupos"""
+    """Une dos clases para que un profesor pueda impartir la misma asignatura a ambos grupos simultáneamente"""
+    if not current_user.rol == 'admin':
+        return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
+        
     try:
-        data = request.json
+        data = request.get_json()
         if not data:
             return jsonify({'success': False, 'message': 'No se recibieron datos'})
         
@@ -812,80 +867,23 @@ def unir_clases():
 def clear_all(clase_id):
     """Elimina todas las asignaciones de horario para una clase específica"""
     # Solo administradores pueden limpiar horarios
->>>>>>> 270550446b4b8a77cc12f49870042ae8af22be5e
     if not current_user.rol == 'admin':
         return jsonify({'success': False, 'message': 'No tienes permiso para esta acción'}), 403
     
     try:
-<<<<<<< HEAD
-        data = request.get_json()
-        
-        # Primero, eliminar todas las actividades especiales existentes
-        ActividadEspecial.query.delete()
-        
-        # Crear las nuevas actividades
-        for dia, sesiones in data.items():
-            for sesion, actividades in sesiones.items():
-                # Convertir la sesión a número de hora (1-7)
-                sesiones_map = {
-                    'Primera': 1, 'Segunda': 2, 'Tercera': 3, 'Cuarta': 4,
-                    'Quinta': 5, 'Sexta': 6, 'Séptima': 7
-                }
-                hora = sesiones_map.get(sesion)
-                
-                if not hora:
-                    continue
-                
-                for actividad_nombre in actividades:
-                    # Si es un examen, extraer el nombre de la asignatura
-                    if ' - ' in actividad_nombre:
-                        nombre, asignatura = actividad_nombre.split(' - ', 1)
-                    else:
-                        nombre = actividad_nombre
-                        asignatura = None
-                    
-                    # Determinar el color basado en el tipo de actividad
-                    colores = {
-                        'Deporte': '#4caf50',
-                        'Inglés': '#2196f3',
-                        'Barón de Warsage': '#ff9800',
-                        'Tutoría': '#9c27b0',
-                        'Disposición BON': '#e91e63',
-                        'Examen': '#f44336'
-                    }
-                    
-                    actividad = ActividadEspecial(
-                        nombre=nombre,
-                        descripcion=asignatura if asignatura else '',
-                        dia=dia,
-                        hora=hora,
-                        color=colores.get(nombre, '#3498db')
-                    )
-                    db.session.add(actividad)
-        
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Actividades especiales guardadas correctamente'})
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error al guardar actividades especiales: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500 
-=======
         # Verificar que la clase existe
         clase = Clase.query.get(clase_id)
         if not clase:
             return jsonify({'success': False, 'message': 'Clase no encontrada'}), 404
-        
-        # Eliminar todos los horarios de esta clase
+            
+        # Eliminar todas las asignaciones de esta clase
         Horario.query.filter_by(clase_id=clase_id).delete()
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Horario limpiado con éxito'})
-    
+        return jsonify({'success': True, 'message': 'Horario limpiado correctamente'})
+        
     except Exception as e:
         db.session.rollback()
-        print(f"[Clear All] ERROR: {str(e)}")
-        import traceback
+        print(f"Error al limpiar horario: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
->>>>>>> 270550446b4b8a77cc12f49870042ae8af22be5e

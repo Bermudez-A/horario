@@ -9,8 +9,11 @@ class Horario(db.Model):
     clase_id = db.Column(db.Integer, db.ForeignKey('clases.id', ondelete='CASCADE'), nullable=False)
     dia = db.Column(db.String(15), nullable=False)  # lunes, martes, etc.
     hora = db.Column(db.String(15), nullable=False)  # formato: "8:00 - 8:55"
-    asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=False)
-    profesor_id = db.Column(db.Integer, db.ForeignKey('profesores.id'), nullable=False)
+    asignatura_id = db.Column(db.Integer, db.ForeignKey('asignaturas.id'), nullable=True)
+    profesor_id = db.Column(db.Integer, db.ForeignKey('profesores.id'), nullable=True)
+    es_actividad_especial = db.Column(db.Boolean, nullable=False, default=False)
+    nombre_actividad_especial = db.Column(db.String(100), nullable=True)
+    color_actividad_especial = db.Column(db.String(7), nullable=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_modificacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -20,6 +23,8 @@ class Horario(db.Model):
     profesor = db.relationship('Profesor', back_populates='horarios')
     
     def __repr__(self):
+        if self.es_actividad_especial:
+            return f'<Horario: {self.clase.nombre}, {self.dia} {self.hora}, {self.nombre_actividad_especial}>'
         return f'<Horario: {self.clase.nombre}, {self.dia} {self.hora}, {self.asignatura.nombre}>'
     
     @classmethod

@@ -51,15 +51,28 @@ class Clase(db.Model):
             # Convertir hora a índice (hora viene como texto "1", "2", etc.)
             try:
                 hora_idx = int(h.hora) - 1
-                horario[h.dia][hora_idx] = {
-                    'id': h.id,
-                    'asignatura': h.asignatura.nombre,
-                    'profesor': h.profesor.get_nombre_completo() if h.profesor else None,
-                    'color': h.asignatura.color,
-                    'icono': h.asignatura.icono,
-                    'asignatura_id': h.asignatura_id,
-                    'profesor_id': h.profesor_id
-                }
+                if h.es_actividad_especial:
+                    horario[h.dia][hora_idx] = {
+                        'id': h.id,
+                        'asignatura': h.nombre_actividad_especial,
+                        'profesor': None,
+                        'color': h.color_actividad_especial,
+                        'icono': None,
+                        'asignatura_id': None,
+                        'profesor_id': None,
+                        'es_actividad_especial': True
+                    }
+                else:
+                    horario[h.dia][hora_idx] = {
+                        'id': h.id,
+                        'asignatura': h.asignatura.nombre,
+                        'profesor': h.profesor.get_nombre_completo() if h.profesor else None,
+                        'color': h.asignatura.color,
+                        'icono': h.asignatura.icono,
+                        'asignatura_id': h.asignatura_id,
+                        'profesor_id': h.profesor_id,
+                        'es_actividad_especial': False
+                    }
             except (ValueError, IndexError) as e:
                 # Manejar errores de conversión o índices fuera de rango
                 print(f"Error al procesar hora '{h.hora}' para día '{h.dia}': {str(e)}")
