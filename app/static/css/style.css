@@ -55,39 +55,139 @@ footer a:hover {
 }
 
 /* Estilos para la tabla de horarios */
-.table-horario {
+.horario-tabla {
     border-collapse: separate;
-    border-spacing: 2px;
+    border-spacing: 0;
+    width: 100%;
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
 }
 
-.table-horario th {
-    background-color: #f8f9fa;
+.horario-tabla thead {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.horario-tabla thead th {
+    color: var(--dark-color);
     font-weight: 600;
     text-align: center;
-    vertical-align: middle;
+    padding: 1rem;
+    border: none;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
-.table-horario td {
-    height: 80px;
+.horario-tabla tbody tr {
+    transition: background-color 0.3s ease;
+}
+
+.horario-tabla tbody tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.horario-tabla tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.horario-tabla tbody th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: var(--dark-color);
+    padding: 1rem;
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 0.9rem;
+}
+
+.horario-tabla td {
+    padding: 0;
+    height: 90px;
     vertical-align: middle;
-    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.celda-horario {
     position: relative;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.table-horario .cell-content {
-    padding: 10px;
+.celda-vacia {
+    background-color: #f8f9fa;
+    cursor: pointer;
 }
 
-.table-horario .asignatura {
-    font-weight: bold;
-    margin-bottom: 3px;
+.celda-vacia:hover {
+    background-color: #e9ecef;
 }
 
-.table-horario .profesor {
-    font-size: 0.8em;
-    color: #666;
+.celda-con-clase {
+    cursor: move;
+}
+
+.asignatura-bloque {
+    height: 100%;
+    width: 100%;
+    padding: 0.75rem;
+    color: white;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.asignatura-bloque:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.asignatura-nombre {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.asignatura-nombre i {
+    font-size: 0.8rem;
+}
+
+.profesor-nombre {
+    font-size: 0.8rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .horario-tabla thead th {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .horario-tabla tbody th {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .horario-tabla td {
+        height: 70px;
+    }
+    
+    .asignatura-nombre {
+        font-size: 0.8rem;
+    }
+    
+    .profesor-nombre {
+        font-size: 0.75rem;
+    }
 }
 
 /* Estilos para el cuadro de disponibilidad */
@@ -1102,4 +1202,47 @@ body.admin-layout {
     background: linear-gradient(45deg, #36b9cc 0%, #258391 100%);
     color: white;
     border: none;
+}
+
+/* Estilos para celdas sin profesor asignado */
+.celda-horario.sin-profesor:not(.actividad-especial) {
+    position: relative;
+    border: 3px solid var(--danger-color);
+    animation: pulse-border 1.5s infinite;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+}
+
+.celda-horario.sin-profesor:not(.actividad-especial) .asignatura-bloque {
+    border: 2px solid rgba(231, 76, 60, 0.5);
+    position: relative;
+}
+
+.celda-horario.sin-profesor:not(.actividad-especial) .asignatura-bloque::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(231, 76, 60, 0.1) 0%,
+        rgba(231, 76, 60, 0.2) 50%,
+        rgba(231, 76, 60, 0.1) 100%
+    );
+    pointer-events: none;
+}
+
+@keyframes pulse-border {
+    0% {
+        border-color: var(--danger-color);
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+    }
+    50% {
+        border-color: rgba(231, 76, 60, 0.8);
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+    }
+    100% {
+        border-color: var(--danger-color);
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
+    }
 }
