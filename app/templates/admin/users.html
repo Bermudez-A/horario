@@ -4,6 +4,19 @@
 
 {% block content %}
 <div class="container-fluid px-4">
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
     <h1 class="mt-4 mb-4"><i class="fas fa-users me-2"></i>Administración de Usuarios</h1>
     
     <div class="card mb-4">
@@ -60,44 +73,23 @@
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ url_for('admin.edit_user', id=user.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-edit"></i>
+                                    <a href="{{ url_for('admin.edit_user', id=user.id) }}" class="btn btn-action btn-edit">
+                                        <i class="fas fa-edit me-1"></i>Editar
                                     </a>
-                                    {% if current_user.id != user.id %}
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    <!-- Modal de confirmación para eliminar -->
-                                    <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Confirmar eliminación</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    ¿Estás seguro de que deseas eliminar al usuario <strong>{{ user.username }}</strong>?
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <a href="{{ url_for('admin.delete_user', id=user.id) }}" class="btn btn-danger">Eliminar</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {% if user.id != current_user.id %}
+                                    <form action="{{ url_for('admin.delete_user', id=user.id) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-action btn-delete" onclick="return confirm('¿Estás seguro de que deseas eliminar este usuario?');">
+                                            <i class="fas fa-trash me-1"></i>Eliminar
+                                        </button>
+                                    </form>
                                     {% endif %}
-                                    
-                                    {% if current_user.id != user.id %}
-                                    {% if user.activo %}
-                                    <a href="{{ url_for('admin.toggle_user_status', id=user.id) }}" class="btn btn-sm btn-outline-warning">
-                                        <i class="fas fa-user-slash" title="Desactivar"></i>
-                                    </a>
-                                    {% else %}
-                                    <a href="{{ url_for('admin.toggle_user_status', id=user.id) }}" class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-user-check" title="Activar"></i>
-                                    </a>
-                                    {% endif %}
+                                    {% if user.rol == 'profesor' and user.profesor %}
+                                    <form action="{{ url_for('admin.toggle_profesor_asignacion', id=user.profesor.id) }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-action {% if user.profesor.asignaturas %}btn-unlink{% else %}btn-link{% endif %}">
+                                            <i class="fas {% if user.profesor.asignaturas %}fa-unlink{% else %}fa-link{% endif %} me-1"></i>
+                                            {% if user.profesor.asignaturas %}Desvincular{% else %}Vincular{% endif %}
+                                        </button>
+                                    </form>
                                     {% endif %}
                                 </div>
                             </td>
@@ -127,32 +119,16 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar DataTable con traducción en español
-        new DataTable('#usersTable', {
+        // Inicialización de DataTables
+        $('#usersTable').DataTable({
             language: {
-                "emptyTable": "No hay datos disponibles en la tabla",
-                "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
-                "infoEmpty": "Mostrando 0 a 0 de 0 registros",
-                "infoFiltered": "(filtrado de _MAX_ registros totales)",
-                "infoThousands": ",",
-                "lengthMenu": "Mostrar _MENU_ registros",
-                "loadingRecords": "Cargando...",
-                "processing": "Procesando...",
-                "search": "Buscar:",
-                "zeroRecords": "No se encontraron registros coincidentes",
-                "paginate": {
-                    "first": "Primero",
-                    "last": "Último",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
-                },
-                "aria": {
-                    "sortAscending": ": activar para ordenar la columna de forma ascendente",
-                    "sortDescending": ": activar para ordenar la columna de forma descendente"
-                }
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
             },
-            order: [[0, 'asc']]
+            responsive: true,
+            order: [[0, 'asc']],
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]]
         });
     });
 </script>
-{% endblock %} 
+{% endblock %}
