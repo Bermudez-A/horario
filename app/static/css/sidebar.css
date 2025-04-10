@@ -14,7 +14,6 @@ body {
     max-width: 250px;
     background: #2c3e50; /* Fondo más oscuro y profesional */
     color: #ecf0f1;
-    transition: all 0.3s;
     height: 100vh;
     position: sticky;
     top: 0;
@@ -107,7 +106,6 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    transition: all 0.3s;
     position: fixed;
     top: 20px;
     left: 210px;
@@ -120,10 +118,6 @@ body {
 
 #sidebar.collapsed #sidebarCollapse {
     left: 40px;
-}
-
-#sidebarCollapse i {
-    transition: all 0.3s;
 }
 
 #sidebar.collapsed #sidebarCollapse i {
@@ -212,7 +206,6 @@ body {
     display: block;
     color: #bdc3c7;
     text-decoration: none;
-    transition: all 0.3s;
     border-left: 3px solid transparent;
     font-weight: 400;
     letter-spacing: 0.3px;
@@ -277,15 +270,10 @@ body {
     font-size: 0.95em;
 }
 
-/* Transiciones suaves para el sidebar */
-#sidebar, #content-wrapper {
-    transition: all 0.3s ease;
-}
-
+/* Estilos para el contenedor principal */
 #content-wrapper {
     width: calc(100% - 250px);
     padding-left: 0;
-    transition: all 0.3s;
 }
 
 #content-wrapper.expanded {

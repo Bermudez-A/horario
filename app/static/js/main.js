@@ -323,6 +323,7 @@ function getCSRFToken() {
 
 /**
  * Configura la funcionalidad del sidebar para administradores
+ * Versión mejorada sin animaciones
  */
 function setupSidebar() {
     const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
@@ -340,23 +341,29 @@ function setupSidebar() {
         contentWrapper.classList.add('expanded');
     }
     
-    // Botón de hamburguesa en móviles
+    // Botón de hamburguesa en móviles - aplicamos cambios directamente sin animaciones
     if (sidebarToggleBtn) {
-        sidebarToggleBtn.addEventListener('click', function() {
+        sidebarToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             sidebar.classList.toggle('active');
+            // Evitar comportamiento de scroll
+            document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
         });
     }
     
-    // Botón de cierre en móviles
+    // Botón de cierre en móviles - acción inmediata sin animaciones
     if (sidebarCollapseBtn) {
-        sidebarCollapseBtn.addEventListener('click', function() {
+        sidebarCollapseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             sidebar.classList.remove('active');
+            document.body.style.overflow = '';
         });
     }
     
-    // Botón de colapso en desktop
+    // Botón de colapso en desktop - cambio instantáneo sin transiciones
     if (sidebarCollapse) {
-        sidebarCollapse.addEventListener('click', function() {
+        sidebarCollapse.addEventListener('click', function(e) {
+            e.preventDefault();
             sidebar.classList.toggle('collapsed');
             contentWrapper.classList.toggle('expanded');
             // Guardar estado en localStorage
@@ -370,7 +377,20 @@ function setupSidebar() {
         link.addEventListener('click', function() {
             if (window.innerWidth < 768 && sidebar) {
                 sidebar.classList.remove('active');
+                document.body.style.overflow = '';
             }
         });
+    });
+
+    // Cerrar sidebar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth < 768 && 
+            sidebar && 
+            sidebar.classList.contains('active') && 
+            !sidebar.contains(e.target) && 
+            e.target !== sidebarToggleBtn) {
+            sidebar.classList.remove('active');
+            document.body.style.overflow = '';
+        }
     });
 }
