@@ -114,7 +114,7 @@
             </ul>
         </div>
         
-        <ul class="list-unstyled components animate-stagger">
+        <ul class="list-unstyled components">
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('index') }}">
                     <i class="fas fa-home me-2"></i><span>Inicio</span>
@@ -141,8 +141,8 @@
             <div class="nav-divider"></div>
             <div class="section-title">ADMINISTRACIÓN</div>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                    <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
+                <a class="nav-link" href="{{ url_for('admin.asignar_profesores_clases') }}">
+                    <i class="fas fa-user-plus me-2"></i><span>Asignar Profesores</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -165,14 +165,13 @@
                     <i class="fas fa-graduation-cap me-2"></i><span>Secciones</span>
                 </a>
             </li>
+            <!-- Eliminados los elementos de Configuración y Respaldo -->
+            
+            <div class="nav-divider"></div>
+            <div class="section-title">EQUIPO</div>
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-cogs me-2"></i><span>Configuración</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-database me-2"></i><span>Respaldo</span>
+                <a class="nav-link" href="{{ url_for('developers') }}">
+                    <i class="fas fa-code-branch me-2"></i><span>Desarrolladores</span>
                 </a>
             </li>
         </ul>
@@ -208,7 +207,7 @@
 
         <footer class="bg-dark text-white py-4 mt-auto">
             <div class="container text-center">
-                <p class="mb-0">&copy; 2023 Generador de Horarios. Todos los derechos reservados.</p>
+                <p class="mb-0">&copy; 2025 AURORA - Automatización de Horarios. Todos los derechos reservados.</p>
             </div>
         </footer>
     </div>

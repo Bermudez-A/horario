@@ -839,14 +839,8 @@ def unir_clases():
             )
             db.session.add(horario)
         
-        # Eliminar cualquier otro horario de la misma asignatura en esta clase
-        # pero en diferente posición
-        Horario.query.filter(
-            Horario.clase_id == clase_actual_id,
-            Horario.asignatura_id == asignatura_actual_id,
-            Horario.dia != dia,
-            Horario.hora != hora
-        ).delete()
+        # No eliminamos ninguna asignación anterior
+        # Esto evita afectar a otras clases que no estamos moviendo
         
         db.session.commit()
         

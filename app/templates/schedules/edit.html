@@ -299,7 +299,10 @@
                                                                 {{ hora_data.asignatura }}
                                     </div>
                                     <div class="profesor-nombre">
-                                                                {{ hora_data.profesor if hora_data.profesor else 'Sin asignar' }}
+                                        {% if hora_data.es_actividad_especial %}
+                                        {% else %}
+                                        {{ hora_data.profesor if hora_data.profesor else 'Sin asignar' }}
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endif %}

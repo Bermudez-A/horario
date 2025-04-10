@@ -71,20 +71,21 @@
     animation: pulse 1s ease infinite;
 }
 
+/* Eliminada la animación para elementos del sidebar */
 .animate-stagger > * {
-    opacity: 0;
-    animation: slideUp 0.5s ease forwards;
+    opacity: 1; /* Mantener visible desde el inicio */
 }
 
-/* Aplica retrasos escalonados a los hijos */
-.animate-stagger > *:nth-child(1) { animation-delay: 0.1s; }
-.animate-stagger > *:nth-child(2) { animation-delay: 0.2s; }
-.animate-stagger > *:nth-child(3) { animation-delay: 0.3s; }
-.animate-stagger > *:nth-child(4) { animation-delay: 0.4s; }
-.animate-stagger > *:nth-child(5) { animation-delay: 0.5s; }
-.animate-stagger > *:nth-child(6) { animation-delay: 0.6s; }
-.animate-stagger > *:nth-child(7) { animation-delay: 0.7s; }
-.animate-stagger > *:nth-child(8) { animation-delay: 0.8s; }
+/* Eliminados los retrasos escalonados para el sidebar */
+/* Las siguientes reglas se conservan solo para otros elementos que no sean del sidebar */
+.animate-stagger > *:not(#sidebar *):nth-child(1) { animation-delay: 0.1s; }
+.animate-stagger > *:not(#sidebar *):nth-child(2) { animation-delay: 0.2s; }
+.animate-stagger > *:not(#sidebar *):nth-child(3) { animation-delay: 0.3s; }
+.animate-stagger > *:not(#sidebar *):nth-child(4) { animation-delay: 0.4s; }
+.animate-stagger > *:not(#sidebar *):nth-child(5) { animation-delay: 0.5s; }
+.animate-stagger > *:not(#sidebar *):nth-child(6) { animation-delay: 0.6s; }
+.animate-stagger > *:not(#sidebar *):nth-child(7) { animation-delay: 0.7s; }
+.animate-stagger > *:not(#sidebar *):nth-child(8) { animation-delay: 0.8s; }
 
 /* Animación para la barra de progreso del dashboard */
 .animate-progress-bar {
@@ -262,8 +263,8 @@
     transform: translateY(0);
 }
 
-/* Transiciones de página */
-.page-transition {
+/* Transiciones de página - sin afectar al sidebar */
+.page-transition:not(#sidebar, #sidebar *) {
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -421,4 +422,4 @@
 
 .bounce-in-down {
     animation: bounceInDown 1s forwards;
-} 
+}
