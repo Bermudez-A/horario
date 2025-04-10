@@ -594,53 +594,55 @@
         }
 
         function openModal(event) {
-        const celda = event.currentTarget;
-        console.log(`[Modal Editar/Nuevo] Abriendo para celda ${celda.dataset.dia} ${celda.dataset.hora}° hora`);
+  // 🛠️ Asegurarse de que los event listeners están activos
+  reinicializarEventListeners();
 
-        // Asigna los datos globales
-        currentDia = celda.dataset.dia;
-        currentHora = celda.dataset.hora;
-        selectedAsignaturaId = celda.dataset.asignaturaId || null;
-        selectedProfesorId = celda.dataset.profesorId || null;
+  const celda = event.currentTarget;
+  console.log(`[Modal Editar/Nuevo] Abriendo para celda ${celda.dataset.dia} ${celda.dataset.hora}° hora`);
 
-        // Referencias a elementos del modal
-        const modalElement = document.getElementById('asignarModal');
-        const modalDia = document.getElementById('modal-dia');
-        const modalHora = document.getElementById('modal-hora');
-        const btnEliminar = document.getElementById('btn-eliminar');
-        const conflictoDiv = document.getElementById('conflicto-info');
+  // Asigna los datos globales
+  currentDia = celda.dataset.dia;
+  currentHora = celda.dataset.hora;
+  selectedAsignaturaId = celda.dataset.asignaturaId || null;
+  selectedProfesorId = celda.dataset.profesorId || null;
 
-        if (!modalElement || !modalDia || !modalHora || !btnEliminar || !conflictoDiv) {
-            console.error("[Modal] Elementos necesarios no encontrados");
-            return;
-        }
+  // Referencias a elementos del modal
+  const modalElement = document.getElementById('asignarModal');
+  const modalDia = document.getElementById('modal-dia');
+  const modalHora = document.getElementById('modal-hora');
+  const btnEliminar = document.getElementById('btn-eliminar');
+  const conflictoDiv = document.getElementById('conflicto-info');
 
-        // Actualizar el contenido del modal
-        modalDia.textContent = capitalize(currentDia);
-        modalHora.textContent = currentHora + '° hora';
-        document.querySelectorAll('.subject-option').forEach(option => {
-            option.classList.toggle('selected', selectedAsignaturaId && option.dataset.id === selectedAsignaturaId);
-        });
-        updateProfesoresList();
-        btnEliminar.style.display = selectedAsignaturaId ? 'inline-block' : 'none';
-        if (conflictoDiv.textContent.trim() === '') {
-            conflictoDiv.innerHTML = '<span class="text-muted small">Seleccione asignatura y profesor.</span>';
-        }
+  if (!modalElement || !modalDia || !modalHora || !btnEliminar || !conflictoDiv) {
+    console.error("[Modal] Elementos necesarios no encontrados");
+    return;
+  }
 
-        // Inicializar los eventos del modal solo una vez
-        initializeModalEvents();
+  // Actualizar el contenido del modal
+  modalDia.textContent = capitalize(currentDia);
+  modalHora.textContent = currentHora + '° hora';
+  document.querySelectorAll('.subject-option').forEach(option => {
+    option.classList.toggle('selected', selectedAsignaturaId && option.dataset.id === selectedAsignaturaId);
+  });
+  updateProfesoresList();
+  btnEliminar.style.display = selectedAsignaturaId ? 'inline-block' : 'none';
+  if (conflictoDiv.textContent.trim() === '') {
+    conflictoDiv.innerHTML = '<span class="text-muted small">Seleccione asignatura y profesor.</span>';
+  }
 
-        // Mostrar el modal
-        const modalInstance = new bootstrap.Modal(modalElement);
-        modalInstance.show();
+  // Mostrar el modal
+  if (currentModal) {
+  currentModal.show();
+}
 
-        // Limpia los datos cuando el modal se cierra (se ejecuta solo una vez)
-        modalElement.addEventListener('hidden.bs.modal', function () {
-            console.log("[Modal] Modal cerrado");
-            selectedAsignaturaId = null;
-            selectedProfesorId = null;
-        }, { once: true });
-    }
+  // Limpiar datos al cerrar
+  modalElement.addEventListener('hidden.bs.modal', function () {
+    console.log("[Modal] Modal cerrado");
+    selectedAsignaturaId = null;
+    selectedProfesorId = null;
+  }, { once: true });
+}
+
 
 
         // Inicializar datos de asignaturas y profesores (simplificado para ejemplo)
@@ -1326,7 +1328,8 @@
             const spinner = document.getElementById('spinnerGuardar');
             btnGuardar.disabled = true;
             spinner.classList.remove('d-none');
-            document.getElementById('modal-error-container').innerHTML = ''; // Limpiar errores previos del modal
+            const container = document.getElementById('modal-error-container');
+container.querySelectorAll('.alert').forEach(a => a.remove()); // solo borra alertas, no el contenedor // Limpiar errores previos del modal
 
             // Proceder directamente con el guardado (la verificación ya se hizo antes)
             const ajustar = document.getElementById('ajustar-otras-clases')?.checked || false;
@@ -1596,18 +1599,25 @@
             const nuevoProfesorId = option.dataset.id;
             console.log(`[Modal Select Prof] Seleccionado profesor ID: ${nuevoProfesorId}`);
 
-            // Actualizar selección visual
+            // Quitar selección anterior
             document.querySelectorAll('.profesor-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
             option.classList.add('selected');
-            
+
             // Actualizar estado
             selectedProfesorId = nuevoProfesorId;
-            
+
+            // Habilitar botón guardar
+            const btnGuardar = document.getElementById('btn-guardar');
+            if (btnGuardar) {
+                btnGuardar.disabled = false;
+            }
+
             // Verificar conflictos
             verificarConflictos();
         }
+
 
         function updateProfesoresList() {
             const profesoresList = document.getElementById('profesores-list');
@@ -1618,6 +1628,7 @@
 
             // Limpiar lista actual
             profesoresList.innerHTML = '';
+            document.querySelectorAll('#modal-error-container .alert').forEach(a => a.remove());
             
             if (!selectedAsignaturaId) {
                 profesoresList.innerHTML = '<div class="alert alert-light border small">Seleccione una asignatura.</div>';
@@ -1805,7 +1816,11 @@
         
         // Función para verificar conflictos (independiente, no bloquea la edición)
         function verificarConflictos() {
-            const conflictoDiv = document.getElementById('conflicto-info');
+  const infoDiv = document.getElementById('conflicto-info');
+  if (!infoDiv) {
+    console.error("[verificarConflictos] #conflicto-info desapareció del DOM");
+    return;
+  }
             const btnGuardar = document.getElementById('btn-guardar');
             
             if (!conflictoDiv || !btnGuardar) {
@@ -2104,23 +2119,23 @@
             });
         }
 
-        function mostrarAlertaEnModal(mensaje, tipo = 'info') {
-            const conflictoDiv = document.getElementById('conflicto-info');
-            if (!conflictoDiv) {
-                console.error("[Modal Alert] No se encontró el contenedor de alertas");
-                return;
-            }
-            
-            conflictoDiv.innerHTML = `
-                <div class="alert alert-${tipo} alert-dismissible fade show small py-1" role="alert">
-                    ${tipo === 'danger' ? '<i class="fas fa-exclamation-triangle me-1"></i>' : ''}
-                    ${tipo === 'success' ? '<i class="fas fa-check-circle me-1"></i>' : ''}
-                    ${mensaje}
-                    <button type="button" class="btn-close py-1 px-2" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
-                </div>
-            `;
-            console.log(`[Modal Alert ${tipo}]: ${mensaje}`);
-        }
+        function mostrarAlertaEnModal(mensaje, tipo = 'danger') {
+  const container = document.getElementById('modal-error-container');
+  if (!container) return;
+
+  // Crear la alerta como nodo
+  const alerta = document.createElement('div');
+  alerta.className = `alert alert-${tipo} alert-dismissible fade show small py-2 mt-1`;
+  alerta.role = 'alert';
+  alerta.innerHTML = `
+    ${mensaje}
+    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  `;
+
+  container.appendChild(alerta);
+
+  // Eliminar solo la alerta, no el contenedor
+}
         
         // Mostrar alertas generales
         function mostrarAlerta(mensaje, tipo) {
@@ -2161,7 +2176,7 @@
                             }
                         });
                     }
-                }, 5000);
+                }, 15000);
             }
         }
         
@@ -2234,8 +2249,7 @@
                 // ... existing code ...
             }
         }
-
+        setTimeout(() => reinicializarEventListeners(), 1000); // reintenta tras 1 segundo
     });
 </script>
 {% endblock %} 
-rewritten_file>
