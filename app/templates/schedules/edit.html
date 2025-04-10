@@ -836,13 +836,117 @@
                 checkConflictsAPI(origen.profesorId, destino.dia, destino.hora, currentClaseId)
             ]).then(([conflictoDestEnOrigen, conflictoOrigenEnDestino]) => {
                 let mensajesError = [];
+                let conflictosProfesor = [];
+
+                // Verificar si hay conflictos de profesor
                 if (conflictoDestEnOrigen.conflict) {
-                    mensajesError.push(`Origen (${origen.dia} ${origen.hora}): ${conflictoDestEnOrigen.message}`);
-                }
-                if (conflictoOrigenEnDestino.conflict) {
-                    mensajesError.push(`Destino (${destino.dia} ${destino.hora}): ${conflictoOrigenEnDestino.message}`);
+                    const mensajeError = conflictoDestEnOrigen.message || '';
+                    if (mensajeError.includes('ya tiene clase') || mensajeError.includes('ya está asignado')) {
+                        conflictosProfesor.push({
+                            tipo: 'origen',
+                            dia: origen.dia,
+                            hora: origen.hora,
+                            profesorId: destino.profesorId,
+                            mensaje: conflictoDestEnOrigen.message,
+                            claseConflicto: conflictoDestEnOrigen.conflicting_class
+                        });
+                    } else {
+                        mensajesError.push(`Origen (${origen.dia} ${origen.hora}): ${conflictoDestEnOrigen.message}`);
+                    }
                 }
 
+                if (conflictoOrigenEnDestino.conflict) {
+                    const mensajeError = conflictoOrigenEnDestino.message || '';
+                    if (mensajeError.includes('ya tiene clase') || mensajeError.includes('ya está asignado')) {
+                        conflictosProfesor.push({
+                            tipo: 'destino',
+                            dia: destino.dia,
+                            hora: destino.hora,
+                            profesorId: origen.profesorId,
+                            mensaje: conflictoOrigenEnDestino.message,
+                            claseConflicto: conflictoOrigenEnDestino.conflicting_class
+                        });
+                    } else {
+                        mensajesError.push(`Destino (${destino.dia} ${destino.hora}): ${conflictoOrigenEnDestino.message}`);
+                    }
+                }
+
+                // Si hay conflictos de profesor, mostrar opción de unir clases
+                if (conflictosProfesor.length > 0) {
+                    const conflicto = conflictosProfesor[0]; // Tomamos el primer conflicto
+                    console.log("[Swap] Detectado conflicto de profesor, preparando datos para unir clases:", conflicto);
+                    
+                    // Extraer información de la clase conflictiva del mensaje
+                    const mensaje = conflicto.mensaje || '';
+                    let claseConflictoNombre = 'Otra clase';
+                    let asignaturaConflictoNombre = asignaturasData[conflicto.tipo === 'origen' ? destino.asignaturaId : origen.asignaturaId]?.nombre || 'Misma asignatura';
+                    let claseConflictoId = 0;
+                    
+                    // Intentar extraer el ID de la clase del mensaje
+                    if (mensaje.includes('Sección')) {
+                        const match = mensaje.match(/Sección\s+([A-Z])/);
+                        if (match) {
+                            claseConflictoNombre = `Sección ${match[1]}`;
+                            // Asumir que la sección B es la clase 2, C es 3, etc.
+                            claseConflictoId = match[1].charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+                        }
+                    } else if (mensaje.includes('clase')) {
+                        const match = mensaje.match(/clase\s+([^,]+)/);
+                        if (match) {
+                            claseConflictoNombre = match[1].trim();
+                            // Intentar extraer el ID de la clase del nombre
+                            const idMatch = claseConflictoNombre.match(/\d+/);
+                            if (idMatch) {
+                                claseConflictoId = parseInt(idMatch[0]);
+                            }
+                        }
+                    }
+                    
+                    // Si no se pudo extraer el ID, intentar obtenerlo de la clase conflictiva
+                    if (!claseConflictoId && conflicto.claseConflicto?.clase_id) {
+                        claseConflictoId = conflicto.claseConflicto.clase_id;
+                    }
+                    
+                    // Intentar extraer el nombre de la asignatura del mensaje
+                    if (mensaje.includes('asignatura')) {
+                        const match = mensaje.match(/asignatura\s+([^,]+)/);
+                        if (match) asignaturaConflictoNombre = match[1].trim();
+                    }
+                    
+                    // Preparar datos para el modal de unir clases
+                    window.unionClasesData = {
+                        dia: conflicto.dia,
+                        hora: conflicto.hora,
+                        asignatura_actual_id: conflicto.tipo === 'origen' ? destino.asignaturaId : origen.asignaturaId,
+                        asignatura_actual_nombre: asignaturasData[conflicto.tipo === 'origen' ? destino.asignaturaId : origen.asignaturaId]?.nombre || 'No disponible',
+                        clase_actual_id: currentClaseId,
+                        clase_actual_nombre: '{{ clase.nombre }}',
+                        profesor_id: conflicto.profesorId,
+                        profesor_nombre: profesoresData[conflicto.profesorId]?.nombre || 'No disponible',
+                        clase_a_unir_id: claseConflictoId, // Usar el ID extraído
+                        clase_existente_nombre: claseConflictoNombre,
+                        asignatura_existente_id: conflicto.claseConflicto?.asignatura_id || (conflicto.tipo === 'origen' ? destino.asignaturaId : origen.asignaturaId),
+                        asignatura_existente_nombre: asignaturasData[conflicto.claseConflicto?.asignatura_id]?.nombre || 'Misma asignatura'
+                    };
+
+                    // Guardar datos de origen para cuando se confirme la unión
+                    window.origenMovimiento = {
+                        dia: conflicto.tipo === 'origen' ? destino.dia : origen.dia,
+                        hora: conflicto.tipo === 'origen' ? destino.hora : origen.hora
+                    };
+
+                    // Guardar los datos del intercambio para después de unir las clases
+                    window.pendingSwap = {
+                        origen: origen,
+                        destino: destino
+                    };
+
+                    // Mostrar modal de unir clases
+                    mostrarModalUnirClases();
+                    return Promise.resolve(); // No rechazar la promesa, permitir que continúe el flujo
+                }
+
+                // Si hay otros tipos de conflictos, mostrarlos
                 if (mensajesError.length > 0) {
                     console.error("[Swap] Conflictos detectados:", mensajesError);
                     errorContainer.innerHTML = `<div class="alert alert-danger small">${mensajesError.join('<br>')}</div>`;
@@ -872,8 +976,8 @@
             })
             .catch(error => {
                 console.error('[Swap] Error durante el intercambio:', error);
-                if (error.message !== "Conflictos detectados") { // No mostrar doble alerta
-                     errorContainer.innerHTML = `<div class="alert alert-danger small">Error inesperado: ${error.message}</div>`;
+                if (error.message !== "Conflicto detectado") { // No mostrar doble alerta
+                    errorContainer.innerHTML = `<div class="alert alert-danger small">Error inesperado: ${error.message}</div>`;
                 }
             })
             .finally(() => {
@@ -1249,7 +1353,6 @@
                              data-color="${asignatura.color}"
                              style="background-color: ${asignatura.color}"
                              draggable="true"
-                             ondragstart="drag(event)"
                              data-asignatura-id="${asignaturaId}"
                              data-profesor-id="${profesorId}"
                              title="${asignatura.nombre} - ${profesor.nombre}">
@@ -1696,6 +1799,7 @@
             if (!window.unionClasesData) {
                 console.error("[Unir Clases] No hay datos para unir clases");
                 mostrarAlerta("Error: No hay datos para unir las clases", "danger");
+                window.location.reload(); // Recargar incluso en caso de error
                 return;
             }
             
@@ -1719,6 +1823,7 @@
             if (datosFaltantes.length > 0) {
                 console.error("[Unir Clases] Datos faltantes:", datosFaltantes);
                 mostrarAlerta(`Error: Faltan los siguientes datos: ${datosFaltantes.join(', ')}`, "danger");
+                window.location.reload(); // Recargar incluso en caso de error
                 return;
             }
             
@@ -1728,6 +1833,7 @@
             if (!btnConfirmarUnir || !spinnerUnir) {
                 console.error("[Unir Clases] Elementos del botón de confirmar no encontrados");
                 mostrarAlerta("Error: No se pudo encontrar el botón de confirmar", "danger");
+                window.location.reload(); // Recargar incluso en caso de error
                 return;
             }
             
@@ -1767,31 +1873,36 @@
             })
             .then(respData => {
                 if (respData.success) {
-                    // Cerrar modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('unirClasesModal'));
-                    if (modal) modal.hide();
+                    // Cerrar todos los modales abiertos
+                    const modales = ['unirClasesModal', 'swapModal', 'asignarModal'];
+                    modales.forEach(modalId => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+                        if (modal) modal.hide();
+                    });
                     
-                    // Verificar si esta unión viene de un movimiento de clase
-                    if (window.origenMovimiento) {
-                        // Si viene de un movimiento, actualizar la interfaz para reflejar el movimiento
-                        actualizarUIAlMover(
-                            window.origenMovimiento.dia, 
-                            window.origenMovimiento.hora, 
-                            data.dia, 
-                            data.hora
-                        );
-                        // Limpiar datos de origen
-                        window.origenMovimiento = null;
+                    // Verificar si hay un intercambio pendiente
+                    if (window.pendingSwap) {
+                        console.log("[Unir Clases] Hay un intercambio pendiente, procediendo...");
+                        const { origen, destino } = window.pendingSwap;
+                        
+                        // Realizar el intercambio después de unir las clases
+                        return Promise.all([
+                            actualizarClaseEnServidor(destino.asignaturaId, destino.profesorId, origen.dia, origen.hora),
+                            actualizarClaseEnServidor(origen.asignaturaId, origen.profesorId, destino.dia, destino.hora)
+                        ]).then(results => {
+                            if (results && results.every(result => result && result.success)) {
+                                actualizarCelda(origen.dia, origen.hora, destino.asignaturaId, destino.profesorId);
+                                actualizarCelda(destino.dia, destino.hora, origen.asignaturaId, origen.profesorId);
+                                mostrarAlerta('Clases unidas e intercambiadas correctamente', 'success');
+                            } else {
+                                throw new Error('Error al intercambiar las clases');
+                            }
+                        });
                     } else {
-                        // Si no viene de un movimiento, solo actualizar la celda destino
+                        // Si no hay intercambio pendiente, solo actualizar la celda
                         actualizarCelda(data.dia, data.hora, data.asignatura_actual_id, data.profesor_id);
+                        mostrarAlerta('Clases unidas correctamente', 'success');
                     }
-                    
-                    // Mostrar mensaje de éxito
-                    mostrarAlerta('Clases unidas correctamente', 'success');
-                    
-                    // Recargar la página para asegurar que todo esté actualizado
-                    location.reload();
                 } else {
                     throw new Error(respData.message || 'Error al unir clases');
                 }
@@ -1804,6 +1915,11 @@
                 // Restaurar botón
                 if (btnConfirmarUnir) btnConfirmarUnir.disabled = false;
                 if (spinnerUnir) spinnerUnir.classList.add('d-none');
+                // Limpiar datos pendientes
+                window.pendingSwap = null;
+                window.origenMovimiento = null;
+                // Recargar la página siempre al final
+                window.location.reload();
             });
         }
 
