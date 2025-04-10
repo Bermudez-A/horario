@@ -19,17 +19,8 @@ from app.models.disponibilidad import Disponibilidad
 @login_required
 @admin_required
 def dashboard():
-    users_count = User.query.count()
-    profesores_count = Profesor.query.count()
-    asignaturas_count = Asignatura.query.count()
-    clases_count = Clase.query.count()
-    
-    return render_template('admin/dashboard.html', 
-                           title='Panel de Administración',
-                           users_count=users_count,
-                           profesores_count=profesores_count,
-                           asignaturas_count=asignaturas_count,
-                           clases_count=clases_count)
+    # Redirigir a la página de asignar profesores
+    return redirect(url_for('admin.asignar_profesores_clases'))
 
 # Gestión de Usuarios
 @admin.route('/users')
@@ -1205,7 +1196,7 @@ def asignar_profesores_clases():
                             flash('Combinación de profesor y asignatura no válida', 'danger')
                 
                 # Si se envió pero no se seleccionó ningún profesor, eliminar la asignación existente
-                elif asignacion_actual and 'eliminar' in request.form:
+                elif asignacion_actual && 'eliminar' in request.form:
                     db.session.delete(asignacion_actual)
                     db.session.commit()
                     flash(f'Asignación de profesor eliminada para la asignatura {asignatura.nombre}', 'success')
