@@ -594,57 +594,54 @@
         }
 
         function openModal(event) {
-            const celda = event.currentTarget;
-            console.log(`[Modal Editar/Nuevo] Abriendo para celda ${celda.dataset.dia} ${celda.dataset.hora}° hora`);
-            
-            currentDia = celda.dataset.dia;
-            currentHora = celda.dataset.hora;
-            selectedAsignaturaId = celda.dataset.asignaturaId || null;
-            selectedProfesorId = celda.dataset.profesorId || null;
+        const celda = event.currentTarget;
+        console.log(`[Modal Editar/Nuevo] Abriendo para celda ${celda.dataset.dia} ${celda.dataset.hora}° hora`);
 
-            // Actualizar elementos del modal
-            const modalDia = document.getElementById('modal-dia');
-            const modalHora = document.getElementById('modal-hora');
-            const btnEliminar = document.getElementById('btn-eliminar');
-            const conflictoDiv = document.getElementById('conflicto-info');
-            
-            if (!modalDia || !modalHora || !btnEliminar || !conflictoDiv) {
-                console.error("[Modal] No se encontraron elementos necesarios del modal");
-                return;
-            }
+        // Asigna los datos globales
+        currentDia = celda.dataset.dia;
+        currentHora = celda.dataset.hora;
+        selectedAsignaturaId = celda.dataset.asignaturaId || null;
+        selectedProfesorId = celda.dataset.profesorId || null;
 
-            modalDia.textContent = capitalize(currentDia);
-            modalHora.textContent = currentHora + '° hora';
+        // Referencias a elementos del modal
+        const modalElement = document.getElementById('asignarModal');
+        const modalDia = document.getElementById('modal-dia');
+        const modalHora = document.getElementById('modal-hora');
+        const btnEliminar = document.getElementById('btn-eliminar');
+        const conflictoDiv = document.getElementById('conflicto-info');
 
-            // Actualizar selección visual de asignaturas
-            document.querySelectorAll('.subject-option').forEach(option => {
-                option.classList.toggle('selected', selectedAsignaturaId && option.dataset.id === selectedAsignaturaId);
-            });
-
-            // Actualizar lista de profesores
-            updateProfesoresList();
-
-            // Habilitar/Deshabilitar botón de eliminar
-            btnEliminar.style.display = selectedAsignaturaId ? 'inline-block' : 'none';
-
-            // Establecer mensaje inicial solo si no hay otro mensaje
-            if (conflictoDiv.textContent.trim() === '') {
-                conflictoDiv.innerHTML = '<span class="text-muted small">Seleccione asignatura y profesor.</span>';
-            }
-
-            // Mostrar el modal usando la instancia guardada
-            if (currentModal) {
-                currentModal.show();
-            }
+        if (!modalElement || !modalDia || !modalHora || !btnEliminar || !conflictoDiv) {
+            console.error("[Modal] Elementos necesarios no encontrados");
+            return;
         }
 
-        // Inicializar eventos de las celdas
-        document.querySelectorAll('.celda-horario:not(.celda-actividad-comun)').forEach(celda => {
-            celda.addEventListener('click', openModal);
-            celda.addEventListener('dragover', allowDrop);
-            celda.addEventListener('dragleave', leaveDrop);
-            celda.addEventListener('drop', drop);
+        // Actualizar el contenido del modal
+        modalDia.textContent = capitalize(currentDia);
+        modalHora.textContent = currentHora + '° hora';
+        document.querySelectorAll('.subject-option').forEach(option => {
+            option.classList.toggle('selected', selectedAsignaturaId && option.dataset.id === selectedAsignaturaId);
         });
+        updateProfesoresList();
+        btnEliminar.style.display = selectedAsignaturaId ? 'inline-block' : 'none';
+        if (conflictoDiv.textContent.trim() === '') {
+            conflictoDiv.innerHTML = '<span class="text-muted small">Seleccione asignatura y profesor.</span>';
+        }
+
+        // Inicializar los eventos del modal solo una vez
+        initializeModalEvents();
+
+        // Mostrar el modal
+        const modalInstance = new bootstrap.Modal(modalElement);
+        modalInstance.show();
+
+        // Limpia los datos cuando el modal se cierra (se ejecuta solo una vez)
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            console.log("[Modal] Modal cerrado");
+            selectedAsignaturaId = null;
+            selectedProfesorId = null;
+        }, { once: true });
+    }
+
 
         // Inicializar datos de asignaturas y profesores (simplificado para ejemplo)
         try {
@@ -1350,9 +1347,7 @@
                     mostrarAlerta('Asignación guardada con éxito', 'success');
                     
                     // Esperar un momento para que se muestre el mensaje de éxito
-                    setTimeout(() => {
-                        window.location.reload(); // Recargar la página
-                    }, 500);
+                    mostrarAlerta('Asignación guardada con éxito', 'success');
                 } else {
                     mostrarAlertaEnModal(`Error al guardar: ${data.message || 'Error desconocido'}`, 'danger');
                     btnGuardar.disabled = false;
@@ -1779,18 +1774,6 @@
                 btnGuardar.disabled = !selectedAsignaturaId || !selectedProfesorId;
             }
         }
-
-        // Agregar un intervalo para verificar el estado del modal
-        document.addEventListener('DOMContentLoaded', function() {
-            // ... existing code ...
-            
-            // Agregar un intervalo para mantener el estado del modal
-            setInterval(function() {
-                if (document.getElementById('asignarModal').classList.contains('show')) {
-                    actualizarEstadoModal();
-                }
-            }, 1000); // Verificar cada segundo
-        });
 
         // Llama a la API para verificar conflictos
         function checkConflictsAPI(profesorId, dia, hora, claseId) {

@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, Blueprint
 from flask_login import login_required, current_user
 from app import db
 from app.schedules import schedules
@@ -10,6 +10,8 @@ from app.models.disponibilidad import Disponibilidad
 from app.models.user import User
 from app.schedules.generator import generate_schedule
 from app.models.actividad_especial import ActividadEspecial
+from app.models.actividad_personalizada import ActividadPersonalizada
+import json
 
 @schedules.route('/')
 @login_required
@@ -452,45 +454,33 @@ def generate_all():
 @schedules.route('/availability')
 @login_required
 def availability():
-    """Vista para gestionar actividades especiales"""
-    if not current_user.rol == 'admin':
-        flash('No tienes permiso para acceder a esta sección', 'warning')
-        return redirect(url_for('schedules.index'))
-    
-    # Obtener todas las asignaturas para el selector de exámenes
-    asignaturas = Asignatura.query.filter_by(activa=True).all()
-    
-    # Obtener actividades especiales existentes
+    # Get existing special activities
+    actividades_existentes = {}
     actividades = ActividadEspecial.query.all()
-    actividades_dict = {}
     
     for actividad in actividades:
-        # Convertir hora a nombre de sesión
-        sesiones_map = {
-            1: 'Primera', 2: 'Segunda', 3: 'Tercera', 4: 'Cuarta',
-            5: 'Quinta', 6: 'Sexta', 7: 'Séptima'
-        }
-        sesion = sesiones_map.get(actividad.hora)
+        if actividad.dia not in actividades_existentes:
+            actividades_existentes[actividad.dia] = {}
+        if actividad.hora not in actividades_existentes[actividad.dia]:
+            actividades_existentes[actividad.dia][actividad.hora] = []
         
-        if not sesion:
-            continue
-            
-        if actividad.dia not in actividades_dict:
-            actividades_dict[actividad.dia] = {}
-            
-        if sesion not in actividades_dict[actividad.dia]:
-            actividades_dict[actividad.dia][sesion] = []
-            
-        nombre_actividad = actividad.nombre
-        if actividad.nombre == 'Examen' and actividad.descripcion:
-            nombre_actividad += f' - {actividad.descripcion}'
-            
-        actividades_dict[actividad.dia][sesion].append(nombre_actividad)
+        if actividad.nombre == 'Examen':
+            actividades_existentes[actividad.dia][actividad.hora].append(
+                f'Examen - {actividad.descripcion}'
+            )
+        else:
+            actividades_existentes[actividad.dia][actividad.hora].append(actividad.nombre)
+    
+    # Get custom activities
+    actividades_personalizadas = ActividadPersonalizada.query.filter_by(activo=True).all()
+    
+    # Get subjects for exam modal
+    asignaturas = Asignatura.query.all()
     
     return render_template('schedules/availability.html',
-                          title='Actividades Especiales',
-                          asignaturas=asignaturas,
-                          actividades_existentes=actividades_dict)
+                         actividades_existentes=actividades_existentes,
+                         actividades_personalizadas=actividades_personalizadas,
+                         asignaturas=asignaturas)
 
 @schedules.route('/availability/update', methods=['POST'])
 @login_required
@@ -924,3 +914,62 @@ def clear_all(clase_id):
         print(f"Error al limpiar horario: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500 
+
+@schedules.route('/gestionar_actividades_personalizadas', methods=['GET', 'POST'])
+@login_required
+def gestionar_actividades_personalizadas():
+    if request.method == 'POST':
+        try:
+            nombre = request.form.get('nombre')
+            color = request.form.get('color')
+            icono = request.form.get('icono')
+            
+            if not nombre or not color:
+                return jsonify({
+                    'success': False,
+                    'message': 'El nombre y el color son obligatorios'
+                }), 400
+            
+            actividad = ActividadPersonalizada(
+                nombre=nombre,
+                color=color,
+                icono=icono,
+                creado_por=current_user.id
+            )
+            
+            db.session.add(actividad)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Actividad personalizada creada correctamente',
+                'actividad': actividad.to_dict()
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error al crear la actividad: {str(e)}'
+            }), 500
+    
+    actividades = ActividadPersonalizada.query.filter_by(activo=True).all()
+    return render_template('schedules/actividades_personalizadas.html', actividades=actividades)
+
+@schedules.route('/gestionar_actividades_personalizadas/<int:id>', methods=['PUT', 'DELETE'])
+@login_required
+def gestionar_actividad_personalizada(id):
+    actividad = ActividadPersonalizada.query.get_or_404(id)
+    
+    if request.method == 'PUT':
+        data = request.get_json()
+        actividad.nombre = data.get('nombre', actividad.nombre)
+        actividad.color = data.get('color', actividad.color)
+        actividad.icono = data.get('icono', actividad.icono)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Actividad actualizada correctamente'})
+    
+    elif request.method == 'DELETE':
+        actividad.activo = False
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Actividad eliminada correctamente'}) 
