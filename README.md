@@ -4,11 +4,23 @@ Aplicación web desarrollada en Flask para la creación y gestión de horarios e
 
 ## Características principales
 
-- Gestión de profesores, asignaturas y clases
-- Generación y asignación de horarios
-- Visualización de estadísticas y métricas
-- Análisis de carga docente
+- Gestión completa de profesores, asignaturas y clases
+- Generación automática de horarios mediante algoritmos voraces
+- Interfaz visual para edición manual de horarios con drag & drop
+- Sistema de gestión de disponibilidad de profesores
+- Panel de estadísticas avanzado con:
+  - Análisis de carga docente
+  - Comparativa entre secciones y grupos
+  - Seguimiento del progreso curricular
+  - Visualización de métricas en tiempo real
 - Exportación de datos a PDF y Excel
+- Interfaz moderna y responsiva con:
+  - Animaciones suaves y efectos visuales
+  - Diseño adaptable a dispositivos móviles
+  - Temas claros y oscuros
+  - Efectos de glassmorphism
+- Sistema de notificaciones en tiempo real
+- Gestión de usuarios y roles (admin/profesor)
 
 ## Instalación y configuración
 
@@ -16,6 +28,7 @@ Aplicación web desarrollada en Flask para la creación y gestión de horarios e
 
 - Python 3.9 o superior
 - pip (gestor de paquetes de Python)
+- Navegador web moderno con soporte para JavaScript ES6+
 
 ### Instalación
 
@@ -80,7 +93,13 @@ horario/
 │   ├── auth/           # Módulo para autenticación
 │   ├── models/         # Modelos de la base de datos
 │   ├── stats/          # Módulo para estadísticas
-│   ├── static/         # Archivos estáticos (CSS, JS, imágenes)
+│   ├── static/         # Archivos estáticos
+│   │   ├── css/        # Estilos CSS
+│   │   │   ├── style.css
+│   │   │   └── animations.css
+│   │   └── js/         # Scripts JavaScript
+│   │       ├── main.js
+│   │       └── animations.js
 │   └── templates/      # Plantillas HTML
 │
 ├── migrations/         # Migraciones de la base de datos
@@ -90,6 +109,28 @@ horario/
 ├── app.py              # Punto de entrada de la aplicación
 └── requirements.txt    # Dependencias del proyecto
 ```
+
+## Características técnicas
+
+- **Frontend:**
+  - Bootstrap 5.3 para la interfaz de usuario
+  - Chart.js para visualización de datos
+  - Animaciones CSS personalizadas
+  - Efectos de glassmorphism
+  - Diseño responsivo y adaptable
+
+- **Backend:**
+  - Flask como framework web
+  - SQLAlchemy para ORM
+  - Sistema de autenticación y autorización
+  - API RESTful para interacciones
+
+- **Características avanzadas:**
+  - Drag & drop para edición de horarios
+  - Gráficos interactivos y actualizables
+  - Sistema de notificaciones en tiempo real
+  - Exportación de datos en múltiples formatos
+  - Optimización de carga docente
 
 ## Contribución
 

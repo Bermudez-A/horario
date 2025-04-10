@@ -5,7 +5,30 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="fas fa-calendar-alt me-2"></i>Horario de {{ clase.nombre }}</h1>
+        <div class="d-flex align-items-center">
+            <h1 class="me-3"><i class="fas fa-calendar-alt me-2"></i>Horario de</h1>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle px-4 py-2" type="button" id="claseDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ clase.nombre }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-lg" aria-labelledby="claseDropdown" style="min-width: 300px; max-height: 400px; overflow-y: auto;">
+                    {% for c in clases %}
+                    <li>
+                        <a class="dropdown-item {% if c.id == clase.id %}active{% endif %} py-2" 
+                           href="{{ url_for('schedules.view_schedule', clase_id=c.id) }}">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-users me-2"></i>
+                                <div>
+                                    <div class="fw-bold">{{ c.nombre }}</div>
+                                    <small class="text-muted">Sección {{ c.seccion }}</small>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
         <div>
             <a href="{{ url_for('schedules.index') }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Volver
@@ -14,6 +37,9 @@
             <a href="{{ url_for('schedules.edit_schedule', clase_id=clase.id) }}" class="btn btn-primary">
                 <i class="fas fa-edit me-1"></i> Editar
             </a>
+            <button class="btn btn-danger" id="btn-eliminar" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                <i class="fas fa-trash-alt me-1"></i> Eliminar
+            </button>
             {% endif %}
             <button class="btn btn-outline-primary" id="btn-exportar">
                 <i class="fas fa-file-excel me-1"></i> CSV
@@ -21,6 +47,30 @@
             <button class="btn btn-outline-danger" id="btn-pdf">
                 <i class="fas fa-file-pdf me-1"></i> PDF
             </button>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación de eliminación -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar el horario de <strong>{{ clase.nombre }}</strong>?</p>
+                    <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form action="{{ url_for('schedules.clear_all', clase_id=clase.id) }}" method="POST">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt me-1"></i> Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 

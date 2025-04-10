@@ -194,7 +194,30 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="fas fa-edit me-2"></i>Editar Horario de {{ clase.nombre }}</h1>
+        <div class="d-flex align-items-center">
+            <h1 class="me-3"><i class="fas fa-edit me-2"></i>Editar Horario de</h1>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle px-4 py-2" type="button" id="claseDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ clase.nombre }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-lg" aria-labelledby="claseDropdown" style="min-width: 300px; max-height: 400px; overflow-y: auto;">
+                    {% for c in clases %}
+                    <li>
+                        <a class="dropdown-item {% if c.id == clase.id %}active{% endif %} py-2" 
+                           href="{{ url_for('schedules.edit_schedule', clase_id=c.id) }}">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-users me-2"></i>
+                                <div>
+                                    <div class="fw-bold">{{ c.nombre }}</div>
+                                    <small class="text-muted">Sección {{ c.seccion }}</small>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
         <div>
             <a href="{{ url_for('schedules.view_schedule', clase_id=clase.id) }}" class="btn btn-secondary">
                 <i class="fas fa-eye me-1"></i> Ver Horario
@@ -900,13 +923,31 @@
                             const mensaje = conflictoData.message || '';
                             let claseConflictoNombre = 'Otra clase';
                             let asignaturaConflictoNombre = asignaturasData[asignaturaId]?.nombre || 'Misma asignatura';
+                            let claseConflictoId = 0;
                             
-                            // Intentar extraer el nombre de la clase del mensaje
+                            // Intentar extraer el ID de la clase del mensaje
                             if (mensaje.includes('Sección')) {
-                                claseConflictoNombre = mensaje.split('Sección')[1].trim();
+                                const match = mensaje.match(/Sección\s+([A-Z])/);
+                                if (match) {
+                                    claseConflictoNombre = `Sección ${match[1]}`;
+                                    // Asumir que la sección B es la clase 2, C es 3, etc.
+                                    claseConflictoId = match[1].charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+                                }
                             } else if (mensaje.includes('clase')) {
                                 const match = mensaje.match(/clase\s+([^,]+)/);
-                                if (match) claseConflictoNombre = match[1].trim();
+                                if (match) {
+                                    claseConflictoNombre = match[1].trim();
+                                    // Intentar extraer el ID de la clase del nombre
+                                    const idMatch = claseConflictoNombre.match(/\d+/);
+                                    if (idMatch) {
+                                        claseConflictoId = parseInt(idMatch[0]);
+                                    }
+                                }
+                            }
+                            
+                            // Si no se pudo extraer el ID, intentar obtenerlo de la clase conflictiva
+                            if (!claseConflictoId && claseConflicto.clase_id) {
+                                claseConflictoId = claseConflicto.clase_id;
                             }
                             
                             // Intentar extraer el nombre de la asignatura del mensaje
@@ -936,7 +977,7 @@
                                 clase_actual_nombre: '{{ clase.nombre }}',
                                 profesor_id: profesorId,
                                 profesor_nombre: profesoresData[profesorId]?.nombre || 'No disponible',
-                                clase_existente_id: claseConflicto.clase_id || 0,
+                                clase_a_unir_id: claseConflictoId, // Usar el ID extraído
                                 clase_existente_nombre: claseConflictoNombre,
                                 asignatura_existente_id: claseConflicto.asignatura_id || asignaturaId,
                                 asignatura_existente_nombre: asignaturaConflictoNombre
@@ -1664,6 +1705,7 @@
             // Verificar datos mínimos requeridos
             const datosRequeridos = {
                 clase_actual_id: data.clase_actual_id,
+                clase_a_unir_id: data.clase_a_unir_id,
                 profesor_id: data.profesor_id,
                 asignatura_actual_id: data.asignatura_actual_id,
                 dia: data.dia,
@@ -1696,13 +1738,18 @@
             // Preparar datos para la API
             const apiData = {
                 clase_actual_id: data.clase_actual_id,
+                clase_a_unir_id: data.clase_a_unir_id,
                 profesor_id: data.profesor_id,
                 asignatura_actual_id: data.asignatura_actual_id,
                 dia: data.dia,
-                hora: data.hora,
-                clase_existente_id: data.clase_existente_id || 0,
-                asignatura_existente_id: data.asignatura_existente_id || data.asignatura_actual_id
+                hora: data.hora
             };
+
+            // Si hay datos de origen (movimiento), incluirlos
+            if (window.origenMovimiento) {
+                apiData.dia_origen = window.origenMovimiento.dia;
+                apiData.hora_origen = window.origenMovimiento.hora;
+            }
             
             console.log("[Unir Clases] Enviando datos a API:", apiData);
             
@@ -1742,6 +1789,9 @@
                     
                     // Mostrar mensaje de éxito
                     mostrarAlerta('Clases unidas correctamente', 'success');
+                    
+                    // Recargar la página para asegurar que todo esté actualizado
+                    location.reload();
                 } else {
                     throw new Error(respData.message || 'Error al unir clases');
                 }
