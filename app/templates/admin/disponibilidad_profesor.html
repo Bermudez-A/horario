@@ -24,7 +24,7 @@
                 </div>
                 <div class="card-body">
                     <p>En este panel puede marcar las horas en las que el profesor <strong>NO</strong> estará disponible para impartir clases.</p>
-                    <p>Haga clic en una celda del horario para cambiar su disponibilidad. Las celdas <span class="badge bg-danger">rojas</span> indican no disponibilidad.</p>
+                    <p>Haga clic en cada celda para cambiar la disponibilidad. Las celdas <span class="badge bg-danger">rojas</span> indican no disponibilidad.</p>
                     <div class="d-flex mt-3 justify-content-center">
                         <div class="me-4 d-flex align-items-center">
                             <div class="disponibilidad-muestra disponible me-2"></div> Disponible
@@ -65,57 +65,24 @@
     </div>
 </div>
 
-<!-- Modal para editar disponibilidad -->
-<div class="modal fade" id="disponibilidadModal" tabindex="-1" aria-labelledby="disponibilidadModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<!-- Modal para ingresar motivo de no disponibilidad -->
+<div class="modal fade" id="motivoModal" tabindex="-1" aria-labelledby="motivoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
         <div class="modal-content shadow-lg">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="disponibilidadModalLabel"><i class="fas fa-edit me-2"></i>Editar Disponibilidad</h5>
+                <h5 class="modal-title" id="motivoModalLabel"><i class="fas fa-question-circle me-2"></i>Motivo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="disponibilidadForm">
-                    <input type="hidden" id="modalDia" name="dia">
-                    <input type="hidden" id="modalHora" name="hora">
-                    <input type="hidden" id="modalProfesorId" name="profesor_id">
-                    
-                    <div class="alert alert-info small">
-                        <p class="mb-1"><strong>Profesor:</strong> <span id="modalProfesorNombre"></span></p>
-                        <p class="mb-1"><strong>Día:</strong> <span id="modalDiaTexto"></span></p>
-                        <p class="mb-0"><strong>Hora:</strong> <span id="modalHoraTexto"></span></p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Disponibilidad:</label>
-                        <div class="form-check form-switch form-check-reverse mb-2">
-                            <input class="form-check-input" type="radio" name="disponible" id="disponibleSi" value="true" checked>
-                            <label class="form-check-label" for="disponibleSi">
-                               <span class="badge bg-success">Disponible</span>
-                            </label>
-                        </div>
-                        <div class="form-check form-switch form-check-reverse">
-                            <input class="form-check-input" type="radio" name="disponible" id="disponibleNo" value="false">
-                            <label class="form-check-label" for="disponibleNo">
-                                <span class="badge bg-danger">No disponible</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3" id="motivoContainer" style="display:none;">
-                        <label for="motivo" class="form-label fw-bold">Motivo (Obligatorio si no está disponible):</label>
-                        <textarea class="form-control" id="motivo" name="motivo" rows="3" placeholder="Indique el motivo de la no disponibilidad..."></textarea>
-                        <div class="invalid-feedback">
-                            Por favor, indique un motivo.
-                        </div>
-                    </div>
-                </form>
+                <input type="hidden" id="modalDiaHora">
+                <div class="mb-3">
+                    <label for="textoMotivo" class="form-label">Indique el motivo de la no disponibilidad (opcional):</label>
+                    <textarea class="form-control" id="textoMotivo" rows="3" placeholder="Ej: Reunión de departamento, capacitación, etc."></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btnGuardarDisponibilidad">
-                    <span class="spinner-border spinner-border-sm d-none me-1" id="spinnerGuardar" role="status" aria-hidden="true"></span>
-                    Guardar Cambios
-                </button>
+                <button type="button" class="btn btn-primary" id="btnGuardarMotivo">Guardar</button>
             </div>
         </div>
     </div>
@@ -163,45 +130,34 @@
          min-width: 80px; /* Ancho mínimo para celdas */
     }
     .celda-disponibilidad {
-        cursor: pointer;
         height: 60px; /* Un poco más altas */
-        transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-        font-size: 0.9rem; /* Texto un poco más pequeño si hay motivo */
-        position: relative; /* Para posible contenido absoluto */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background-color 0.2s ease-in-out;
+        cursor: pointer;
     }
-    .celda-disponibilidad:hover {
-        opacity: 0.85;
-        transform: scale(1.02); /* Ligero efecto zoom */
+    .btn-disponibilidad {
+        width: 90%;
+        font-weight: bold;
     }
-    .celda-disponibilidad.disponible {
-        background-color: #d1e7dd;
-        color: #0f5132;
-    }
-    .celda-disponibilidad.no-disponible {
+    .motivo-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
         background-color: #f8d7da;
         color: #842029;
-        font-weight: 500;
-    }
-     /* Estilo para el motivo dentro de la celda (opcional) */
-    .celda-disponibilidad .motivo-texto {
-        display: block;
-        font-size: 0.75rem;
         margin-top: 4px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 100%;
+        cursor: pointer;
     }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // console.log("¡Script de disponibilidad iniciado!"); 
-
     // Variables globales
-    let diaActual = null;
-    let horaActual = null;
     let profesorIdActual = null;
     let nombreProfesorActual = '';
     let disponibilidadesCargadas = []; // Almacena los datos cargados
@@ -327,19 +283,28 @@
             for (const dia of dias) {
                 // Buscar en los datos si existe esta hora y día
                 const disponibilidad = disponibilidadesCargadas.find(d => d.dia === dia && d.hora === horaSistema);
-                
                 const disponible = disponibilidad ? disponibilidad.disponible : true;
                 const motivo = disponibilidad && disponibilidad.motivo ? disponibilidad.motivo : '';
                 
+                // Clase de fondo basada en disponibilidad
+                const bgClass = disponible ? 'disponible' : 'no-disponible';
+                const btnVariant = disponible ? 'success' : 'danger';
+                const btnText = disponible ? 'Disponible' : 'No disponible';
+                
                 html += `
-                    <td class="celda-disponibilidad ${disponible ? 'disponible' : 'no-disponible'}" 
+                    <td class="celda-disponibilidad ${bgClass}" 
                         data-dia="${dia}" 
-                        data-hora="${horaSistema}" 
-                        data-disponible="${disponible}" 
-                        data-motivo="${motivo}" 
-                        title="${!disponible ? `No disponible: ${motivo}` : 'Disponible'}"
-                    >
-                     ${!disponible ? `<span class="motivo-texto" title="${motivo}">${motivo}</span>` : ''} <!-- Mostrar motivo si no está disponible -->
+                        data-hora="${horaSistema}">
+                        <button class="btn btn-${btnVariant} btn-sm btn-disponibilidad"
+                                data-dia="${dia}" 
+                                data-hora="${horaSistema}" 
+                                data-disponible="${disponible ? 'true' : 'false'}">
+                            ${btnText}
+                        </button>
+                        ${!disponible && motivo ? 
+                          `<span class="motivo-badge" data-dia="${dia}" data-hora="${horaSistema}" data-motivo="${motivo}" title="${motivo}">
+                              <i class="fas fa-info-circle"></i> Ver motivo
+                           </span>` : ''}
                     </td>
                 `;
             }
@@ -365,19 +330,70 @@
             return; // Detener si no se puede renderizar
         }
         
-        console.log("[Renderizar] Añadiendo event listeners a las celdas...");
-        // Agregar event listeners a las celdas
-        document.querySelectorAll('.celda-disponibilidad').forEach(celda => {
-            celda.addEventListener('click', function() {
+        console.log("[Renderizar] Añadiendo event listeners a los botones...");
+        // Agregar event listeners a los botones de disponibilidad
+        document.querySelectorAll('.btn-disponibilidad').forEach(boton => {
+            boton.addEventListener('click', function() {
                 const dia = this.dataset.dia;
                 const hora = this.dataset.hora;
                 const disponible = this.dataset.disponible === 'true';
-                const motivo = this.dataset.motivo || '';
                 
-                mostrarModalDisponibilidad(dia, hora, disponible, motivo);
+                console.log(`[Click] Botón: día=${dia}, hora=${hora}, disponible=${disponible}`);
+                
+                // Cambiar el estado directamente sin usar el modal
+                // Si está disponible, cambiarlo a no disponible y viceversa
+                actualizarDisponibilidad(dia, hora, !disponible, '');
             });
         });
+        
+        // Agregar event listeners a los badges de motivo
+        document.querySelectorAll('.motivo-badge').forEach(badge => {
+            badge.addEventListener('click', function(e) {
+                e.stopPropagation(); // Evitar que se active el evento del botón
+                const motivo = this.dataset.motivo;
+                alert(`Motivo: ${motivo}`);
+            });
+        });
+        
         console.log("[Renderizar] Finalizado.");
+    }
+    
+    // Mostrar modal para ingresar motivo
+    function mostrarModalMotivo(dia, hora) {
+        try {
+            console.log(`[Modal Motivo] Abriendo para día: ${dia}, hora: ${hora}`);
+            
+            // Obtener referencias al modal
+            const modalElement = document.getElementById('motivoModal');
+            const textoMotivo = document.getElementById('textoMotivo');
+            const modalDiaHora = document.getElementById('modalDiaHora');
+            
+            if (!modalElement || !textoMotivo || !modalDiaHora) {
+                console.error("[Modal Motivo] No se encontraron elementos necesarios");
+                return;
+            }
+            
+            // Limpiar y preparar el modal
+            textoMotivo.value = '';
+            modalDiaHora.value = `${dia}_${hora}`;
+            
+            // Inicializar el modal si no está inicializado
+            let modal = bootstrap.Modal.getInstance(modalElement);
+            if (!modal) {
+                modal = new bootstrap.Modal(modalElement);
+            }
+            
+            // Mostrar el modal
+            modal.show();
+
+            // Enfocar el campo de texto
+            setTimeout(() => {
+                textoMotivo.focus();
+            }, 500);
+        } catch (error) {
+            console.error("[Modal Motivo] Error al mostrar el modal:", error);
+            mostrarMensaje('danger', 'Error al mostrar el formulario de motivo');
+        }
     }
     
     // Cargar disponibilidad del profesor
@@ -403,6 +419,7 @@
                 console.log(`[Cargar] Respuesta recibida (Estado: ${response.status})`);
                 if (!response.ok) {
                     return response.text().then(text => {
+                        console.error(`[Cargar] Error en respuesta: ${response.status} - ${text}`);
                         throw new Error(`Error del servidor: ${response.status} - ${text || 'Sin detalles'}`);
                     });
                 }
@@ -465,153 +482,28 @@
             });
     }
     
-    // Mostrar modal para editar disponibilidad
-    function mostrarModalDisponibilidad(dia, hora, disponible, motivo) {
-        try {
-            console.log(`[Modal] Abriendo para día: ${dia}, hora: ${hora}, disponible: ${disponible}`);
-            
-            // Verificar que el modal existe en el DOM
-            const modalElement = document.getElementById('disponibilidadModal');
-            if (!modalElement) {
-                console.error("[Modal] El elemento modal no se encuentra en el DOM");
-                throw new Error("El formulario de disponibilidad no está disponible");
-            }
-
-            // Inicializar el modal si no está inicializado
-            let modal = bootstrap.Modal.getInstance(modalElement);
-            if (!modal) {
-                modal = new bootstrap.Modal(modalElement);
-                console.log("[Modal] Modal inicializado");
-            }
-
-            // Configurar los datos antes de mostrar el modal
-            diaActual = dia;
-            horaActual = hora;
-            
-            // Convertir hora del sistema a número de clase para mostrar en el modal
-            const horaClase = horasClaseMap[hora] || hora;
-
-            // Función para actualizar los elementos del modal
-            function actualizarElementosModal() {
-                // Verificar que todos los elementos necesarios existan
-                const elementos = {
-                    modalDia: modalElement.querySelector('#modalDia'),
-                    modalHora: modalElement.querySelector('#modalHora'),
-                    modalProfesorId: modalElement.querySelector('#modalProfesorId'),
-                    modalDiaTexto: modalElement.querySelector('#modalDiaTexto'),
-                    modalHoraTexto: modalElement.querySelector('#modalHoraTexto'),
-                    modalProfesorNombre: modalElement.querySelector('#modalProfesorNombre'),
-                    motivo: modalElement.querySelector('#motivo'),
-                    motivoContainer: modalElement.querySelector('#motivoContainer'),
-                    disponibleSi: modalElement.querySelector('#disponibleSi'),
-                    disponibleNo: modalElement.querySelector('#disponibleNo')
-                };
-                
-                // Verificar que todos los elementos existan
-                for (const [nombre, elemento] of Object.entries(elementos)) {
-                    if (!elemento) {
-                        console.error(`[Modal] Elemento ${nombre} no encontrado en el DOM`);
-                        throw new Error(`Elemento ${nombre} no encontrado en el DOM`);
-                    }
-                }
-                
-                // Llenar campos del modal
-                elementos.modalDia.value = dia;
-                elementos.modalHora.value = hora;
-                elementos.modalProfesorId.value = profesorIdActual;
-                elementos.modalDiaTexto.textContent = diasSemana[dia] || dia;
-                elementos.modalHoraTexto.textContent = horaClase;
-                elementos.modalProfesorNombre.textContent = nombreProfesorActual || 'Profesor';
-                
-                // Limpiar validación previa del motivo
-                elementos.motivo.classList.remove('is-invalid');
-                
-                // Establecer estado de disponibilidad
-                if (disponible) {
-                    elementos.disponibleSi.checked = true;
-                    elementos.disponibleNo.checked = false;
-                    elementos.motivoContainer.style.display = 'none';
-                    elementos.motivo.value = '';
-                } else {
-                    elementos.disponibleSi.checked = false;
-                    elementos.disponibleNo.checked = true;
-                    elementos.motivoContainer.style.display = 'block';
-                    elementos.motivo.value = motivo || '';
-                }
-            }
-
-            // Configurar el event listener para cuando el modal esté completamente mostrado
-            const onShown = function() {
-                try {
-                    actualizarElementosModal();
-                    modalElement.removeEventListener('shown.bs.modal', onShown);
-                } catch (error) {
-                    console.error("[Modal] ERROR al actualizar elementos:", error);
-                    mostrarMensaje('danger', 'Error al mostrar el formulario de disponibilidad: ' + error.message);
-                    modal.hide();
-                }
-            };
-
-            // Agregar el event listener para cuando el modal se cierra
-            const onHidden = function() {
-                console.log("[Modal] Modal cerrado, recargando página...");
-                setTimeout(() => {
-                    window.location.reload();
-                }, 100);
-            };
-
-            // Agregar los event listeners
-            modalElement.addEventListener('shown.bs.modal', onShown, { once: true });
-            modalElement.addEventListener('hidden.bs.modal', onHidden, { once: true });
-
-            // Mostrar el modal
-            modal.show();
-            console.log("[Modal] Mostrado correctamente.");
-        } catch (error) {
-            console.error("[Modal] ERROR al mostrar el modal:", error);
-            mostrarMensaje('danger', 'Error al mostrar el formulario de disponibilidad: ' + error.message);
-        }
-    }
-    
-    // Guardar disponibilidad
-    function guardarDisponibilidad() {
-        console.log("[Guardar] Iniciando proceso de guardado...");
-        const dia = document.getElementById('modalDia').value; // 'lunes', 'martes', etc.
-        const hora = document.getElementById('modalHora').value; // '8:00 - 9:00', etc.
-        const profesorId = document.getElementById('modalProfesorId').value;
-        const disponible = document.querySelector('input[name="disponible"]:checked').value === 'true';
-        const motivoInput = document.getElementById('motivo');
-        const motivo = motivoInput.value.trim();
+    // Actualizar disponibilidad en el servidor
+    function actualizarDisponibilidad(dia, hora, disponible, motivo) {
+        console.log(`[Actualizar] Actualizando disponibilidad: día=${dia}, hora=${hora}, disponible=${disponible}, motivo=${motivo}`);
         
-        // Limpiar error previo
-        motivoInput.classList.remove('is-invalid');
-
-        // Validar si se requiere motivo
-        if (!disponible && !motivo) {
-             console.warn("[Guardar] Intento de guardar 'No disponible' sin motivo.");
-            motivoInput.classList.add('is-invalid');
+        if (!profesorIdActual) {
+            console.error("[Actualizar] No hay ID de profesor.");
+            mostrarMensaje('danger', 'Error: No se pudo identificar al profesor.');
             return;
         }
         
-        // Mostrar spinner
-        console.log("[Guardar] Mostrando spinner...");
-        const btnGuardar = document.getElementById('btnGuardarDisponibilidad');
-        const spinner = document.getElementById('spinnerGuardar');
-        spinner.classList.remove('d-none');
-        btnGuardar.setAttribute('disabled', 'disabled');
-        
-        // Datos para enviar (dia y hora como strings)
+        // Datos para enviar
         const dataToSend = {
-            profesor_id: profesorId,
+            profesor_id: profesorIdActual,
             dia: dia,
             hora: hora,
             disponible: disponible,
             motivo: disponible ? '' : motivo // Asegurar motivo vacío si está disponible
         };
         
-        console.log("[Guardar] Enviando datos:", dataToSend);
+        console.log("[Actualizar] Enviando datos:", dataToSend);
         
-        // Hacer petición a la API con la ruta correcta
+        // Hacer petición a la API
         fetch('/schedules/availability/update', {
             method: 'POST',
             headers: {
@@ -621,83 +513,88 @@
             body: JSON.stringify(dataToSend)
         })
         .then(response => {
-             console.log(`[Guardar] Respuesta recibida (Estado: ${response.status})`);
+            console.log(`[Actualizar] Respuesta recibida (Estado: ${response.status})`);
             if (!response.ok) {
-                // Intentar leer el cuerpo del error si existe
                 return response.text().then(text => {
-                     console.error(`[Guardar] Error en respuesta: ${response.status} - ${text}`);
+                    console.error(`[Actualizar] Error en respuesta: ${response.status} - ${text}`);
                     throw new Error(`Error del servidor: ${response.status} - ${text || 'Sin detalles'}`);
                 });
             }
             return response.json();
         })
         .then(data => {
-            console.log("[Guardar] Respuesta JSON del servidor:", data);
+            console.log("[Actualizar] Respuesta JSON del servidor:", data);
             
             if (data.success) {
-                 console.log("[Guardar] Operación exitosa en el servidor.");
-                // Cerrar modal
-                try {
-                    const modalElement = document.getElementById('disponibilidadModal');
-                    const modal = bootstrap.Modal.getInstance(modalElement);
-                    if (modal) {
-                        modal.hide();
-                        console.log("[Guardar] Modal cerrado.");
+                console.log("[Actualizar] Operación exitosa en el servidor.");
+                
+                // Actualizar la UI directamente sin recargar
+                const celdaSelector = `.celda-disponibilidad[data-dia="${dia}"][data-hora="${hora}"]`;
+                const celda = document.querySelector(celdaSelector);
+                
+                if (celda) {
+                    // Actualizar clase de la celda
+                    celda.classList.toggle('disponible', disponible);
+                    celda.classList.toggle('no-disponible', !disponible);
+                    
+                    // Actualizar el botón
+                    const boton = celda.querySelector('.btn-disponibilidad');
+                    if (boton) {
+                        boton.classList.remove('btn-success', 'btn-danger');
+                        boton.classList.add(disponible ? 'btn-success' : 'btn-danger');
+                        boton.textContent = disponible ? 'Disponible' : 'No disponible';
+                        boton.dataset.disponible = disponible ? 'true' : 'false';
                     }
-                } catch (e) {
-                    console.warn("[Guardar] No se pudo obtener la instancia del modal para cerrarlo.", e);
+                    
+                    // Actualizar el motivo si es necesario
+                    if (!disponible && motivo) {
+                        let motivoBadge = celda.querySelector('.motivo-badge');
+                        if (!motivoBadge) {
+                            // Crear el badge si no existe
+                            motivoBadge = document.createElement('span');
+                            motivoBadge.className = 'motivo-badge';
+                            motivoBadge.dataset.dia = dia;
+                            motivoBadge.dataset.hora = hora;
+                            
+                            // Agregar event listener
+                            motivoBadge.addEventListener('click', function(e) {
+                                e.stopPropagation(); // Evitar que se active el evento del botón
+                                alert(`Motivo: ${this.dataset.motivo}`);
+                            });
+                            
+                            celda.appendChild(motivoBadge);
+                        }
+                        
+                        motivoBadge.innerHTML = `<i class="fas fa-info-circle"></i> Ver motivo`;
+                        motivoBadge.dataset.motivo = motivo;
+                        motivoBadge.title = motivo;
+                    } else if (disponible) {
+                        // Si está disponible, eliminar el badge de motivo
+                        const motivoBadge = celda.querySelector('.motivo-badge');
+                        if (motivoBadge) {
+                            motivoBadge.remove();
+                        }
+                    }
                 }
                 
                 // Mostrar mensaje de éxito
                 mostrarMensaje('success', 'La disponibilidad ha sido actualizada correctamente.');
                 
-                // Recargar la página después de un breve retraso
-                setTimeout(() => {
-                    window.location.reload();
-                }, 500);
+                // También actualizar los datos cargados
+                const index = disponibilidadesCargadas.findIndex(d => d.dia === dia && d.hora === hora);
+                if (index !== -1) {
+                    disponibilidadesCargadas[index].disponible = disponible;
+                    disponibilidadesCargadas[index].motivo = motivo;
+                }
             } else {
-                console.error("[Guardar] El servidor indicó un error:", data.message);
-                throw new Error(data.message || 'Error desconocido al guardar la disponibilidad');
+                console.error("[Actualizar] El servidor indicó un error:", data.message);
+                mostrarMensaje('danger', data.message || 'Error desconocido al guardar la disponibilidad');
             }
         })
         .catch(error => {
-            console.error("[Guardar] ERROR en fetch o procesamiento:", error);
-            mostrarMensaje('danger', `Error al guardar la disponibilidad: ${error.message}`);
-        })
-        .finally(() => {
-            // Ocultar spinner y habilitar botón
-            spinner.classList.add('d-none');
-            btnGuardar.removeAttribute('disabled');
+            console.error("[Actualizar] ERROR en fetch o procesamiento:", error);
+            mostrarMensaje('danger', `Error al actualizar la disponibilidad: ${error.message}`);
         });
-    }
-
-    // Actualizar una celda específica en la tabla
-    function actualizarCeldaDisponibilidad(dia, hora, disponible, motivo) {
-        console.log(`[Actualizar Celda] Actualizando celda: ${dia}, ${hora}, disponible: ${disponible}`);
-        
-        // Encontrar la celda correspondiente
-        const celda = document.querySelector(`.celda-disponibilidad[data-dia="${dia}"][data-hora="${hora}"]`);
-        if (!celda) {
-            console.error(`[Actualizar Celda] No se encontró la celda para ${dia}, ${hora}`);
-            return;
-        }
-        
-        // Actualizar clases y atributos
-        celda.className = `celda-disponibilidad ${disponible ? 'disponible' : 'no-disponible'}`;
-        celda.dataset.disponible = disponible;
-        celda.dataset.motivo = motivo || '';
-        
-        // Actualizar contenido
-        if (!disponible && motivo) {
-            celda.innerHTML = `<span class="motivo-texto" title="${motivo}">${motivo}</span>`;
-        } else {
-            celda.innerHTML = '';
-        }
-        
-        // Actualizar tooltip
-        celda.title = !disponible ? `No disponible: ${motivo}` : 'Disponible';
-        
-        console.log("[Actualizar Celda] Celda actualizada correctamente");
     }
 
     // Inicializar al cargar la página
@@ -725,35 +622,31 @@
                 cargarDisponibilidad(profesorIdActual);
             } else {
                 console.warn("[Botón Refrescar] No hay ID de profesor para refrescar.");
-                mostrarMensaje('warning', 'No se ha especificado un profesor válido.');
+                mostrarMensaje('warning', 'No hay profesor seleccionado para actualizar.');
             }
         });
         
-        // Event listener para guardar disponibilidad
-        document.getElementById('btnGuardarDisponibilidad')?.addEventListener('click', guardarDisponibilidad);
-        
-        // Event listener para cambiar visibilidad del campo motivo en el modal
-        document.querySelectorAll('input[name="disponible"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const disponible = this.value === 'true';
-                const motivoContainer = document.getElementById('motivoContainer');
-                const motivoInput = document.getElementById('motivo');
-                
-                if (motivoContainer && motivoInput) {
-                    motivoContainer.style.display = disponible ? 'none' : 'block';
-                    if (disponible) {
-                        motivoInput.classList.remove('is-invalid');
-                    } else {
-                        setTimeout(() => {
-                            try {
-                                motivoInput.focus();
-                            } catch(e) {
-                                console.warn("[Modal] Error al enfocar motivo:", e);
-                            }
-                        }, 100);
-                    }
-                }
-            });
+        // Event listener para el botón de guardar motivo
+        document.getElementById('btnGuardarMotivo')?.addEventListener('click', function() {
+            const modalDiaHora = document.getElementById('modalDiaHora').value;
+            const textoMotivo = document.getElementById('textoMotivo').value.trim();
+            
+            if (!modalDiaHora) {
+                console.error("[Guardar Motivo] No hay información de día/hora.");
+                return;
+            }
+            
+            const [dia, hora] = modalDiaHora.split('_');
+            
+            // Cerrar el modal
+            const modalElement = document.getElementById('motivoModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Actualizar disponibilidad con el motivo (ahora es opcional)
+            actualizarDisponibilidad(dia, hora, false, textoMotivo);
         });
         
         console.log("[Init] Inicialización completada.");
