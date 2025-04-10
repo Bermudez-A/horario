@@ -36,37 +36,19 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 7cdfb04ad409e156f22bdfbef70ce631bf662e1c
 # on Windows, a path can contain colons and backslashes and has to be converted:
 case "$(uname)" in
     CYGWIN*|MSYS*|MINGW*)
         # transform D:\path\to\venv to /d/path/to/venv on MSYS and MINGW
         # and to /cygdrive/d/path/to/venv on Cygwin
-<<<<<<< HEAD
-        VIRTUAL_ENV=$(cygpath 'C:\Users\david\OneDrive\Escritorio\ACLOG\MANIOBRAS\horario\venv')
-=======
-        VIRTUAL_ENV=$(cygpath 'C:\APP\horario\venv')
->>>>>>> 7cdfb04ad409e156f22bdfbef70ce631bf662e1c
+        VIRTUAL_ENV=$(cygpath 'C:\Users\alvid\Desktop\horario\venv')
         export VIRTUAL_ENV
         ;;
     *)
         # use the path as-is
-<<<<<<< HEAD
-        export VIRTUAL_ENV='C:\Users\david\OneDrive\Escritorio\ACLOG\MANIOBRAS\horario\venv'
+        export VIRTUAL_ENV='C:\Users\alvid\Desktop\horario\venv'
         ;;
 esac
-=======
-        export VIRTUAL_ENV='C:\APP\horario\venv'
-        ;;
-esac
-=======
-VIRTUAL_ENV="C:\Users\aclog\Desktop\horario_dia2\horario\venv"
-export VIRTUAL_ENV
->>>>>>> 2635d9897ad6b8a01be99eac65e71d8f0532e46c
->>>>>>> 7cdfb04ad409e156f22bdfbef70ce631bf662e1c
 
 _OLD_VIRTUAL_PATH="$PATH"
 PATH="$VIRTUAL_ENV/"Scripts":$PATH"
