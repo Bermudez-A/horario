@@ -81,6 +81,7 @@ def create():
 def view_schedule(clase_id):
     clase = Clase.query.get_or_404(clase_id)
     horario = clase.get_horario_completo()
+    clases = Clase.query.filter_by(activa=True).all()  # Obtener todas las clases activas
     
     # Verificar permisos
     if current_user.rol == 'alumno' and not current_user.id == clase_id:
@@ -135,7 +136,8 @@ def view_schedule(clase_id):
                           clase=clase, 
                           horario=horario,
                           distribucion_dias=distribucion_dias,
-                          resumen_asignaturas=resumen_asignaturas)
+                          resumen_asignaturas=resumen_asignaturas,
+                          clases=clases)
 
 @schedules.route('/edit/<int:clase_id>')
 @login_required
@@ -149,6 +151,7 @@ def edit_schedule(clase_id):
     asignaturas = Asignatura.query.filter_by(activa=True).all()
     profesores = Profesor.query.join(User).filter(User.activo == True).all()
     horario = clase.get_horario_completo()
+    clases = Clase.query.filter_by(activa=True).all()  # Obtener todas las clases activas
     
     # Obtener actividades comunes
     try:
@@ -165,7 +168,8 @@ def edit_schedule(clase_id):
                           horario=horario,
                           asignaturas=asignaturas,
                           profesores=profesores,
-                          actividades_comunes=actividades_comunes)
+                          actividades_comunes=actividades_comunes,
+                          clases=clases)
 
 @schedules.route('/update', methods=['POST'])
 @login_required
@@ -793,68 +797,107 @@ def unir_clases():
         
         # Obtener datos necesarios
         clase_actual_id = data.get('clase_actual_id')
+        clase_a_unir_id = data.get('clase_a_unir_id')
         profesor_id = data.get('profesor_id')
-        asignatura_actual_id = data.get('asignatura_actual_id')
+        asignatura_id = data.get('asignatura_actual_id')
         dia = data.get('dia')
         hora = data.get('hora')
+        dia_origen = data.get('dia_origen')
+        hora_origen = data.get('hora_origen')
+        
+        print(f"[Unir Clases] Iniciando unión - Datos: clase_actual={clase_actual_id}, clase_unir={clase_a_unir_id}, dia={dia}, hora={hora}, origen=({dia_origen}, {hora_origen})")
         
         # Validar datos obligatorios
-        if not all([clase_actual_id, profesor_id, asignatura_actual_id, dia, hora]):
+        if not all([clase_actual_id, clase_a_unir_id, profesor_id, asignatura_id, dia, hora]):
             return jsonify({'success': False, 'message': 'Faltan datos obligatorios'})
         
-        # Verificar que la clase exista
+        # 1. Verificar que ambas clases existan
         clase_actual = Clase.query.get(clase_actual_id)
-        if not clase_actual:
-            return jsonify({'success': False, 'message': 'La clase no existe'})
+        clase_a_unir = Clase.query.get(clase_a_unir_id)
+        if not clase_actual or not clase_a_unir:
+            return jsonify({'success': False, 'message': 'Una o ambas clases no existen'})
         
-        # Verificar que el profesor exista
-        profesor = Profesor.query.get(profesor_id)
-        if not profesor:
-            return jsonify({'success': False, 'message': 'El profesor no existe'})
-        
-        # Verificar la asignatura
-        asignatura_actual = Asignatura.query.get(asignatura_actual_id)
-        if not asignatura_actual:
-            return jsonify({'success': False, 'message': 'La asignatura no existe'})
-        
-        # Verificar si ya existe un horario en esta posición
-        horario_existente = Horario.query.filter_by(
-            clase_id=clase_actual_id,
-            dia=dia,
-            hora=hora
-        ).first()
-        
-        if horario_existente:
-            # Si existe, actualizarlo
-            horario_existente.asignatura_id = asignatura_actual_id
-            horario_existente.profesor_id = profesor_id
-        else:
-            # Si no existe, crear uno nuevo
-            horario = Horario(
+        # 2. Eliminar el horario original si existe
+        if dia_origen and hora_origen:
+            horario_origen = Horario.query.filter_by(
                 clase_id=clase_actual_id,
+                dia=dia_origen,
+                hora=hora_origen
+            ).first()
+            if horario_origen:
+                print(f"[Unir Clases] Eliminando horario origen: ID={horario_origen.id}")
+                db.session.delete(horario_origen)
+                db.session.commit()
+        
+        # 3. Eliminar cualquier horario existente en la posición destino para ambas clases
+        for clase_id in [clase_actual_id, clase_a_unir_id]:
+            horario_existente = Horario.query.filter_by(
+                clase_id=clase_id,
                 dia=dia,
-                hora=hora,
-                asignatura_id=asignatura_actual_id,
-                profesor_id=profesor_id
-            )
-            db.session.add(horario)
-        
-        # No eliminamos ninguna asignación anterior
-        # Esto evita afectar a otras clases que no estamos moviendo
-        
+                hora=hora
+            ).first()
+            if horario_existente:
+                print(f"[Unir Clases] Eliminando horario existente en destino: ID={horario_existente.id}")
+                db.session.delete(horario_existente)
         db.session.commit()
         
-        return jsonify({
-            'success': True,
-            'message': 'Clase actualizada correctamente'
-        })
+        # 4. Verificar conflictos con otras clases
+        clases_existentes = Horario.query.filter_by(
+            profesor_id=profesor_id,
+            dia=dia,
+            hora=hora
+        ).filter(Horario.clase_id.notin_([clase_actual_id, clase_a_unir_id])).all()
         
+        if clases_existentes:
+            clases_nombres = [h.clase.nombre for h in clases_existentes]
+            return jsonify({
+                'success': False,
+                'message': 'El profesor ya tiene clase asignada en: ' + ', '.join(clases_nombres)
+            }), 409
+        
+        # 5. Crear nuevos horarios para ambas clases
+        nuevos_horarios = []
+        for clase_id in [clase_actual_id, clase_a_unir_id]:
+            nuevo_horario = Horario(
+                clase_id=clase_id,
+                dia=dia,
+                hora=hora,
+                asignatura_id=asignatura_id,
+                profesor_id=profesor_id,
+                es_actividad_especial=False
+            )
+            nuevos_horarios.append(nuevo_horario)
+            db.session.add(nuevo_horario)
+            print(f"[Unir Clases] Creando nuevo horario para clase {clase_id}")
+        
+        # 6. Commit final y verificación
+        try:
+            db.session.commit()
+            print("[Unir Clases] Commit exitoso")
+            
+            # Verificar que los horarios se crearon correctamente
+            for horario in nuevos_horarios:
+                if not Horario.query.get(horario.id):
+                    raise Exception("No se pudo verificar la creación de uno de los horarios")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Clases unidas correctamente: {clase_actual.nombre} y {clase_a_unir.nombre}'
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"[Unir Clases] Error en commit final: {str(e)}")
+            return jsonify({'success': False, 'message': 'Error al guardar los cambios'}), 500
+            
     except Exception as e:
         db.session.rollback()
         print(f"[Unir Clases] ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Error interno del servidor: {str(e)}'}), 500
+    finally:
+        db.session.close()
 
 @schedules.route('/clear_all/<int:clase_id>', methods=['POST'])
 @login_required
