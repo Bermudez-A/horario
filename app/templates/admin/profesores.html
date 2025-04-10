@@ -103,19 +103,31 @@
                     
                     <div class="profesor-card-footer">
                         <div class="profesor-card-actions d-flex flex-wrap gap-2">
-                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}" class="btn btn-action btn-edit">
+                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}"
+                               class="btn btn-sm btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               title="Editar profesor">
                                 <i class="fas fa-edit me-1"></i>Editar
                             </a>
-                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}" class="btn btn-action btn-info">
-                                <i class="fas fa-eye me-1"></i>Disponibilidad
+                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}"
+                               class="btn btn-sm btn-outline-info"
+                               data-bs-toggle="tooltip"
+                               title="Ver disponibilidad">
+                                <i class="fas fa-eye me-1"></i>Ver
                             </a>
-                            <button type="button" class="btn btn-link text-success p-0" 
-                                    data-bs-toggle="modal" data-bs-target="#vincularModal{{ profesor.id }}">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#vincularModal{{ profesor.id }}"
+                                    title="Vincular profesor">
                                 <i class="fas fa-link me-1"></i>Vincular
                             </button>
-                            <button type="button" class="btn btn-link text-danger p-0" 
-                                    data-bs-toggle="modal" data-bs-target="#eliminarModal{{ profesor.id }}">
-                                <i class="fas fa-trash me-1"></i>Eliminar
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#eliminarModal{{ profesor.id }}"
+                                    title="Eliminar profesor">
+                                <i class="fas fa-trash me-1"></i>Borrar
                             </button>
                         </div>
                     </div>
@@ -236,22 +248,33 @@
                     
                     <div class="profesor-card-footer">
                         <div class="profesor-card-actions d-flex flex-wrap gap-2">
-                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}" class="btn btn-action btn-edit">
+                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}"
+                               class="btn btn-sm btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               title="Editar profesor">
                                 <i class="fas fa-edit me-1"></i>Editar
                             </a>
-                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}" class="btn btn-action btn-info">
-                                <i class="fas fa-eye me-1"></i>Disponibilidad
+                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}"
+                               class="btn btn-sm btn-outline-info"
+                               data-bs-toggle="tooltip"
+                               title="Ver disponibilidad">
+                                <i class="fas fa-eye me-1"></i>Ver
                             </a>
                             <form action="{{ url_for('admin.toggle_profesor_asignacion', id=profesor.id) }}" method="POST" style="display: inline;">
-                                <button type="submit" class="btn btn-action {% if profesor.asignaturas %}btn-unlink{% else %}btn-link{% endif %}">
+                                <button type="submit"
+                                        class="btn btn-sm {% if profesor.asignaturas %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                                        title="{% if profesor.asignaturas %}Desvincular profesor{% else %}Vincular profesor{% endif %}">
                                     <i class="fas {% if profesor.asignaturas %}fa-unlink{% else %}fa-link{% endif %} me-1"></i>
-                                    {% if profesor.asignaturas %}Desvincular{% else %}Vincular{% endif %}
+                                    {% if profesor.asignaturas %}Desv.{% else %}Vinc.{% endif %}
                                 </button>
                             </form>
                             {% if not profesor.asignaturas %}
-                            <button type="button" class="btn btn-action btn-delete" 
-                                    data-bs-toggle="modal" data-bs-target="#eliminarModal{{ profesor.id }}">
-                                <i class="fas fa-trash me-1"></i>Eliminar
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#eliminarModal{{ profesor.id }}"
+                                    title="Eliminar profesor">
+                                <i class="fas fa-trash me-1"></i>Borrar
                             </button>
                             {% endif %}
                         </div>
@@ -302,6 +325,12 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar tooltips de Bootstrap
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
         // Variables para los elementos del DOM
         const searchInput = document.getElementById('searchProfesor');
         const asignaturaFilter = document.getElementById('filterAsignatura');
@@ -446,9 +475,45 @@
 
     .profesor-card-actions {
         display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
+        justify-content: space-around;
+        align-items: center;
+        margin: 0.5rem 0;
+        padding: 0 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .profesor-card-actions {
+            padding: 0;
+            gap: 0.125rem;
+        }
+        
+        .profesor-card-actions .btn {
+            padding: 0.25rem;
+            font-size: 0.75rem;
+        }
+        
+        .profesor-card-actions .btn i {
+            margin-right: 0.125rem;
+        }
+    }
+
+    .profesor-card-actions .btn {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+        white-space: nowrap;
+        flex: 1;
+        max-width: fit-content;
+    }
+
+    .profesor-card-actions .btn i {
+        margin-right: 0.25rem;
+    }
+
+    .profesor-card-actions form {
+        flex: 1;
+        max-width: fit-content;
     }
 
     .profesor-card {

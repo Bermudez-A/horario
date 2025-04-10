@@ -78,58 +78,40 @@ document.addEventListener('DOMContentLoaded', function() {
     function generateCSV(btnElement, originalBtnText) {
         const horarioTabla = document.querySelector('.horario-tabla');
         const titulo = document.querySelector('h1').textContent;
+        const exportUrl = document.getElementById('data-export').dataset.url;
         
-        // Crear cabeceras
-        let csv = ['Hora,Lunes,Martes,Miércoles,Jueves,Viernes'];
-        
-        // Recorrer filas de la tabla (saltando la cabecera)
-        const filas = horarioTabla.querySelectorAll('tbody tr');
-        filas.forEach(fila => {
-            let rowData = [];
-            
-            // Obtener hora
-            const hora = fila.querySelector('th').textContent.trim();
-            rowData.push(`"${hora}"`);
-            
-            // Obtener celdas
-            const celdas = fila.querySelectorAll('td');
-            celdas.forEach(celda => {
-                // Comprobar si hay clase
-                const asignaturaElement = celda.querySelector('.asignatura-nombre');
-                const profesorElement = celda.querySelector('.profesor-nombre');
-                
-                if (asignaturaElement && profesorElement) {
-                    const asignatura = asignaturaElement.textContent.trim();
-                    const profesor = profesorElement.textContent.trim();
-                    rowData.push(`"${asignatura} (${profesor})"`);
-                } else {
-                    rowData.push('""');
+        // Fetch the CSV data from the server
+        fetch(exportUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
                 }
+                return response.text();
+            })
+            .then(csvContent => {
+                // Create blob and download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', `Horario_${titulo.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Restaurar el botón
+                btnElement.innerHTML = originalBtnText;
+                btnElement.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('error', 'Error al exportar el horario');
+                btnElement.innerHTML = originalBtnText;
+                btnElement.disabled = false;
             });
-            
-            // Añadir fila al CSV
-            csv.push(rowData.join(','));
-        });
-        
-        // Unir todas las filas
-        const csvContent = csv.join('\n');
-        
-        // Crear blob y descargar
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', `Horario_${titulo.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
-        link.style.visibility = 'hidden';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Restaurar el botón
-        btnElement.innerHTML = originalBtnText;
-        btnElement.disabled = false;
     }
     
     // Botón de exportar a PDF
@@ -255,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Redirigir después de un breve retraso
                     setTimeout(() => {
-                        window.location.href = "{{ url_for('schedules.index') }}";
+                        window.location.href = document.getElementById('data-export').dataset.url.split('?')[0];
                     }, 1500);
                 } else {
                     // Mostrar mensaje de error

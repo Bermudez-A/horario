@@ -458,7 +458,7 @@ def edit_asignatura(id):
     
     return render_template('admin/asignatura_form.html', title='Editar Asignatura', form=form, asignatura=asignatura)
 
-@admin.route('/asignaturas/delete/<int:id>')
+@admin.route('/asignaturas/delete/<int:id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_asignatura(id):
