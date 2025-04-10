@@ -23,6 +23,81 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
+    <style>
+        /* Estilos compartidos para actividades especiales */
+        .actividad-especial {
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            padding: 8px;
+            margin-bottom: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .actividad-especial i {
+            margin-right: 0.5rem;
+        }
+
+        /* Colores para actividades especiales */
+        .actividad-deporte {
+            background-color: #4caf50 !important;
+            color: white !important;
+        }
+
+        .actividad-ingles {
+            background-color: #2196f3 !important;
+            color: white !important;
+        }
+
+        .actividad-baron {
+            background-color: #ff9800 !important;
+            color: white !important;
+        }
+
+        .actividad-tutoria {
+            background-color: #9c27b0 !important;
+            color: white !important;
+        }
+
+        .actividad-bon {
+            background-color: #e91e63 !important;
+            color: white !important;
+        }
+
+        .actividad-examen {
+            background-color: #f44336 !important;
+            color: white !important;
+        }
+
+        /* Estilos para celdas de horario */
+        .celda-horario {
+            padding: 8px;
+            vertical-align: middle;
+            min-height: 80px;
+            transition: all 0.3s ease;
+        }
+
+        .asignatura-bloque {
+            border-radius: 6px;
+            padding: 8px;
+            color: white;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .asignatura-nombre {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .profesor-nombre {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+    </style>
+
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% if current_user.is_authenticated and current_user.rol == 'admin' %}d-flex admin-layout{% else %}standard-layout{% endif %} page-transition">
