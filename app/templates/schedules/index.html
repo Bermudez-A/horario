@@ -120,30 +120,6 @@
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
-
-                                        <!-- Modal de confirmación de eliminación -->
-                                        <div class="modal fade" id="confirmDeleteModal{{ horario.id }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ horario.id }}" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="confirmDeleteModalLabel{{ horario.id }}">Confirmar Eliminación</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p>¿Estás seguro de que deseas eliminar el horario de <strong>{{ horario.nombre }}</strong>?</p>
-                                                        <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <form action="{{ url_for('schedules.clear_all', clase_id=horario.id) }}" method="POST">
-                                                            <button type="submit" class="btn btn-danger">
-                                                                <i class="fas fa-trash-alt me-1"></i> Eliminar
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -160,6 +136,37 @@
         </div>
     </div>
 </div>
+
+<!-- Modales de confirmación de eliminación -->
+{% for horario in horarios %}
+<div class="modal fade" id="confirmDeleteModal{{ horario.id }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ horario.id }}" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="confirmDeleteModalLabel{{ horario.id }}">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar el horario de <strong>{{ horario.nombre }}</strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+                <form action="{{ url_for('schedules.clear_all', clase_id=horario.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 {% endblock %}
 
 {% block scripts %}
