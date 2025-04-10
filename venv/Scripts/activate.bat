@@ -8,15 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-<<<<<<< HEAD
 set "VIRTUAL_ENV=C:\Users\david\OneDrive\Escritorio\ACLOG\MANIOBRAS\horario\venv"
-=======
-<<<<<<< HEAD
-set "VIRTUAL_ENV=C:\APP\horario\venv"
-=======
-set VIRTUAL_ENV=C:\Users\aclog\Desktop\horario_dia2\horario\venv
->>>>>>> 2635d9897ad6b8a01be99eac65e71d8f0532e46c
->>>>>>> 7cdfb04ad409e156f22bdfbef70ce631bf662e1c
 
 if not defined PROMPT set PROMPT=$P$G
 

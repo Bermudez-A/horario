@@ -142,7 +142,7 @@
                         
                         <div class="form-group">
                             <label for="color">Color</label>
-                            <input type="color" class="form-control" id="color" name="color" required>
+                            <input type="color" class="form-control" id="color" name="color" value="#3498db" required>
                         </div>
                         
                         <div class="form-group">
@@ -190,7 +190,7 @@
                                     <button class="btn btn-edit me-2" onclick="editActivity({{ actividad.id }})">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-delete" onclick="deleteActivity({{ actividad.id }})">
+                                    <button class="btn btn-delete" onclick="confirmDelete({{ actividad.id }})">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -251,6 +251,26 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de confirmación para eliminar actividad -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar esta actividad?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -262,6 +282,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const iconPicker = document.getElementById('iconPicker');
     const editIconPicker = document.getElementById('editIconPicker');
     const errorMessage = document.getElementById('errorMessage');
+    
+    // Inicializar modales
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    let actividadToDelete = null;
 
     // Función para mostrar mensajes de error
     function showError(message) {
@@ -297,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn btn-edit me-2" onclick="editActivity(${actividad.id})">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn btn-delete" onclick="deleteActivity(${actividad.id})">
+                    <button class="btn btn-delete" onclick="confirmDelete(${actividad.id})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -338,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(form);
         const data = {
             nombre: formData.get('nombre'),
-            color: formData.get('color'),
+            color: formData.get('color') || '#3498db', // Valor por defecto si está vacío
             icono: formData.get('icono')
         };
 
@@ -362,6 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 activitiesList.insertAdjacentHTML('beforeend', createActivityHTML(result.actividad));
                 showSuccess(result.message);
                 form.reset();
+                // Restablecer el color al valor por defecto
+                document.getElementById('color').value = '#3498db';
                 iconPicker.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
             } else {
                 showError(result.message);
@@ -395,6 +421,49 @@ document.addEventListener('DOMContentLoaded', function() {
         const editModal = new bootstrap.Modal(document.getElementById('editModal'));
         editModal.show();
     };
+
+    // Función para confirmar la eliminación
+    window.confirmDelete = function(id) {
+        actividadToDelete = id;
+        deleteModal.show();
+    };
+
+    // Configurar el botón de confirmación de eliminación
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+        if (!actividadToDelete) return;
+        
+        try {
+            const response = await fetch(`/schedules/gestionar_actividades_personalizadas/${actividadToDelete}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                const activityCard = document.querySelector(`.activity-card[data-id="${actividadToDelete}"]`);
+                activityCard.remove();
+                
+                // Si no quedan actividades, mostrar el mensaje
+                const activitiesList = document.getElementById('activitiesList');
+                if (!activitiesList.querySelector('.activity-card')) {
+                    activitiesList.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-info-circle mb-2"></i>
+                            <p>No hay actividades personalizadas. ¡Crea una nueva!</p>
+                        </div>
+                    `;
+                }
+                
+                showSuccess(result.message);
+                deleteModal.hide();
+            } else {
+                showError(result.message);
+            }
+        } catch (error) {
+            showError('Error al eliminar la actividad');
+            console.error('Error:', error);
+        }
+    });
 
     // Función para guardar los cambios de una actividad
     window.saveEdit = async function() {
@@ -430,42 +499,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             showError('Error al actualizar la actividad');
             console.error('Error:', error);
-        }
-    };
-
-    // Función para eliminar una actividad
-    window.deleteActivity = async function(id) {
-        if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
-            try {
-                const response = await fetch(`/schedules/gestionar_actividades_personalizadas/${id}`, {
-                    method: 'DELETE'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    const activityCard = document.querySelector(`.activity-card[data-id="${id}"]`);
-                    activityCard.remove();
-                    
-                    // Si no quedan actividades, mostrar el mensaje
-                    const activitiesList = document.getElementById('activitiesList');
-                    if (!activitiesList.querySelector('.activity-card')) {
-                        activitiesList.innerHTML = `
-                            <div class="text-center text-muted py-4">
-                                <i class="fas fa-info-circle mb-2"></i>
-                                <p>No hay actividades personalizadas. ¡Crea una nueva!</p>
-                            </div>
-                        `;
-                    }
-                    
-                    showSuccess(result.message);
-                } else {
-                    showError(result.message);
-                }
-            } catch (error) {
-                showError('Error al eliminar la actividad');
-                console.error('Error:', error);
-            }
         }
     };
 

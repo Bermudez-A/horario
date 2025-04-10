@@ -490,13 +490,19 @@ def availability():
     
     # Get custom activities
     actividades_personalizadas = ActividadPersonalizada.query.filter_by(activo=True).all()
+    actividades_personalizadas_dict = [{
+        'id': act.id,
+        'nombre': act.nombre,
+        'color': act.color,
+        'icono': act.icono
+    } for act in actividades_personalizadas]
     
     # Get subjects for exam modal
     asignaturas = Asignatura.query.all()
     
     return render_template('schedules/availability.html',
                          actividades_existentes=actividades_existentes,
-                         actividades_personalizadas=actividades_personalizadas,
+                         actividades_personalizadas=actividades_personalizadas_dict,
                          asignaturas=asignaturas)
 
 @schedules.route('/availability/update', methods=['POST'])
@@ -961,7 +967,12 @@ def gestionar_actividades_personalizadas():
             return jsonify({
                 'success': True,
                 'message': 'Actividad personalizada creada correctamente',
-                'actividad': actividad.to_dict()
+                'actividad': {
+                    'id': actividad.id,
+                    'nombre': actividad.nombre,
+                    'color': actividad.color,
+                    'icono': actividad.icono
+                }
             })
             
         except Exception as e:
@@ -972,13 +983,16 @@ def gestionar_actividades_personalizadas():
                 'message': f'Error al crear la actividad: {str(e)}'
             }), 500
     
-    print("[Actividades Personalizadas] Cargando actividades...")
+    # GET method
     actividades = ActividadPersonalizada.query.filter_by(activo=True).all()
-    print(f"[Actividades Personalizadas] Se encontraron {len(actividades)} actividades activas")
-    for actividad in actividades:
-        print(f"[Actividades Personalizadas] - ID: {actividad.id}, Nombre: {actividad.nombre}, Color: {actividad.color}, Icono: {actividad.icono}")
-    
-    return render_template('schedules/actividades_personalizadas.html', actividades=actividades)
+    # Convertir los objetos a diccionarios
+    actividades_dict = [{
+        'id': act.id,
+        'nombre': act.nombre,
+        'color': act.color,
+        'icono': act.icono
+    } for act in actividades]
+    return render_template('schedules/actividades_personalizadas.html', actividades=actividades_dict)
 
 @schedules.route('/gestionar_actividades_personalizadas/<int:id>', methods=['PUT', 'DELETE'])
 @login_required

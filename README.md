@@ -1,145 +1,244 @@
 # Sistema de Gestión de Horarios Escolares
 
-Aplicación web desarrollada en Flask para la creación y gestión de horarios escolares, con funcionalidades avanzadas de visualización estadística y análisis de carga docente.
+## Descripción
+Sistema web para la gestión y generación automática de horarios escolares. Permite la administración de profesores, asignaturas, clases y la generación de horarios optimizados basados en las disponibilidades de los profesores.
 
-## Características principales
+## Características Principales
+- Gestión completa de usuarios y permisos
+- Administración de profesores y sus disponibilidades
+- Gestión de asignaturas y clases
+- Generación automática de horarios
+- Gestión de actividades especiales y personalizadas
+- Interfaz intuitiva y responsiva
+- Exportación de horarios en diferentes formatos
 
-- Gestión completa de profesores, asignaturas y clases
-- Generación automática de horarios mediante algoritmos voraces
-- Interfaz visual para edición manual de horarios con drag & drop
-- Sistema de gestión de disponibilidad de profesores
-- Panel de estadísticas avanzado con:
-  - Análisis de carga docente
-  - Comparativa entre secciones y grupos
-  - Seguimiento del progreso curricular
-  - Visualización de métricas en tiempo real
-- Exportación de datos a PDF y Excel
-- Interfaz moderna y responsiva con:
-  - Animaciones suaves y efectos visuales
-  - Diseño adaptable a dispositivos móviles
-  - Temas claros y oscuros
-  - Efectos de glassmorphism
-- Sistema de notificaciones en tiempo real
-- Gestión de usuarios y roles (admin/profesor)
+## Requisitos del Sistema
+- Python 3.8 o superior
+- PostgreSQL 12 o superior
+- Navegador web moderno (Chrome, Firefox, Edge, Safari)
 
-## Instalación y configuración
+## Instalación
 
-### Requisitos previos
+### 1. Clonar el repositorio
+```bash
+git clone [URL_DEL_REPOSITORIO]
+cd horario
+```
 
-- Python 3.9 o superior
-- pip (gestor de paquetes de Python)
-- Navegador web moderno con soporte para JavaScript ES6+
+### 2. Crear y activar entorno virtual
+```bash
+python -m venv venv
+# En Windows
+venv\Scripts\activate
+# En Linux/Mac
+source venv/bin/activate
+```
 
-### Instalación
+### 3. Instalar dependencias
+```bash
+pip install -r requirements.txt
+```
 
-1. Clona este repositorio:
-   ```
-   git clone <url-del-repositorio>
-   cd horario
-   ```
+### 4. Configurar variables de entorno
+Crear un archivo `.env` en la raíz del proyecto con:
+```env
+FLASK_APP=app
+FLASK_ENV=development
+SECRET_KEY=tu_clave_secreta
+DATABASE_URL=postgresql://usuario:contraseña@localhost:5432/nombre_bd
+```
 
-2. Crea un entorno virtual:
-   ```
-   # En Windows
-   python -m venv venv
-   venv\Scripts\activate
+### 5. Inicializar la base de datos
+```bash
+flask db init
+flask db migrate
+flask db upgrade
+```
 
-   # En macOS/Linux
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+### 6. Crear usuario administrador
+```bash
+flask create-admin
+```
 
-3. Instala las dependencias:
-   ```
-   pip install -r requirements.txt
-   ```
-
-4. Configura las variables de entorno:
-   - Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
-     ```
-     FLASK_APP=app.py
-     FLASK_ENV=development
-     SECRET_KEY=tu_clave_secreta_aqui
-     ```
-
-### Ejecución de la aplicación
-
-1. Activa el entorno virtual (si no está activado):
-   ```
-   # En Windows
-   venv\Scripts\activate
-
-   # En macOS/Linux
-   source venv/bin/activate
-   ```
-
-2. Inicia la aplicación:
-   ```
-   python app.py
-   ```
-
-3. Accede a la aplicación en tu navegador web:
-   ```
-   http://localhost:5000
-   ```
-
-## Estructura del proyecto
-
+## Estructura del Proyecto
 ```
 horario/
-│
-├── app/                # Paquete principal de la aplicación
-│   ├── admin/          # Módulo para administración
-│   ├── auth/           # Módulo para autenticación
-│   ├── models/         # Modelos de la base de datos
-│   ├── stats/          # Módulo para estadísticas
-│   ├── static/         # Archivos estáticos
-│   │   ├── css/        # Estilos CSS
-│   │   │   ├── style.css
-│   │   │   └── animations.css
-│   │   └── js/         # Scripts JavaScript
-│   │       ├── main.js
-│   │       └── animations.js
-│   └── templates/      # Plantillas HTML
-│
-├── migrations/         # Migraciones de la base de datos
-├── venv/               # Entorno virtual (ignorado en git)
-├── .env                # Variables de entorno (ignorado en git)
-├── .gitignore          # Archivos y directorios ignorados por git
-├── app.py              # Punto de entrada de la aplicación
-└── requirements.txt    # Dependencias del proyecto
+├── app/
+│   ├── __init__.py
+│   ├── admin/
+│   │   ├── __init__.py
+│   │   ├── routes.py
+│   │   ├── forms.py
+│   │   └── utils.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── profesor.py
+│   │   ├── asignatura.py
+│   │   ├── clase.py
+│   │   ├── disponibilidad.py
+│   │   ├── disponibilidad_comun.py
+│   │   ├── actividad_especial.py
+│   │   ├── actividad_personalizada.py
+│   │   └── horario.py
+│   ├── schedules/
+│   │   ├── __init__.py
+│   │   └── routes.py
+│   ├── static/
+│   │   ├── css/
+│   │   ├── js/
+│   │   └── img/
+│   └── templates/
+│       ├── base.html
+│       ├── admin/
+│       │   ├── users.html
+│       │   ├── user_form.html
+│       │   ├── profesores.html
+│       │   ├── profesor_form.html
+│       │   ├── asignaturas.html
+│       │   ├── asignatura_form.html
+│       │   ├── clases.html
+│       │   ├── clase_form.html
+│       │   ├── horarios.html
+│       │   ├── editar_horario.html
+│       │   ├── disponibilidad_profesor.html
+│       │   ├── asignar_profesores.html
+│       │   ├── asignar_profesor_asignatura.html
+│       │   └── seleccionar_clase.html
+│       └── schedules/
+│           ├── availability.html
+│           └── actividades_personalizadas.html
+├── venv/
+├── requirements.txt
+└── README.md
+
 ```
 
-## Características técnicas
+## Módulos Principales
 
-- **Frontend:**
-  - Bootstrap 5.3 para la interfaz de usuario
-  - Chart.js para visualización de datos
-  - Animaciones CSS personalizadas
-  - Efectos de glassmorphism
-  - Diseño responsivo y adaptable
+### 1. Administración (app/admin/)
+- Gestión de usuarios y permisos
+- Administración de profesores
+- Gestión de asignaturas
+- Control de clases
+- Configuración del sistema
 
-- **Backend:**
-  - Flask como framework web
-  - SQLAlchemy para ORM
-  - Sistema de autenticación y autorización
-  - API RESTful para interacciones
+### 2. Modelos (app/models/)
+- User: Gestión de usuarios y autenticación
+- Profesor: Información de profesores
+- Asignatura: Detalles de asignaturas
+- Clase: Configuración de clases
+- Disponibilidad: Horarios de profesores
+- Horario: Generación y gestión de horarios
+- ActividadEspecial: Eventos especiales
+- ActividadPersonalizada: Actividades personalizadas
 
-- **Características avanzadas:**
-  - Drag & drop para edición de horarios
-  - Gráficos interactivos y actualizables
-  - Sistema de notificaciones en tiempo real
-  - Exportación de datos en múltiples formatos
-  - Optimización de carga docente
+### 3. Horarios (app/schedules/)
+- Generación automática de horarios
+- Gestión de disponibilidades
+- Actividades especiales
+- Personalización de actividades
+
+## Uso del Sistema
+
+### 1. Acceso al Sistema
+- URL: http://localhost:5000
+- Usuario administrador por defecto:
+  - Email: admin@example.com
+  - Contraseña: admin123
+
+### 2. Gestión de Profesores
+1. Ir a "Administración > Profesores"
+2. Agregar nuevo profesor
+3. Configurar disponibilidad
+4. Asignar asignaturas
+
+### 3. Generación de Horarios
+1. Ir a "Horarios > Generar Horario"
+2. Seleccionar clase
+3. Configurar preferencias
+4. Generar horario
+5. Revisar y ajustar si es necesario
+
+### 4. Actividades Especiales
+1. Ir a "Horarios > Actividades Especiales"
+2. Crear nueva actividad
+3. Asignar a horarios específicos
+
+## API Endpoints
+
+### Autenticación
+- POST /login
+- POST /logout
+- POST /register
+
+### Profesores
+- GET /admin/profesores
+- POST /admin/profesores
+- GET /admin/profesores/<id>
+- PUT /admin/profesores/<id>
+- DELETE /admin/profesores/<id>
+
+### Horarios
+- GET /schedules/horarios
+- POST /schedules/generar
+- GET /schedules/horarios/<id>
+- PUT /schedules/horarios/<id>
+
+## Desarrollo
+
+### Estructura de Código
+- Patrón MVC (Modelo-Vista-Controlador)
+- Flask como framework web
+- SQLAlchemy para ORM
+- Bootstrap para interfaz
+- JavaScript para interacciones
+
+### Convenciones de Código
+- PEP 8 para Python
+- CamelCase para JavaScript
+- snake_case para Python
+- Comentarios en inglés
+
+### Pruebas
+```bash
+# Ejecutar pruebas
+flask test
+
+# Cobertura de pruebas
+coverage run -m pytest
+coverage report
+```
+
+## Despliegue
+
+### Producción
+1. Configurar servidor web (Nginx/Apache)
+2. Configurar WSGI (Gunicorn/uWSGI)
+3. Configurar base de datos PostgreSQL
+4. Configurar variables de entorno de producción
+5. Configurar SSL/TLS
+
+### Docker
+```bash
+# Construir imagen
+docker build -t horario-app .
+
+# Ejecutar contenedor
+docker run -p 5000:5000 horario-app
+```
 
 ## Contribución
-
-1. Haz un fork del repositorio
-2. Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`)
-3. Haz commit de tus cambios (`git commit -am 'Añadir nueva funcionalidad'`)
-4. Haz push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Crea un nuevo Pull Request
+1. Fork el repositorio
+2. Crear rama de feature
+3. Commit cambios
+4. Push a la rama
+5. Crear Pull Request
 
 ## Licencia
+Este proyecto está bajo la licencia MIT. Ver el archivo LICENSE para más detalles.
 
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo LICENSE para más detalles. 
+## Contacto
+- Email: contacto@example.com
+- Sitio web: https://www.example.com
+- Documentación: https://docs.example.com 
