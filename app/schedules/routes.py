@@ -458,18 +458,35 @@ def availability():
     actividades_existentes = {}
     actividades = ActividadEspecial.query.all()
     
+    # Mapeo de horas numéricas a nombres de sesión
+    sesiones_map = {
+        1: 'Primera',
+        2: 'Segunda',
+        3: 'Tercera',
+        4: 'Cuarta',
+        5: 'Quinta',
+        6: 'Sexta',
+        7: 'Séptima'
+    }
+    
     for actividad in actividades:
         if actividad.dia not in actividades_existentes:
             actividades_existentes[actividad.dia] = {}
-        if actividad.hora not in actividades_existentes[actividad.dia]:
-            actividades_existentes[actividad.dia][actividad.hora] = []
+        
+        # Convertir la hora numérica a nombre de sesión
+        sesion = sesiones_map.get(actividad.hora)
+        if not sesion:
+            continue
+            
+        if sesion not in actividades_existentes[actividad.dia]:
+            actividades_existentes[actividad.dia][sesion] = []
         
         if actividad.nombre == 'Examen':
-            actividades_existentes[actividad.dia][actividad.hora].append(
+            actividades_existentes[actividad.dia][sesion].append(
                 f'Examen - {actividad.descripcion}'
             )
         else:
-            actividades_existentes[actividad.dia][actividad.hora].append(actividad.nombre)
+            actividades_existentes[actividad.dia][sesion].append(actividad.nombre)
     
     # Get custom activities
     actividades_personalizadas = ActividadPersonalizada.query.filter_by(activo=True).all()
@@ -920,9 +937,10 @@ def clear_all(clase_id):
 def gestionar_actividades_personalizadas():
     if request.method == 'POST':
         try:
-            nombre = request.form.get('nombre')
-            color = request.form.get('color')
-            icono = request.form.get('icono')
+            data = request.get_json()
+            nombre = data.get('nombre')
+            color = data.get('color')
+            icono = data.get('icono')
             
             if not nombre or not color:
                 return jsonify({
@@ -948,12 +966,18 @@ def gestionar_actividades_personalizadas():
             
         except Exception as e:
             db.session.rollback()
+            print(f"[Actividades Personalizadas] Error al crear actividad: {str(e)}")
             return jsonify({
                 'success': False,
                 'message': f'Error al crear la actividad: {str(e)}'
             }), 500
     
+    print("[Actividades Personalizadas] Cargando actividades...")
     actividades = ActividadPersonalizada.query.filter_by(activo=True).all()
+    print(f"[Actividades Personalizadas] Se encontraron {len(actividades)} actividades activas")
+    for actividad in actividades:
+        print(f"[Actividades Personalizadas] - ID: {actividad.id}, Nombre: {actividad.nombre}, Color: {actividad.color}, Icono: {actividad.icono}")
+    
     return render_template('schedules/actividades_personalizadas.html', actividades=actividades)
 
 @schedules.route('/gestionar_actividades_personalizadas/<int:id>', methods=['PUT', 'DELETE'])
@@ -962,14 +986,34 @@ def gestionar_actividad_personalizada(id):
     actividad = ActividadPersonalizada.query.get_or_404(id)
     
     if request.method == 'PUT':
-        data = request.get_json()
-        actividad.nombre = data.get('nombre', actividad.nombre)
-        actividad.color = data.get('color', actividad.color)
-        actividad.icono = data.get('icono', actividad.icono)
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Actividad actualizada correctamente'})
+        try:
+            data = request.get_json()
+            actividad.nombre = data.get('nombre', actividad.nombre)
+            actividad.color = data.get('color', actividad.color)
+            actividad.icono = data.get('icono', actividad.icono)
+            db.session.commit()
+            return jsonify({
+                'success': True, 
+                'message': 'Actividad actualizada correctamente'
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error al actualizar la actividad: {str(e)}'
+            }), 500
     
     elif request.method == 'DELETE':
-        actividad.activo = False
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Actividad eliminada correctamente'}) 
+        try:
+            actividad.activo = False
+            db.session.commit()
+            return jsonify({
+                'success': True, 
+                'message': 'Actividad eliminada correctamente'
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error al eliminar la actividad: {str(e)}'
+            }), 500 

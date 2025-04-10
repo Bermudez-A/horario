@@ -12,6 +12,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        background-color: #fff;
     }
 
     .activity-preview {
@@ -110,30 +111,6 @@
         z-index: 1000;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-
-    .activity-card {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        margin: 5px;
-        border-radius: 4px;
-        background-color: #fff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .activity-icon {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 10px;
-    }
-
-    .activity-icon i {
-        color: white;
-    }
 </style>
 {% endblock %}
 
@@ -198,26 +175,33 @@
                 </div>
                 <div class="card-body">
                     <div id="activitiesList">
-                        {% for actividad in actividades %}
-                        <div class="activity-card" data-id="{{ actividad.id }}">
-                            <div class="activity-preview">
-                                <div class="activity-icon" style="background-color: {{ actividad.color }}">
-                                    {% if actividad.icono %}
-                                    <i class="fas {{ actividad.icono }}"></i>
-                                    {% endif %}
+                        {% if actividades %}
+                            {% for actividad in actividades %}
+                            <div class="activity-card" data-id="{{ actividad.id }}">
+                                <div class="activity-preview">
+                                    <div class="activity-icon" style="background-color: {{ actividad.color }}">
+                                        {% if actividad.icono %}
+                                        <i class="fas {{ actividad.icono }}"></i>
+                                        {% endif %}
+                                    </div>
+                                    <span class="activity-name">{{ actividad.nombre }}</span>
                                 </div>
-                                <span>{{ actividad.nombre }}</span>
+                                <div class="activity-actions">
+                                    <button class="btn btn-edit me-2" onclick="editActivity({{ actividad.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-delete" onclick="deleteActivity({{ actividad.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="activity-actions">
-                                <button class="btn btn-edit me-2" onclick="editActivity({{ actividad.id }})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-delete" onclick="deleteActivity({{ actividad.id }})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-info-circle mb-2"></i>
+                                <p>No hay actividades personalizadas. ¡Crea una nueva!</p>
                             </div>
-                        </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -246,7 +230,16 @@
                     </div>
                     <div class="form-group">
                         <label>Icono</label>
-                        <div class="icon-picker" id="editIconPicker"></div>
+                        <div class="icon-picker" id="editIconPicker">
+                            {% for icon in ['fa-running', 'fa-language', 'fa-school', 'fa-users', 'fa-file-alt', 
+                                          'fa-book', 'fa-music', 'fa-paint-brush', 'fa-flask', 'fa-laptop',
+                                          'fa-chalkboard', 'fa-graduation-cap', 'fa-microscope', 'fa-calculator',
+                                          'fa-globe', 'fa-history', 'fa-atom', 'fa-dna', 'fa-brain', 'fa-heart'] %}
+                            <div class="icon-option" data-icon="{{ icon }}">
+                                <i class="fas {{ icon }}"></i>
+                            </div>
+                            {% endfor %}
+                        </div>
                         <input type="hidden" id="editIcono">
                     </div>
                 </form>
@@ -262,12 +255,12 @@
 
 {% block scripts %}
 <script>
+console.log('Actividades recibidas:', {{ actividades|tojson|safe }});
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('activityForm');
-    const modal = document.getElementById('editModal');
-    const closeBtn = document.querySelector('.btn-close');
-    const cancelBtn = document.querySelector('.btn-secondary');
-    const actividadesContainer = document.getElementById('activitiesList');
+    const iconPicker = document.getElementById('iconPicker');
+    const editIconPicker = document.getElementById('editIconPicker');
     const errorMessage = document.getElementById('errorMessage');
 
     // Función para mostrar mensajes de error
@@ -290,44 +283,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    // Función para agregar una nueva actividad al contenedor
-    function addActividadToContainer(actividad) {
-        const actividadElement = document.createElement('div');
-        actividadElement.className = 'activity-card';
-        actividadElement.setAttribute('data-id', actividad.id);
-        
-        const icon = document.createElement('div');
-        icon.className = 'activity-icon';
-        icon.style.backgroundColor = actividad.color;
-        
-        const iconContent = document.createElement('i');
-        iconContent.className = actividad.icono || 'fas fa-calendar';
-        
-        const name = document.createElement('span');
-        name.textContent = actividad.nombre;
-        
-        icon.appendChild(iconContent);
-        actividadElement.appendChild(icon);
-        actividadElement.appendChild(name);
-        actividadesContainer.appendChild(actividadElement);
+    // Función para crear el HTML de una actividad
+    function createActivityHTML(actividad) {
+        return `
+            <div class="activity-card" data-id="${actividad.id}">
+                <div class="activity-preview">
+                    <div class="activity-icon" style="background-color: ${actividad.color}">
+                        ${actividad.icono ? `<i class="fas ${actividad.icono}"></i>` : ''}
+                    </div>
+                    <span class="activity-name">${actividad.nombre}</span>
+                </div>
+                <div class="activity-actions">
+                    <button class="btn btn-edit me-2" onclick="editActivity(${actividad.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-delete" onclick="deleteActivity(${actividad.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
     }
 
-    // Icon picker functionality
-    const iconOptions = document.querySelectorAll('.icon-option');
-    iconOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Remover la clase selected de todas las opciones
-            iconOptions.forEach(opt => opt.classList.remove('selected'));
-            // Agregar la clase selected a la opción clickeada
-            this.classList.add('selected');
-            // Actualizar el valor del input hidden con el icono seleccionado
-            const iconoInput = document.getElementById('icono');
-            iconoInput.value = this.dataset.icon;
-            console.log('Icono seleccionado:', iconoInput.value); // Para debugging
-        });
-    });
+    // Configurar el selector de iconos
+    function setupIconPicker(container, inputId) {
+        const icons = ['fa-running', 'fa-language', 'fa-school', 'fa-users', 'fa-file-alt', 
+                      'fa-book', 'fa-music', 'fa-paint-brush', 'fa-flask', 'fa-laptop',
+                      'fa-chalkboard', 'fa-graduation-cap', 'fa-microscope', 'fa-calculator',
+                      'fa-globe', 'fa-history', 'fa-atom', 'fa-dna', 'fa-brain', 'fa-heart'];
+        
+        container.innerHTML = icons.map(icon => `
+            <div class="icon-option" data-icon="${icon}">
+                <i class="fas ${icon}"></i>
+            </div>
+        `).join('');
 
-    // Asegurarse de que el formulario incluya el icono seleccionado
+        container.querySelectorAll('.icon-option').forEach(option => {
+            option.addEventListener('click', function() {
+                container.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                document.getElementById(inputId).value = this.dataset.icon;
+            });
+        });
+    }
+
+    // Configurar los selectores de iconos
+    setupIconPicker(iconPicker, 'icono');
+    setupIconPicker(editIconPicker, 'editIcono');
+
+    // Manejar el envío del formulario de nueva actividad
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -338,26 +342,27 @@ document.addEventListener('DOMContentLoaded', function() {
             icono: formData.get('icono')
         };
 
-        console.log('Datos a enviar:', data); // Para debugging
-
         try {
             const response = await fetch('/schedules/gestionar_actividades_personalizadas', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
-                body: new URLSearchParams(data)
+                body: JSON.stringify(data)
             });
 
             const result = await response.json();
-            console.log('Respuesta del servidor:', result); // Para debugging
 
             if (result.success) {
+                const activitiesList = document.getElementById('activitiesList');
+                const noActivitiesMessage = activitiesList.querySelector('.text-center.text-muted');
+                if (noActivitiesMessage) {
+                    noActivitiesMessage.remove();
+                }
+                activitiesList.insertAdjacentHTML('beforeend', createActivityHTML(result.actividad));
                 showSuccess(result.message);
-                addActividadToContainer(result.actividad);
                 form.reset();
-                // Limpiar la selección de iconos
-                iconOptions.forEach(opt => opt.classList.remove('selected'));
+                iconPicker.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
             } else {
                 showError(result.message);
             }
@@ -367,30 +372,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    function editActivity(id) {
-        const activity = document.querySelector(`.activity-card[data-id="${id}"]`);
-        const nombre = activity.querySelector('.activity-preview span').textContent;
-        const color = activity.querySelector('.activity-icon').style.backgroundColor;
-        const icono = activity.querySelector('.activity-icon i')?.className.replace('fas ', '');
+    // Función para editar una actividad
+    window.editActivity = async function(id) {
+        const activityCard = document.querySelector(`.activity-card[data-id="${id}"]`);
+        const nombre = activityCard.querySelector('.activity-name').textContent;
+        const color = activityCard.querySelector('.activity-icon').style.backgroundColor;
+        const iconElement = activityCard.querySelector('.activity-icon i');
+        const icono = iconElement ? iconElement.className.replace('fas ', '') : '';
         
         document.getElementById('editId').value = id;
         document.getElementById('editNombre').value = nombre;
         document.getElementById('editColor').value = rgbToHex(color);
-        document.getElementById('editIcono').value = icono || '';
+        document.getElementById('editIcono').value = icono;
         
-        // Update icon picker
-        const editIconOptions = document.querySelectorAll('#editIconPicker .icon-option');
-        editIconOptions.forEach(option => {
+        editIconPicker.querySelectorAll('.icon-option').forEach(option => {
             option.classList.remove('selected');
             if (option.dataset.icon === icono) {
                 option.classList.add('selected');
             }
         });
         
-        new bootstrap.Modal(document.getElementById('editModal')).show();
-    }
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        editModal.show();
+    };
 
-    function saveEdit() {
+    // Función para guardar los cambios de una actividad
+    window.saveEdit = async function() {
         const id = document.getElementById('editId').value;
         const data = {
             nombre: document.getElementById('editNombre').value,
@@ -398,51 +405,74 @@ document.addEventListener('DOMContentLoaded', function() {
             icono: document.getElementById('editIcono').value
         };
         
-        fetch(`{{ url_for("schedules.gestionar_actividad_personalizada", id=0) }}`.replace('0', id), {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showSuccess(data.message);
-                location.reload();
-            } else {
-                showError(data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showError('Error al actualizar la actividad');
-        });
-    }
-
-    function deleteActivity(id) {
-        if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
-            fetch(`{{ url_for("schedules.gestionar_actividad_personalizada", id=0) }}`.replace('0', id), {
-                method: 'DELETE'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showSuccess(data.message);
-                    location.reload();
-                } else {
-                    showError(data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showError('Error al eliminar la actividad');
+        try {
+            const response = await fetch(`/schedules/gestionar_actividades_personalizadas/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
             });
-        }
-    }
 
+            const result = await response.json();
+
+            if (result.success) {
+                const activityCard = document.querySelector(`.activity-card[data-id="${id}"]`);
+                activityCard.outerHTML = createActivityHTML({
+                    id: id,
+                    ...data
+                });
+                showSuccess(result.message);
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            } else {
+                showError(result.message);
+            }
+        } catch (error) {
+            showError('Error al actualizar la actividad');
+            console.error('Error:', error);
+        }
+    };
+
+    // Función para eliminar una actividad
+    window.deleteActivity = async function(id) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta actividad?')) {
+            try {
+                const response = await fetch(`/schedules/gestionar_actividades_personalizadas/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const activityCard = document.querySelector(`.activity-card[data-id="${id}"]`);
+                    activityCard.remove();
+                    
+                    // Si no quedan actividades, mostrar el mensaje
+                    const activitiesList = document.getElementById('activitiesList');
+                    if (!activitiesList.querySelector('.activity-card')) {
+                        activitiesList.innerHTML = `
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-info-circle mb-2"></i>
+                                <p>No hay actividades personalizadas. ¡Crea una nueva!</p>
+                            </div>
+                        `;
+                    }
+                    
+                    showSuccess(result.message);
+                } else {
+                    showError(result.message);
+                }
+            } catch (error) {
+                showError('Error al eliminar la actividad');
+                console.error('Error:', error);
+            }
+        }
+    };
+
+    // Función auxiliar para convertir RGB a Hex
     function rgbToHex(rgb) {
-        // Convert rgb(r, g, b) to #RRGGBB
+        if (rgb.startsWith('#')) return rgb;
+        
         const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
         if (!match) return rgb;
         

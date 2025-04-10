@@ -6,8 +6,10 @@ from app.models.horario import Horario
 from app.models.disponibilidad import Disponibilidad
 from app.models.excepcion import Excepcion
 from app.models.actividad_especial import ActividadEspecial
+from app.models.actividad_personalizada import ActividadPersonalizada
 
 __all__ = [
     'User', 'Profesor', 'Asignatura', 'Clase', 'ClaseAsignatura',
-    'Horario', 'Disponibilidad', 'Excepcion', 'ActividadEspecial'
+    'Horario', 'Disponibilidad', 'Excepcion', 'ActividadEspecial',
+    'ActividadPersonalizada'
 ] 
