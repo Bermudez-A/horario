@@ -141,16 +141,25 @@ def profesores():
     for asignatura in asignaturas:
         profesores_por_asignatura[asignatura] = []
     
+    # Lista para profesores sin asignar
+    profesores_sin_asignar = []
+    
     # Luego asignamos los profesores a sus asignaturas
     for profesor in profesores:
-        for asignatura_profesor in profesor.asignaturas:
-            if asignatura_profesor.asignatura in profesores_por_asignatura:
-                if profesor not in profesores_por_asignatura[asignatura_profesor.asignatura]:
-                    profesores_por_asignatura[asignatura_profesor.asignatura].append(profesor)
+        if not profesor.asignaturas:
+            # Si el profesor no tiene asignaturas, lo añadimos a la lista de sin asignar
+            profesores_sin_asignar.append(profesor)
+        else:
+            # Si tiene asignaturas, lo añadimos a cada una de ellas
+            for asignatura_profesor in profesor.asignaturas:
+                if asignatura_profesor.asignatura in profesores_por_asignatura:
+                    if profesor not in profesores_por_asignatura[asignatura_profesor.asignatura]:
+                        profesores_por_asignatura[asignatura_profesor.asignatura].append(profesor)
     
     return render_template('admin/profesores.html', 
                            title='Gestión de Profesores', 
                            profesores_por_asignatura=profesores_por_asignatura,
+                           profesores_sin_asignar=profesores_sin_asignar,
                            asignaturas=asignaturas)
 
 @admin.route('/profesores/add', methods=['GET', 'POST'])
@@ -564,13 +573,28 @@ def delete_profesor(id):
     profesor = Profesor.query.get_or_404(id)
     usuario = profesor.usuario
     
-    # Eliminar profesor (las relaciones se eliminarán en cascada)
-    db.session.delete(profesor)
-    # Eliminar usuario asociado
-    db.session.delete(usuario)
-    
-    db.session.commit()
-    flash('Profesor eliminado correctamente', 'success')
+    try:
+        # Verificar si el profesor tiene asignaciones activas
+        if profesor.asignaturas:
+            flash(f'No se puede eliminar al profesor {profesor.get_nombre_completo()} porque tiene asignaturas asignadas.', 'danger')
+            return redirect(url_for('admin.profesores'))
+            
+        # Verificar si el profesor tiene disponibilidad configurada
+        if profesor.disponibilidad:
+            flash(f'No se puede eliminar al profesor {profesor.get_nombre_completo()} porque tiene disponibilidad configurada.', 'danger')
+            return redirect(url_for('admin.profesores'))
+        
+        # Eliminar profesor (las relaciones se eliminarán en cascada)
+        db.session.delete(profesor)
+        # Eliminar usuario asociado
+        db.session.delete(usuario)
+        
+        db.session.commit()
+        flash(f'Profesor {profesor.get_nombre_completo()} eliminado correctamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar al profesor: {str(e)}', 'danger')
     
     return redirect(url_for('admin.profesores'))
 
@@ -1157,3 +1181,98 @@ def asignar_profesores_clases():
     return render_template('admin/seleccionar_clase.html',
                          title='Asignar Profesores a Clases',
                          form=form)
+
+# Ruta para desvincular un profesor de una asignatura
+@admin.route('/profesores/desvincular/<int:profesor_id>/<int:asignatura_id>')
+@login_required
+@admin_required
+def desvincular_profesor(profesor_id, asignatura_id):
+    profesor = Profesor.query.get_or_404(profesor_id)
+    asignatura = Asignatura.query.get_or_404(asignatura_id)
+    
+    try:
+        # Buscar la relación profesor-asignatura
+        asignacion = AsignaturaProfesor.query.filter_by(
+            profesor_id=profesor_id,
+            asignatura_id=asignatura_id
+        ).first()
+        
+        if asignacion:
+            # Primero eliminar todas las asignaciones de clase asociadas
+            AsignaturaProfesorClase.query.filter_by(asignatura_profesor_id=asignacion.id).delete()
+            
+            # Luego eliminar la relación profesor-asignatura
+            db.session.delete(asignacion)
+            db.session.commit()
+            flash(f'Profesor {profesor.get_nombre_completo()} desvinculado de {asignatura.nombre} correctamente. Ahora aparece en la sección "Profesores sin asignar".', 'success')
+        else:
+            flash(f'El profesor {profesor.get_nombre_completo()} no está vinculado a {asignatura.nombre}', 'warning')
+            
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al desvincular al profesor: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.profesores'))
+
+# Ruta para vincular un profesor a una asignatura
+@admin.route('/profesores/vincular/<int:profesor_id>', methods=['POST'])
+@login_required
+@admin_required
+def vincular_profesor(profesor_id):
+    try:
+        profesor = Profesor.query.get_or_404(profesor_id)
+        asignatura_id = request.form.get('asignatura_id')
+        
+        if not asignatura_id:
+            flash('Debe seleccionar una asignatura.', 'warning')
+            return redirect(url_for('admin.profesores'))
+            
+        asignatura = Asignatura.query.get_or_404(asignatura_id)
+        
+        # Verificar que la asignatura coincida con la especialidad del profesor
+        if asignatura.nombre != profesor.especialidad:
+            flash('El profesor solo puede ser vinculado a su asignatura de especialidad.', 'warning')
+            return redirect(url_for('admin.profesores'))
+        
+        # Verificar si ya existe la relación
+        if asignatura in profesor.asignaturas:
+            flash('El profesor ya está vinculado a esta asignatura.', 'warning')
+            return redirect(url_for('admin.profesores'))
+        
+        # Crear la relación
+        asignatura_profesor = AsignaturaProfesor(
+            asignatura_id=asignatura_id,
+            profesor_id=profesor_id
+        )
+        db.session.add(asignatura_profesor)
+        db.session.commit()
+        
+        flash(f'El profesor {profesor.get_nombre_completo()} ha sido vinculado a la asignatura {asignatura.nombre}.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error al vincular al profesor con la asignatura.', 'danger')
+    
+    return redirect(url_for('admin.profesores'))
+
+@admin.route('/profesores/eliminar/<int:profesor_id>', methods=['POST'])
+@login_required
+@admin_required
+def eliminar_profesor(profesor_id):
+    try:
+        profesor = Profesor.query.get_or_404(profesor_id)
+        
+        # Verificar si el profesor tiene asignaturas vinculadas
+        if profesor.asignaturas:
+            flash('No se puede eliminar el profesor porque tiene asignaturas vinculadas.', 'warning')
+            return redirect(url_for('admin.profesores'))
+        
+        # Eliminar el profesor
+        db.session.delete(profesor)
+        db.session.commit()
+        
+        flash(f'El profesor {profesor.get_nombre_completo()} ha sido eliminado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error al eliminar al profesor.', 'danger')
+    
+    return redirect(url_for('admin.profesores'))

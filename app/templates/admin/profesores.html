@@ -57,6 +57,137 @@
     
     <!-- Contenedor principal de tarjetas -->
     <div class="profesor-cards-container">
+        <!-- Sección de Profesores sin asignar -->
+        <div class="profesor-group" data-asignatura-id="sin-asignar">
+            <h2 class="profesor-heading animate-fade-in">
+                <i class="fas fa-user-slash me-2"></i>Profesores sin asignar
+                <span class="badge bg-secondary rounded-pill ms-2">{{ profesores_sin_asignar|length }}</span>
+            </h2>
+            
+            {% if profesores_sin_asignar %}
+            <div class="profesor-cards animate-stagger">
+                {% for profesor in profesores_sin_asignar %}
+                <div class="profesor-card hover-lift glass shadow-smooth rounded-xl" data-profesor-id="{{ profesor.id }}" data-asignatura-id="sin-asignar" data-rol="{{ profesor.usuario.rol }}">
+                    <div class="profesor-card-header">
+                        <div class="profesor-avatar">
+                            {% if profesor.foto %}
+                                <img src="{{ url_for('static', filename='uploads/profesores/' + profesor.foto) }}" alt="{{ profesor.get_nombre_completo() }}">
+                            {% else %}
+                                <i class="fas fa-user-circle" style="font-size: 2.5rem;"></i>
+                            {% endif %}
+                        </div>
+                        <h3 class="profesor-name">{{ profesor.get_nombre_completo() }}</h3>
+                        <div class="profesor-role">{{ profesor.usuario.rol|capitalize }}</div>
+                    </div>
+                    
+                    <div class="profesor-card-body">
+                        {% if profesor.especialidad %}
+                        <div class="profesor-asignatura mb-3">
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>{{ profesor.especialidad }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="profesor-asignatura">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Sin asignatura asignada</span>
+                        </div>
+                        
+                        {% if profesor.max_horas_diarias %}
+                        <div class="profesor-asignatura">
+                            <i class="fas fa-clock"></i>
+                            <span>Máx. {{ profesor.max_horas_diarias }} horas/día</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="profesor-card-footer">
+                        <div class="profesor-card-actions d-flex flex-wrap gap-2">
+                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}" class="btn btn-link text-primary p-0">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}" class="btn btn-link text-info p-0">
+                                <i class="fas fa-eye me-1"></i>Disponibilidad
+                            </a>
+                            <button type="button" class="btn btn-link text-success p-0" 
+                                    data-bs-toggle="modal" data-bs-target="#vincularModal{{ profesor.id }}">
+                                <i class="fas fa-link me-1"></i>Vincular
+                            </button>
+                            <button type="button" class="btn btn-link text-danger p-0" 
+                                    data-bs-toggle="modal" data-bs-target="#eliminarModal{{ profesor.id }}">
+                                <i class="fas fa-trash me-1"></i>Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modal de Vinculación -->
+                <div class="modal fade" id="vincularModal{{ profesor.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Vincular profesor a asignatura</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>¿Desea vincular al profesor <strong>{{ profesor.get_nombre_completo() }}</strong> a su asignatura de especialidad?</p>
+                                <form id="vincularForm{{ profesor.id }}" action="{{ url_for('admin.vincular_profesor', profesor_id=profesor.id) }}" method="POST">
+                                    {% set asignatura_especialidad = asignaturas|selectattr('nombre', 'equalto', profesor.especialidad)|first %}
+                                    {% if asignatura_especialidad %}
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            El profesor será vinculado a la asignatura <strong>{{ profesor.especialidad }}</strong>
+                                        </div>
+                                        <input type="hidden" name="asignatura_id" value="{{ asignatura_especialidad.id }}">
+                                    {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            No se encontró la asignatura de especialidad del profesor en el sistema.
+                                        </div>
+                                    {% endif %}
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                {% if asignatura_especialidad %}
+                                    <button type="submit" form="vincularForm{{ profesor.id }}" class="btn btn-success">
+                                        <i class="fas fa-link me-1"></i>Vincular
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modal de confirmación para eliminar -->
+                <div class="modal fade" id="eliminarModal{{ profesor.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirmar eliminación</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                ¿Estás seguro de que deseas eliminar al profesor <strong>{{ profesor.get_nombre_completo() }}</strong>?
+                                <div class="alert alert-danger mt-3">
+                                    Esta acción eliminará permanentemente al profesor y su usuario asociado del sistema. Esta acción no se puede deshacer.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <a href="{{ url_for('admin.delete_profesor', id=profesor.id) }}" class="btn btn-danger">Eliminar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-profesores animate-fade-in">
+                <i class="fas fa-check-circle me-2"></i>No hay profesores sin asignar.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sección de Profesores por asignatura -->
         {% for asignatura, profesores in profesores_por_asignatura.items() %}
         <div class="profesor-group" data-asignatura-id="{{ asignatura.id }}">
             <h2 class="profesor-heading animate-fade-in">
@@ -102,13 +233,64 @@
                     </div>
                     
                     <div class="profesor-card-footer">
-                        <div class="profesor-card-actions">
-                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}">
+                        <div class="profesor-card-actions d-flex flex-wrap gap-2">
+                            <a href="{{ url_for('admin.edit_profesor', id=profesor.id) }}" class="btn btn-link text-primary p-0">
                                 <i class="fas fa-edit me-1"></i>Editar
                             </a>
-                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}">
+                            <a href="{{ url_for('admin.disponibilidad_profesor', profesor_id=profesor.id) }}" class="btn btn-link text-info p-0">
                                 <i class="fas fa-eye me-1"></i>Disponibilidad
                             </a>
+                            <button type="button" class="btn btn-link text-warning p-0" 
+                                    data-bs-toggle="modal" data-bs-target="#desvincularModal{{ profesor.id }}_{{ asignatura.id }}">
+                                <i class="fas fa-unlink me-1"></i>Desvincular
+                            </button>
+                            <button type="button" class="btn btn-link text-danger p-0" 
+                                    data-bs-toggle="modal" data-bs-target="#eliminarModal{{ profesor.id }}"
+                                    {% if profesor.asignaturas|length > 1 %}disabled{% endif %}>
+                                <i class="fas fa-trash me-1"></i>Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modal de confirmación para desvincular -->
+                <div class="modal fade" id="desvincularModal{{ profesor.id }}_{{ asignatura.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirmar desvinculación</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                ¿Estás seguro de que deseas desvincular al profesor <strong>{{ profesor.get_nombre_completo() }}</strong> de la asignatura <strong>{{ asignatura.nombre }}</strong>?
+                                <div class="alert alert-warning mt-3">
+                                    Esta acción eliminará la relación entre el profesor y la asignatura. El profesor aparecerá en la sección "Profesores sin asignar".
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <a href="{{ url_for('admin.desvincular_profesor', profesor_id=profesor.id, asignatura_id=asignatura.id) }}" class="btn btn-warning">Desvincular</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modal de confirmación para eliminar -->
+                <div class="modal fade" id="eliminarModal{{ profesor.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirmar eliminación</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                ¿Estás seguro de que deseas eliminar al profesor <strong>{{ profesor.get_nombre_completo() }}</strong>?
+                                <div class="alert alert-danger mt-3">
+                                    Esta acción eliminará permanentemente al profesor y su usuario asociado del sistema. Esta acción no se puede deshacer.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <a href="{{ url_for('admin.delete_profesor', id=profesor.id) }}" class="btn btn-danger">Eliminar</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -122,7 +304,7 @@
         </div>
         {% endfor %}
         
-        {% if not profesores_por_asignatura %}
+        {% if not profesores_por_asignatura and not profesores_sin_asignar %}
         <div class="alert alert-info animate-fade-in shadow-smooth" role="alert">
             <i class="fas fa-info-circle me-2"></i>No hay profesores registrados en el sistema.
         </div>
