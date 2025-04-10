@@ -46,5 +46,9 @@ def create_app():
     @app.route('/')
     def index():
         return render_template('index.html')
+
+    @app.route('/developers')
+    def developers():
+        return render_template('developers.html')
     
     return app 

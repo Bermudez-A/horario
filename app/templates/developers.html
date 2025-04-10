@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="developers-page">
+    <!-- Header Section -->
+    <div class="dev-header">
+        <div class="container">
+            <h1 class="text-center display-4 fw-bold text-white mb-3">Nuestro Equipo</h1>
+            <p class="text-center text-white-50 lead">Conoce a los desarrolladores detrás de AURORA</p>
+        </div>
+    </div>
+
+    <!-- Team Section -->
+    <div class="container py-5">
+        <div class="row g-4 justify-content-center">
+            {% set developers = [
+                {
+                    'name': 'Desarrollador 1',
+                    'role': 'Full Stack Developer',
+                    'image': 'default-avatar.jpg',
+                    'github': '#',
+                    'linkedin': '#',
+                    'skills': ['Python', 'JavaScript', 'React']
+                },
+                {
+                    'name': 'Desarrollador 2',
+                    'role': 'Frontend Developer',
+                    'image': 'default-avatar.jpg',
+                    'github': '#',
+                    'linkedin': '#',
+                    'skills': ['HTML/CSS', 'Vue.js', 'UI/UX']
+                },
+                {
+                    'name': 'Desarrollador 3',
+                    'role': 'Backend Developer',
+                    'image': 'default-avatar.jpg',
+                    'github': '#',
+                    'linkedin': '#',
+                    'skills': ['Python', 'SQL', 'AWS']
+                },
+                {
+                    'name': 'Desarrollador 4',
+                    'role': 'UI/UX Designer',
+                    'image': 'default-avatar.jpg',
+                    'github': '#',
+                    'linkedin': '#',
+                    'skills': ['Figma', 'Adobe XD', 'Prototyping']
+                },
+                {
+                    'name': 'Desarrollador 5',
+                    'role': 'Database Specialist',
+                    'image': 'default-avatar.jpg',
+                    'github': '#',
+                    'linkedin': '#',
+                    'skills': ['PostgreSQL', 'MongoDB', 'Redis']
+                },
+                {
+                    'name': 'Desarrollador 6',
+                    'role': 'QA Engineer',
+                    'image': 'Desarrollador6.jpeg',
+                    'github': '#',
+                    'linkedin': '#',
+                    'skills': ['Testing', 'Automation', 'CI/CD']
+                }
+            ] %}
+
+            {% for dev in developers %}
+            <div class="col-md-6 col-lg-4">
+                <div class="team-card">
+                    <div class="card-img-wrapper">
+                        <div class="img-overlay"></div>
+                        <img src="{{ url_for('static', filename='img/developers/' + dev.image) }}" 
+                             class="dev-image" 
+                             alt="{{ dev.name }}">
+                    </div>
+                    <div class="card-content">
+                        <h3 class="dev-name">{{ dev.name }}</h3>
+                        <p class="dev-role">{{ dev.role }}</p>
+                        <div class="skills-container">
+                            {% for skill in dev.skills %}
+                            <span class="skill-tag">{{ skill }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="social-links">
+                            <a href="{{ dev.github }}" class="social-btn github" target="_blank">
+                                <i class="fab fa-github"></i>
+                            </a>
+                            <a href="{{ dev.linkedin }}" class="social-btn linkedin" target="_blank">
+                                <i class="fab fa-linkedin-in"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.developers-page {
+    background-color: #f8f9fa;
+}
+
+.dev-header {
+    background: linear-gradient(135deg, #0061f2 0%, #00ba94 100%);
+    padding: 6rem 0 4rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.dev-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none"/><circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.1)" stroke-width="2" fill="none"/></svg>') repeat;
+    opacity: 0.4;
+}
+
+.team-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.team-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 1rem 3rem rgba(31, 45, 65, 0.125);
+}
+
+.card-img-wrapper {
+    position: relative;
+    padding-top: 100%;
+    overflow: hidden;
+    background: linear-gradient(45deg, #1a1f71, #0061f2);
+}
+
+.img-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 97, 242, 0.1);
+    z-index: 1;
+}
+
+.dev-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.team-card:hover .dev-image {
+    transform: scale(1.05);
+}
+
+.card-content {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.dev-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.dev-role {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.skills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.skill-tag {
+    background: rgba(0, 97, 242, 0.1);
+    color: #0061f2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.social-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.social-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.github {
+    background: #24292e;
+}
+
+.linkedin {
+    background: #0077b5;
+}
+
+@media (max-width: 768px) {
+    .dev-header {
+        padding: 4rem 0 2rem;
+    }
+    
+    .team-card {
+        margin-bottom: 2rem;
+    }
+}
+</style>
+{% endblock %}

@@ -141,8 +141,8 @@
             <div class="nav-divider"></div>
             <div class="section-title">ADMINISTRACIÓN</div>
             <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                    <i class="fas fa-tachometer-alt me-2"></i><span>Dashboard</span>
+                <a class="nav-link" href="{{ url_for('admin.asignar_profesores_clases') }}">
+                    <i class="fas fa-chalkboard-teacher me-2"></i><span>Asignar Profesores</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -166,6 +166,14 @@
                 </a>
             </li>
             <!-- Eliminados los elementos de Configuración y Respaldo -->
+            
+            <div class="nav-divider"></div>
+            <div class="section-title">EQUIPO</div>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('developers') }}">
+                    <i class="fas fa-code-branch me-2"></i><span>Desarrolladores</span>
+                </a>
+            </li>
         </ul>
     </nav>
     {% endif %}
@@ -199,7 +207,7 @@
 
         <footer class="bg-dark text-white py-4 mt-auto">
             <div class="container text-center">
-                <p class="mb-0">&copy; 2023 Generador de Horarios. Todos los derechos reservados.</p>
+                <p class="mb-0">&copy; 2025 AURORA - Generador de Horarios. Todos los derechos reservados.</p>
             </div>
         </footer>
     </div>
