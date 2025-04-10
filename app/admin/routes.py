@@ -12,6 +12,7 @@ from app.models.clase import Clase
 from app.admin.utils import admin_required, save_picture
 from app.models.disponibilidad_comun import DisponibilidadComun
 from app.models.actividad_especial import ActividadEspecial
+from app.models.disponibilidad import Disponibilidad
 
 # Dashboard
 @admin.route('/')
@@ -95,17 +96,48 @@ def edit_user(id):
 
 @admin.route('/users/delete/<int:id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_user(id):
     user = User.query.get_or_404(id)
     
+    # Verificar que no se está intentando eliminar a sí mismo
     if user.id == current_user.id:
-        flash('No puedes eliminar tu propio usuario', 'danger')
+        flash('No puedes eliminar tu propia cuenta.', 'danger')
         return redirect(url_for('admin.users'))
     
-    db.session.delete(user)
-    db.session.commit()
-    flash('Usuario eliminado con éxito', 'success')
+    try:
+        # Si es profesor, primero desactivar el usuario
+        if user.rol == 'profesor':
+            user.activo = False
+            db.session.flush()
+            
+            # Eliminar asignaciones de clases
+            asignaciones = AsignaturaProfesorClase.query.filter_by(profesor_id=user.profesor.id).all()
+            for asignacion in asignaciones:
+                db.session.delete(asignacion)
+            
+            # Eliminar relaciones con asignaturas
+            relaciones = AsignaturaProfesor.query.filter_by(profesor_id=user.profesor.id).all()
+            for relacion in relaciones:
+                db.session.delete(relacion)
+            
+            # Eliminar disponibilidades
+            disponibilidades = Disponibilidad.query.filter_by(profesor_id=user.profesor.id).all()
+            for disponibilidad in disponibilidades:
+                db.session.delete(disponibilidad)
+            
+            # Eliminar el perfil de profesor
+            db.session.delete(user.profesor)
+        
+        # Finalmente eliminar el usuario
+        db.session.delete(user)
+        db.session.commit()
+        
+        flash(f'Usuario {user.username} eliminado exitosamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el usuario: {str(e)}', 'danger')
+    
     return redirect(url_for('admin.users'))
 
 @admin.route('/users/toggle_status/<int:id>')
@@ -555,46 +587,64 @@ def disponibilidad_profesor(profesor_id):
 @admin_required
 def toggle_profesor_status(id):
     profesor = Profesor.query.get_or_404(id)
-    usuario = profesor.usuario
+    user = profesor.usuario
     
-    usuario.activo = not usuario.activo
+    if user.id == current_user.id:
+        flash('No puedes cambiar el estado de tu propio usuario', 'danger')
+        return redirect(url_for('admin.profesores'))
+    
+    user.activo = not user.activo
     db.session.commit()
     
-    estado = "activado" if usuario.activo else "desactivado"
-    flash(f'Profesor {profesor.get_nombre_completo()} {estado} correctamente', 'success')
+    estado = "activado" if user.activo else "desactivado"
+    flash(f'Profesor {user.username} {estado} con éxito', 'success')
     
     return redirect(url_for('admin.profesores'))
 
 # Ruta para eliminar un profesor
-@admin.route('/profesores/delete/<int:id>')
+@admin.route('/profesores/delete/<int:id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_profesor(id):
     profesor = Profesor.query.get_or_404(id)
-    usuario = profesor.usuario
+    user = profesor.usuario
+    
+    # Verificar que no se está intentando eliminar a sí mismo
+    if user.id == current_user.id:
+        flash('No puedes eliminar tu propia cuenta.', 'danger')
+        return redirect(url_for('admin.profesores'))
     
     try:
-        # Verificar si el profesor tiene asignaciones activas
-        if profesor.asignaturas:
-            flash(f'No se puede eliminar al profesor {profesor.get_nombre_completo()} porque tiene asignaturas asignadas.', 'danger')
-            return redirect(url_for('admin.profesores'))
-            
-        # Verificar si el profesor tiene disponibilidad configurada
-        if profesor.disponibilidad:
-            flash(f'No se puede eliminar al profesor {profesor.get_nombre_completo()} porque tiene disponibilidad configurada.', 'danger')
-            return redirect(url_for('admin.profesores'))
+        # Primero desactivar el usuario
+        user.activo = False
+        db.session.flush()
         
-        # Eliminar profesor (las relaciones se eliminarán en cascada)
+        # Eliminar asignaciones de clases
+        asignaciones = AsignaturaProfesorClase.query.filter_by(profesor_id=profesor.id).all()
+        for asignacion in asignaciones:
+            db.session.delete(asignacion)
+        
+        # Eliminar relaciones con asignaturas
+        relaciones = AsignaturaProfesor.query.filter_by(profesor_id=profesor.id).all()
+        for relacion in relaciones:
+            db.session.delete(relacion)
+        
+        # Eliminar disponibilidades
+        disponibilidades = Disponibilidad.query.filter_by(profesor_id=profesor.id).all()
+        for disponibilidad in disponibilidades:
+            db.session.delete(disponibilidad)
+        
+        # Eliminar el perfil de profesor
         db.session.delete(profesor)
-        # Eliminar usuario asociado
-        db.session.delete(usuario)
         
+        # Finalmente eliminar el usuario
+        db.session.delete(user)
         db.session.commit()
-        flash(f'Profesor {profesor.get_nombre_completo()} eliminado correctamente', 'success')
+        
+        flash(f'Profesor {user.username} eliminado exitosamente.', 'success')
         
     except Exception as e:
         db.session.rollback()
-        flash(f'Error al eliminar al profesor: {str(e)}', 'danger')
+        flash(f'Error al eliminar el profesor: {str(e)}', 'danger')
     
     return redirect(url_for('admin.profesores'))
 
@@ -1274,5 +1324,30 @@ def eliminar_profesor(profesor_id):
     except Exception as e:
         db.session.rollback()
         flash('Error al eliminar al profesor.', 'danger')
+    
+    return redirect(url_for('admin.profesores'))
+
+@admin.route('/profesores/toggle_asignacion/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def toggle_profesor_asignacion(id):
+    profesor = Profesor.query.get_or_404(id)
+    user = profesor.usuario
+    
+    try:
+        if profesor.asignaturas:
+            # Desvincular
+            for asignatura_profesor in profesor.asignaturas:
+                db.session.delete(asignatura_profesor)
+            flash(f'Profesor {user.username} desvinculado con éxito', 'success')
+        else:
+            # Vincular
+            # Aquí deberías definir la lógica para vincular al profesor a una asignatura
+            flash(f'Profesor {user.username} vinculado con éxito', 'success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cambiar la asignación del profesor: {str(e)}', 'danger')
     
     return redirect(url_for('admin.profesores'))

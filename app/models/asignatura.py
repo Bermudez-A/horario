@@ -24,7 +24,7 @@ class AsignaturaProfesorClase(db.Model):
     __tablename__ = 'asignaturas_profesores_clases'
     
     id = db.Column(db.Integer, primary_key=True)
-    asignatura_profesor_id = db.Column(db.Integer, db.ForeignKey('asignaturas_profesores.id'), nullable=False)
+    asignatura_profesor_id = db.Column(db.Integer, db.ForeignKey('asignaturas_profesores.id'), nullable=True)
     clase_id = db.Column(db.Integer, db.ForeignKey('clases.id'), nullable=False)
     fecha_asignacion = db.Column(db.DateTime, default=datetime.utcnow)
     
