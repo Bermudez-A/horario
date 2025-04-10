@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Importar Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+
 <div class="developers-page">
     <!-- Header Section -->
     <div class="dev-header">
@@ -16,51 +19,27 @@
             {% set developers = [
                 {
                     'name': 'Desarrollador 1',
-                    'role': 'Full Stack Developer',
-                    'image': 'default-avatar.jpg',
-                    'github': '#',
-                    'linkedin': '#',
-                    'skills': ['Python', 'JavaScript', 'React']
+                    'image': 'default-avatar.jpg'
                 },
                 {
                     'name': 'Desarrollador 2',
-                    'role': 'Frontend Developer',
-                    'image': 'default-avatar.jpg',
-                    'github': '#',
-                    'linkedin': '#',
-                    'skills': ['HTML/CSS', 'Vue.js', 'UI/UX']
+                    'image': 'default-avatar.jpg'
                 },
                 {
                     'name': 'Desarrollador 3',
-                    'role': 'Backend Developer',
-                    'image': 'default-avatar.jpg',
-                    'github': '#',
-                    'linkedin': '#',
-                    'skills': ['Python', 'SQL', 'AWS']
+                    'image': 'default-avatar.jpg'
                 },
                 {
                     'name': 'Desarrollador 4',
-                    'role': 'UI/UX Designer',
-                    'image': 'default-avatar.jpg',
-                    'github': '#',
-                    'linkedin': '#',
-                    'skills': ['Figma', 'Adobe XD', 'Prototyping']
+                    'image': 'default-avatar.jpg'
                 },
                 {
                     'name': 'Desarrollador 5',
-                    'role': 'Database Specialist',
-                    'image': 'default-avatar.jpg',
-                    'github': '#',
-                    'linkedin': '#',
-                    'skills': ['PostgreSQL', 'MongoDB', 'Redis']
+                    'image': 'default-avatar.jpg'
                 },
                 {
-                    'name': 'Desarrollador 6',
-                    'role': 'QA Engineer',
-                    'image': 'Desarrollador6.jpeg',
-                    'github': '#',
-                    'linkedin': '#',
-                    'skills': ['Testing', 'Automation', 'CI/CD']
+                    'name': 'S.A. Juan Pedro Cerrillo Triguero',
+                    'image': 'Desarrollador6.jpeg'
                 }
             ] %}
 
@@ -74,20 +53,9 @@
                              alt="{{ dev.name }}">
                     </div>
                     <div class="card-content">
-                        <h3 class="dev-name">{{ dev.name }}</h3>
-                        <p class="dev-role">{{ dev.role }}</p>
-                        <div class="skills-container">
-                            {% for skill in dev.skills %}
-                            <span class="skill-tag">{{ skill }}</span>
-                            {% endfor %}
-                        </div>
-                        <div class="social-links">
-                            <a href="{{ dev.github }}" class="social-btn github" target="_blank">
-                                <i class="fab fa-github"></i>
-                            </a>
-                            <a href="{{ dev.linkedin }}" class="social-btn linkedin" target="_blank">
-                                <i class="fab fa-linkedin-in"></i>
-                            </a>
+                        <div class="name-wrapper">
+                            <h3 class="dev-name">{{ dev.name }}</h3>
+                            <div class="name-line"></div>
                         </div>
                     </div>
                 </div>
@@ -166,68 +134,42 @@
 }
 
 .card-content {
-    padding: 1.5rem;
+    padding: 2rem 1.5rem;
     text-align: center;
+    background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+}
+
+.name-wrapper {
+    position: relative;
+    padding: 0.5rem 0;
 }
 
 .dev-name {
-    font-size: 1.25rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.75rem;
     font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
+    color: #1a1f71;
+    margin: 0;
+    letter-spacing: 0.5px;
+    position: relative;
+    display: inline-block;
+    transition: color 0.3s ease;
 }
 
-.dev-role {
-    color: #6b7280;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
+.name-line {
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #0061f2, transparent);
+    margin: 0.5rem auto 0;
+    transition: width 0.6s ease;
 }
 
-.skills-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
+.team-card:hover .name-line {
+    width: 80%;
 }
 
-.skill-tag {
-    background: rgba(0, 97, 242, 0.1);
+.team-card:hover .dev-name {
     color: #0061f2;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.social-links {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.social-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.social-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.github {
-    background: #24292e;
-}
-
-.linkedin {
-    background: #0077b5;
 }
 
 @media (max-width: 768px) {
@@ -237,6 +179,10 @@
     
     .team-card {
         margin-bottom: 2rem;
+    }
+
+    .dev-name {
+        font-size: 1.5rem;
     }
 }
 </style>
