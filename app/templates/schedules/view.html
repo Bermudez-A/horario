@@ -46,7 +46,7 @@
                                     <th class="text-center">{{ hora }}° Hora</th>
                                     
                                     {% for dia in ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'] %}
-                                    <td class="celda-horario {{ 'celda-con-clase' if horario[dia][hora-1] else 'celda-vacia' }}">
+                                    <td class="celda-horario {{ 'celda-con-clase' if horario[dia][hora-1] else 'celda-vacia' }} {{ 'sin-profesor' if horario[dia][hora-1] and not horario[dia][hora-1].profesor else '' }} {{ 'actividad-especial' if horario[dia][hora-1] and horario[dia][hora-1].es_actividad_especial else '' }}">
                                         {% if horario[dia][hora-1] %}
                                         <div class="asignatura-bloque" style="background-color: {{ horario[dia][hora-1].color }}">
                                             <div class="asignatura-nombre">
@@ -56,7 +56,10 @@
                                                 {{ horario[dia][hora-1].asignatura }}
                                             </div>
                                             <div class="profesor-nombre">
+                                                {% if horario[dia][hora-1].es_actividad_especial %}
+                                                {% else %}
                                                 {{ horario[dia][hora-1].profesor if horario[dia][hora-1].profesor else 'Sin asignar' }}
+                                                {% endif %}
                                             </div>
                                         </div>
                                         {% endif %}
