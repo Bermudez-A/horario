@@ -1196,7 +1196,11 @@ def asignar_profesores_clases():
                             flash('Combinación de profesor y asignatura no válida', 'danger')
                 
                 # Si se envió pero no se seleccionó ningún profesor, eliminar la asignación existente
+<<<<<<< HEAD
+                elif asignacion_actual and 'eliminar' in request.form:
+=======
                 elif asignacion_actual & 'eliminar' in request.form:
+>>>>>>> a3807430f999c19472278c6543c3658dcda89d98
                     db.session.delete(asignacion_actual)
                     db.session.commit()
                     flash(f'Asignación de profesor eliminada para la asignatura {asignatura.nombre}', 'success')
